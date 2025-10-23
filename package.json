@@ -10,7 +10,8 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@react-native-voice/voice": "^3.2.4",
+    "@react-native-voice/voice": "^3.1.5",
+    "dayjs": "^1.11.18",
     "expo": "~54.0.18",
     "expo-speech": "~14.0.7",
     "expo-status-bar": "~3.0.8",
