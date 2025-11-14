@@ -15,7 +15,8 @@ export default function App() {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Interact" component={InteractScreen} />
         <Stack.Screen name="Calculate GPA" component={GPAScreen} />
-
+        <Stack.Screen name="Add Timetable" component={TimetableScreen} />
+        
       </Stack.Navigator>
     </NavigationContainer>
   );
