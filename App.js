@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { View, Text, Button, TextInput, FlatList, StyleSheet } from 'react-native';
 import * as Speech from 'expo-speech';
@@ -57,8 +58,21 @@ export default function App() {
 
     setInput('');
   };
+=======
+import * as React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import HomeScreen from './screens/HomeScreen';
+import InteractScreen from './screens/InteractScreen';
+import TimetableScreen from './screens/TimetableScreen';
+import GPAScreen from './screens/GPAScreen';
 
+const Stack = createStackNavigator();
+>>>>>>> interact-updates
+
+export default function App() {
   return (
+<<<<<<< HEAD
     <View style={styles.container}>
       <Text style={styles.title}>📅 REMI Academic Assistant</Text>
 
@@ -87,3 +101,16 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20 },
   input: { width: '90%', borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 10, marginBottom: 15, backgroundColor: '#f9f9f9' },
 });
+=======
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Home">
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Interact" component={InteractScreen} />
+        <Stack.Screen name="Calculate GPA" component={GPAScreen} />
+        <Stack.Screen name="Add Timetable" component={TimetableScreen} />
+        
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+>>>>>>> interact-updates
