@@ -11,6 +11,7 @@ import {
 import { signOut } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get("window");
 
@@ -20,7 +21,11 @@ export default function HomeScreen({ navigation }) {
   const [upcomingExam, setUpcomingExam] = useState(null);
   const [userName, setUserName] = useState("");
   const [userNickname, setUserNickname] = useState("");
+  const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // AsyncStorage key for profile image
+  const PROFILE_IMAGE_KEY = '@profile_image';
 
   useEffect(() => {
     loadUserData();
@@ -151,7 +156,7 @@ export default function HomeScreen({ navigation }) {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         
-        // Set nickname from Firestore (this is what we saved during onboarding)
+        // Set nickname from Firestore
         if (userData.nickname) {
           setUserNickname(userData.nickname);
         }
@@ -164,10 +169,25 @@ export default function HomeScreen({ navigation }) {
         // Fallback if no user document exists
         setUserName(currentUser.email?.split('@')[0] || "User");
       }
+
+      // Load profile image from AsyncStorage
+      await loadProfileImage();
       
     } catch (err) {
       console.log("User data load error:", err);
       setUserName("User");
+    }
+  };
+
+  // Load profile image from AsyncStorage
+  const loadProfileImage = async () => {
+    try {
+      const savedImage = await AsyncStorage.getItem(PROFILE_IMAGE_KEY);
+      if (savedImage) {
+        setProfileImage(savedImage);
+      }
+    } catch (error) {
+      console.log("Error loading profile image:", error);
     }
   };
 
@@ -200,14 +220,22 @@ export default function HomeScreen({ navigation }) {
 
   const overallGPA = getOverallGPA();
 
+  // Get greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
+
   return (
     <View style={styles.container}>
       {/* Header with profile on the right */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
-            <Text style={styles.welcome}>Welcome back</Text>
-            <Text style={styles.userName}>{getDisplayName()}</Text>
+            <Text style={styles.welcome}>{getGreeting()}</Text>
+            <Text style={styles.userName}>{getDisplayName()} 👋</Text>
           </View>
 
           <TouchableOpacity 
@@ -215,14 +243,20 @@ export default function HomeScreen({ navigation }) {
             onPress={navigateToProfile}
             activeOpacity={0.7}
           >
-            <View style={styles.profileIcon}>
-              <Text style={styles.profileInitial}>
-                {getProfileInitial()}
-              </Text>
-            </View>
+            {profileImage ? (
+              <Image 
+                source={{ uri: profileImage }} 
+                style={styles.profileImage}
+              />
+            ) : (
+              <View style={styles.profileIcon}>
+                <Text style={styles.profileInitial}>
+                  {getProfileInitial()}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
-
       </View>
 
       <ScrollView 
@@ -230,29 +264,24 @@ export default function HomeScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* App Logo */}
-        <View style={styles.logoContainer}>
-          <Text style={styles.logo}>REMI</Text>
-          <View style={styles.logoSubtitleContainer}>
-            <View style={styles.logoDot}></View>
-            <Text style={styles.logoSubtitle}>Your Study Assistant</Text>
-          </View>
-        </View>
-
         {/* Summary Cards */}
         <View style={styles.summaryRow}>
           {/* TODAY CARD */}
           <View style={styles.summaryCard}>
             <View style={styles.cardHeader}>
-              <View style={[styles.cardIcon, { backgroundColor: "rgba(60, 99, 255, 0.2)" }]}>
-                <Text style={[styles.cardIconText, { color: "#3C63FF" }]}>📚</Text>
+              <View style={[styles.cardIcon, { backgroundColor: "rgba(83, 95, 253, 0.1)" }]}>
+                <Text style={[styles.cardIconText, { color: "#535FFD" }]}>📚</Text>
               </View>
-              <Text style={styles.cardTitle}>TODAY</Text>
+              <Text style={styles.cardTitle}>Today's Schedule</Text>
             </View>
             
             <View style={styles.cardContent}>
               {todayLectures.length === 0 ? (
-                <Text style={styles.summaryEmpty}>No lectures today</Text>
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyEmoji}>🎉</Text>
+                  <Text style={styles.summaryEmpty}>No lectures today</Text>
+                  <Text style={styles.emptySubtitle}>Enjoy your free time!</Text>
+                </View>
               ) : (
                 todayLectures.slice(0, 3).map((lec, idx) => (
                   <View key={idx} style={styles.lectureItem}>
@@ -268,7 +297,7 @@ export default function HomeScreen({ navigation }) {
                 ))
               )}
               {todayLectures.length > 3 && (
-                <Text style={styles.moreText}>+{todayLectures.length - 3} more</Text>
+                <Text style={styles.moreText}>+{todayLectures.length - 3} more lectures</Text>
               )}
             </View>
           </View>
@@ -276,20 +305,24 @@ export default function HomeScreen({ navigation }) {
           {/* GPA CARD */}
           <View style={styles.summaryCard}>
             <View style={styles.cardHeader}>
-              <View style={[styles.cardIcon, { backgroundColor: "rgba(255, 138, 35, 0.2)" }]}>
+              <View style={[styles.cardIcon, { backgroundColor: "rgba(255, 138, 35, 0.1)" }]}>
                 <Text style={[styles.cardIconText, { color: "#FF8A23" }]}>📊</Text>
               </View>
-              <Text style={styles.cardTitle}>GPA</Text>
+              <Text style={styles.cardTitle}>Academic Progress</Text>
             </View>
             
             <View style={styles.cardContent}>
               {gpaSummary.length === 0 ? (
-                <Text style={styles.summaryEmpty}>No GPA calculated yet</Text>
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyEmoji}>📈</Text>
+                  <Text style={styles.summaryEmpty}>Track your GPA</Text>
+                  <Text style={styles.emptySubtitle}>Calculate your first GPA</Text>
+                </View>
               ) : (
                 <>
                   {overallGPA && (
                     <View style={styles.overallGpaItem}>
-                      <Text style={styles.overallGpaLabel}>Overall</Text>
+                      <Text style={styles.overallGpaLabel}>CGPA</Text>
                       <Text style={styles.overallGpaValue}>{overallGPA}</Text>
                     </View>
                   )}
@@ -299,6 +332,9 @@ export default function HomeScreen({ navigation }) {
                       <Text style={styles.gpaValue}>{item.gpa}</Text>
                     </View>
                   ))}
+                  {gpaSummary.length > 2 && (
+                    <Text style={styles.moreText}>+{gpaSummary.length - 2} more semesters</Text>
+                  )}
                 </>
               )}
             </View>
@@ -309,8 +345,8 @@ export default function HomeScreen({ navigation }) {
         {upcomingExam && (
           <View style={styles.examCard}>
             <View style={styles.cardHeader}>
-              <View style={[styles.cardIcon, { backgroundColor: "rgba(83, 95, 253, 0.2)" }]}>
-                <Text style={[styles.cardIconText, { color: "#535FFD" }]}>⏰</Text>
+              <View style={[styles.cardIcon, { backgroundColor: "rgba(239, 68, 68, 0.1)" }]}>
+                <Text style={[styles.cardIconText, { color: "#EF4444" }]}>⏰</Text>
               </View>
               <View>
                 <Text style={styles.cardTitle}>UPCOMING EXAM</Text>
@@ -333,68 +369,83 @@ export default function HomeScreen({ navigation }) {
 
         {/* Quick Actions Grid */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>Quick Access</Text>
           <View style={styles.grid}>
             <MenuItem
               label="Timetable"
-              color="#3C63FF"
-              icon="⏱"
+              color="#535FFD"
+              icon="⏱️"
+              subtitle="View schedule"
               action={() => navigation.navigate("Timetable")}
             />
 
             <MenuItem
-              label="Chat"
+              label="AI Assistant"
               color="#FF8A23"
               icon="🤖"
+              subtitle="Chat with Remi"
               action={() => navigation.navigate("Chat")}
             />
 
             <MenuItem
-              label="GPA"
-              color="#2E2E38"
+              label="GPA Calculator"
+              color="#10B981"
               icon="📊"
+              subtitle="Track grades"
               action={() => navigation.navigate("GPA")}
             />
 
             <MenuItem
-              label="Edit Timetable"
-              color="#FF8A23"
-              icon="📝"
-              action={() => navigation.navigate("EditTimetable")}
-            />
-
-            <MenuItem
               label="Exams"
-              color="#2E2E38"
-              icon="🗓"
+              color="#EF4444"
+              icon="📝"
+              subtitle="Exam schedule"
               action={() => navigation.navigate("ExamTimetable")}
             />
 
             <MenuItem
-              label="Settings"
-              color="#3C63FF"
-              icon="⚙️"
-              action={() => navigation.navigate("Settings")}
+              label="Edit Timetable"
+              color="#8B5CF6"
+              icon="🗓️"
+              subtitle="New schedule"
+              action={() => navigation.navigate("EditTimetable")}
+            />
+
+            <MenuItem
+              label="Profile"
+              color="#64748B"
+              icon="👤"
+              subtitle="Your account"
+              action={() => navigation.navigate("Profile")}
             />
           </View>
         </View>
-      </ScrollView>
 
-      {/* Floating Voice Assistant */}
-      <View style={styles.voiceSection}>
-        <TouchableOpacity style={styles.voiceBtn}>
-          <View style={styles.voiceBtnInner}>
-            <Text style={styles.voiceIcon}>🎤</Text>
+        {/* Quick Stats */}
+        <View style={styles.statsSection}>
+          <Text style={styles.sectionTitle}>Quick Stats</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{todayLectures.length}</Text>
+              <Text style={styles.statLabel}>Today's Lectures</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{gpaSummary.length}</Text>
+              <Text style={styles.statLabel}>Semesters Tracked</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{upcomingExam ? 1 : 0}</Text>
+              <Text style={styles.statLabel}>Upcoming Exams</Text>
+            </View>
           </View>
-          <View style={styles.voicePulse}></View>
-        </TouchableOpacity>
-      </View>
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
 /* Menu Item Component */
-function MenuItem({ label, color, icon, action }) {
+function MenuItem({ label, color, icon, subtitle, action }) {
   return (
     <TouchableOpacity 
       style={[styles.menuItem, { borderLeftColor: color }]} 
@@ -403,6 +454,7 @@ function MenuItem({ label, color, icon, action }) {
     >
       <Text style={styles.menuIcon}>{icon}</Text>
       <Text style={styles.menuText}>{label}</Text>
+      <Text style={styles.menuSubtitle}>{subtitle}</Text>
     </TouchableOpacity>
   );
 }
@@ -410,18 +462,18 @@ function MenuItem({ label, color, icon, action }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#FAFAFA",
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 120,
+    paddingBottom: 40,
   },
   header: {
     paddingTop: 60,
     paddingHorizontal: 24,
-    paddingBottom: 20,
+    paddingBottom: 24,
     backgroundColor: "#FFFFFF",
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
@@ -434,8 +486,7 @@ const styles = StyleSheet.create({
   headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
+    alignItems: "flex-start",
   },
   headerLeft: {
     flex: 1,
@@ -443,13 +494,22 @@ const styles = StyleSheet.create({
   profileSection: {
     marginLeft: 15,
   },
+  profileImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: "#F1F5F9",
+  },
   profileIcon: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: "#3C63FF",
+    backgroundColor: "#535FFD",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#F1F5F9",
   },
   profileInitial: {
     color: "white",
@@ -457,59 +517,20 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   welcome: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#64748B",
-    marginBottom: 2,
+    marginBottom: 4,
   },
   userName: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "700",
-    color: "#1E293B",
-  },
-  logoutBtn: {
-    backgroundColor: "#F1F5F9",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  logoutText: {
-    color: "#64748B",
-    fontWeight: "600",
-    fontSize: 12,
-  },
-  logoContainer: {
-    alignItems: "center",
-    marginVertical: 20,
-    paddingHorizontal: 24,
-  },
-  logo: {
-    fontSize: 48,
-    fontWeight: "900",
-    color: "#1E293B",
-    letterSpacing: 1,
-  },
-  logoSubtitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  logoDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#3C63FF",
-    marginRight: 8,
-  },
-  logoSubtitle: {
-    fontSize: 14,
-    color: "#64748B",
-    fontWeight: "500",
+    color: "#383940",
   },
   summaryRow: {
     flexDirection: "row",
-    paddingHorizontal: 24,
-    marginBottom: 16,
+    paddingHorizontal: 20,
+    marginBottom: 20,
+    marginTop: 10,
   },
   summaryCard: {
     flex: 1,
@@ -527,15 +548,15 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 20,
     padding: 20,
-    marginHorizontal: 24,
-    marginBottom: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 5,
     borderLeftWidth: 4,
-    borderLeftColor: "#535FFD",
+    borderLeftColor: "#EF4444",
   },
   cardHeader: {
     flexDirection: "row",
@@ -543,20 +564,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardIcon: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
   cardIconText: {
-    fontSize: 18,
+    fontSize: 20,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1E293B",
+    color: "#383940",
   },
   examSubtitle: {
     fontSize: 12,
@@ -564,10 +585,31 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   cardContent: {
-    minHeight: 80,
+    minHeight: 100,
   },
   examContent: {
     minHeight: 60,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  emptyEmoji: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  summaryEmpty: {
+    color: "#383940",
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    color: "#94A3B8",
+    fontSize: 12,
+    textAlign: "center",
   },
   lectureItem: {
     flexDirection: "row",
@@ -578,7 +620,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#3C63FF",
+    backgroundColor: "#535FFD",
     marginRight: 12,
     marginTop: 6,
   },
@@ -588,7 +630,7 @@ const styles = StyleSheet.create({
   lectureCourse: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1E293B",
+    color: "#383940",
     marginBottom: 2,
   },
   lectureTime: {
@@ -630,22 +672,15 @@ const styles = StyleSheet.create({
   gpaValue: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1E293B",
+    color: "#383940",
   },
   overallGpaValue: {
     fontSize: 18,
     fontWeight: "800",
     color: "#FF8A23",
   },
-  summaryEmpty: {
-    color: "#94A3B8",
-    fontSize: 14,
-    fontStyle: "italic",
-    textAlign: "center",
-    marginTop: 20,
-  },
   moreText: {
-    color: "#3C63FF",
+    color: "#535FFD",
     fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
@@ -654,7 +689,7 @@ const styles = StyleSheet.create({
   examCourse: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1E293B",
+    color: "#383940",
     marginBottom: 8,
   },
   examDetails: {
@@ -664,7 +699,7 @@ const styles = StyleSheet.create({
   },
   examDate: {
     fontSize: 14,
-    color: "#535FFD",
+    color: "#EF4444",
     fontWeight: "600",
   },
   examTime: {
@@ -678,13 +713,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   section: {
-    paddingHorizontal: 24,
-    marginTop: 20,
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  statsSection: {
+    paddingHorizontal: 20,
+    marginBottom: 40,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1E293B",
+    color: "#383940",
     marginBottom: 16,
   },
   grid: {
@@ -693,13 +732,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   menuItem: {
-    width: (width - 72) / 3,
-    height: 100,
+    width: (width - 60) / 2,
     backgroundColor: "white",
     borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
+    padding: 16,
+    marginBottom: 12,
     borderLeftWidth: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -708,56 +745,45 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   menuIcon: {
-    fontSize: 28,
+    fontSize: 24,
     marginBottom: 8,
   },
   menuText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "600",
-    color: "#1E293B",
+    color: "#383940",
+    marginBottom: 4,
+  },
+  menuSubtitle: {
+    fontSize: 11,
+    color: "#64748B",
+  },
+  statsGrid: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  statItem: {
+    flex: 1,
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 6,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#535FFD",
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#64748B",
     textAlign: "center",
-  },
-  voiceSection: {
-    position: "absolute",
-    bottom: 30,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-  },
-  voiceBtn: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "#3C63FF",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#3C63FF",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  voiceBtnInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#3C63FF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  voiceIcon: {
-    fontSize: 26,
-    color: "white",
-  },
-  voicePulse: {
-    position: "absolute",
-    top: -5,
-    left: -5,
-    right: -5,
-    bottom: -5,
-    borderRadius: 40,
-    borderWidth: 2,
-    borderColor: "rgba(60, 99, 255, 0.3)",
-    zIndex: -1,
   },
 });
