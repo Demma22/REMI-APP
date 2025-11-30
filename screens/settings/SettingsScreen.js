@@ -310,7 +310,7 @@ export default function SettingsScreen({ navigation }) {
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
-                  <Text style={styles.menuIcon}>🚪</Text>
+
                   <Text style={styles.logoutButtonText}>Logout</Text>
                 </>
               )}
