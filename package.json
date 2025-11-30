@@ -20,6 +20,8 @@
     "@react-navigation/stack": "^7.6.2",
     "expo": "~54.0.25",
     "expo-auth-session": "^7.0.9",
+    "expo-build-properties": "~1.0.9",
+    "expo-constants": "~18.0.10",
     "expo-firebase-recaptcha": "^1.4.4",
     "expo-image-picker": "~17.0.8",
     "expo-speech": "~14.0.7",
