@@ -22,14 +22,38 @@ export default function GPACalculationScreen({ route, navigation }) {
   const [userData, setUserData] = useState(null);
   const [selectedSemester, setSelectedSemester] = useState(initialSemesterKey);
   const [showSemesterPicker, setShowSemesterPicker] = useState(false);
-  const [grades, setGrades] = useState({});
+  const [marks, setMarks] = useState({});
   const [creditUnits, setCreditUnits] = useState({});
   const [calculatedGPA, setCalculatedGPA] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const GRADE_POINTS = { 
-    A: 5.0, "A-": 4.7, "B+": 4.3, B: 4.0, "B-": 3.7, 
-    "C+": 3.3, C: 3.0, "C-": 2.7, D: 2.0, F: 0.0 
+  // ISBAT University Grading System (NCHE Uganda)
+  const getGradePoint = (marks) => {
+    const numericMarks = parseFloat(marks);
+    if (isNaN(numericMarks)) return 0;
+    
+    if (numericMarks >= 80) return 5.0;
+    if (numericMarks >= 75) return 4.5;
+    if (numericMarks >= 70) return 4.0;
+    if (numericMarks >= 65) return 3.5;
+    if (numericMarks >= 60) return 3.0;
+    if (numericMarks >= 55) return 2.5;
+    if (numericMarks >= 50) return 2.0;
+    return 0.0;
+  };
+
+  const getGradeLetter = (marks) => {
+    const numericMarks = parseFloat(marks);
+    if (isNaN(numericMarks)) return "F";
+    
+    if (numericMarks >= 80) return "A";
+    if (numericMarks >= 75) return "A-";
+    if (numericMarks >= 70) return "B+";
+    if (numericMarks >= 65) return "B";
+    if (numericMarks >= 60) return "B-";
+    if (numericMarks >= 55) return "C+";
+    if (numericMarks >= 50) return "C";
+    return "F";
   };
 
   useEffect(() => { 
@@ -52,9 +76,7 @@ export default function GPACalculationScreen({ route, navigation }) {
         const data = userDoc.data();
         setUserData(data);
         
-        // Load existing GPA data if available
         if (data.gpa_data) {
-          // You could pre-populate grades/credits if previously saved
           console.log("Existing GPA data:", data.gpa_data);
         }
       }
@@ -72,26 +94,30 @@ export default function GPACalculationScreen({ route, navigation }) {
     const semesterNumber = semesterKey.replace('semester', '');
     const courses = userData.units?.[semesterNumber] || [];
     
-    const initialGrades = {};
+    const initialMarks = {};
     const initialCredits = {};
     
     courses.forEach(course => {
-      initialGrades[course] = "";
+      initialMarks[course] = "";
       initialCredits[course] = "";
     });
     
-    setGrades(initialGrades);
+    setMarks(initialMarks);
     setCreditUnits(initialCredits);
     setCalculatedGPA(null);
   };
 
-  const handleGradeChange = (courseName, value) => {
-    setGrades(prev => ({ ...prev, [courseName]: value }));
+  const handleMarksChange = (courseName, value) => {
+    // Allow only numbers and decimal point
+    const cleanedValue = value.replace(/[^0-9.]/g, '');
+    setMarks(prev => ({ ...prev, [courseName]: cleanedValue }));
     setCalculatedGPA(null);
   };
 
   const handleCreditChange = (courseName, value) => {
-    setCreditUnits(prev => ({ ...prev, [courseName]: value }));
+    // Allow only numbers and decimal point
+    const cleanedValue = value.replace(/[^0-9.]/g, '');
+    setCreditUnits(prev => ({ ...prev, [courseName]: cleanedValue }));
     setCalculatedGPA(null);
   };
 
@@ -101,32 +127,37 @@ export default function GPACalculationScreen({ route, navigation }) {
       return;
     }
 
-    let totalUnits = 0;
-    let totalPoints = 0;
+    let totalCreditUnits = 0;
+    let totalQualityPoints = 0;
     let validEntries = 0;
 
     const semesterNumber = selectedSemester.replace('semester', '');
     const courses = userData?.units?.[semesterNumber] || [];
 
     courses.forEach(course => {
-      const grade = (grades[course] || "").toUpperCase().trim();
-      const credit = parseFloat(creditUnits[course] || "0");
+      const courseMarks = parseFloat(marks[course] || "0");
+      const creditUnitsValue = parseFloat(creditUnits[course] || "0");
 
-      if (GRADE_POINTS[grade] !== undefined && credit > 0) {
-        totalUnits += credit;
-        totalPoints += credit * GRADE_POINTS[grade];
+      if (courseMarks >= 0 && courseMarks <= 100 && creditUnitsValue > 0) {
+        const gradePoint = getGradePoint(courseMarks);
+        totalCreditUnits += creditUnitsValue;
+        totalQualityPoints += creditUnitsValue * gradePoint;
         validEntries++;
+        
+        console.log(`📊 ${course}: ${courseMarks} marks = ${gradePoint} points × ${creditUnitsValue} credits = ${creditUnitsValue * gradePoint} quality points`);
       }
     });
 
     if (validEntries === 0) {
-      Alert.alert("No Valid Entries", "Please enter at least one valid grade and credit unit.");
+      Alert.alert("No Valid Entries", "Please enter at least one valid marks (0-100) and credit units.");
       return;
     }
 
-    const result = totalPoints / totalUnits;
-    const formattedGPA = isNaN(result) ? "0.00" : result.toFixed(2);
+    const gpa = totalQualityPoints / totalCreditUnits;
+    const formattedGPA = isNaN(gpa) ? "0.00" : gpa.toFixed(2);
     setCalculatedGPA(formattedGPA);
+
+    console.log(`🎯 GPA Calculation: ${totalQualityPoints} quality points ÷ ${totalCreditUnits} credits = ${formattedGPA} GPA`);
 
     // Save to Firebase Firestore
     try {
@@ -138,13 +169,23 @@ export default function GPACalculationScreen({ route, navigation }) {
         semester: selectedSemester,
         semesterNumber: parseInt(semesterNumber),
         gpa: parseFloat(formattedGPA),
-        courses: courses.map(course => ({
-          name: course,
-          grade: grades[course] || "",
-          creditUnits: parseFloat(creditUnits[course] || "0"),
-          points: GRADE_POINTS[(grades[course] || "").toUpperCase().trim()] || 0
-        })).filter(course => course.grade && course.creditUnits > 0),
-        totalCreditUnits: totalUnits,
+        courses: courses.map(course => {
+          const courseMarks = parseFloat(marks[course] || "0");
+          const creditUnitsValue = parseFloat(creditUnits[course] || "0");
+          const gradePoint = getGradePoint(courseMarks);
+          const gradeLetter = getGradeLetter(courseMarks);
+          
+          return {
+            name: course,
+            marks: courseMarks,
+            grade: gradeLetter,
+            creditUnits: creditUnitsValue,
+            gradePoints: gradePoint,
+            qualityPoints: creditUnitsValue * gradePoint
+          };
+        }).filter(course => course.marks > 0 && course.creditUnits > 0),
+        totalCreditUnits: totalCreditUnits,
+        totalQualityPoints: totalQualityPoints,
         calculatedAt: new Date().toISOString()
       };
 
@@ -156,7 +197,13 @@ export default function GPACalculationScreen({ route, navigation }) {
         }
       }, { merge: true });
 
-      Alert.alert("Success", `GPA for ${selectedSemester}: ${formattedGPA}\n\nSaved to your profile!`);
+      Alert.alert(
+        "Success", 
+        `GPA for ${selectedSemester}: ${formattedGPA}\n\n` +
+        `Based on ${validEntries} course${validEntries !== 1 ? 's' : ''}\n` +
+        `Total Credits: ${totalCreditUnits}\n` +
+        `Saved to your profile!`
+      );
     } catch (error) {
       console.log("Save error:", error);
       Alert.alert("Error", "Could not save GPA to your profile");
@@ -250,7 +297,7 @@ export default function GPACalculationScreen({ route, navigation }) {
 
             {/* Courses Form */}
             <View style={styles.coursesSection}>
-              <Text style={styles.sectionTitle}>Enter Grades & Credit Units</Text>
+              <Text style={styles.sectionTitle}>Enter Marks & Credit Units</Text>
               
               {courses.map((course, index) => (
                 <View key={index} style={styles.courseCard}>
@@ -258,14 +305,21 @@ export default function GPACalculationScreen({ route, navigation }) {
                   
                   <View style={styles.inputRow}>
                     <View style={styles.inputGroup}>
-                      <Text style={styles.inputLabel}>Grade</Text>
+                      <Text style={styles.inputLabel}>Marks (0-100)</Text>
                       <TextInput
-                        style={styles.gradeInput}
-                        placeholder="A, B+, B..."
-                        value={grades[course] || ""}
-                        onChangeText={(v) => handleGradeChange(course, v)}
+                        style={styles.marksInput}
+                        placeholder="75, 80, 65..."
+                        keyboardType="numeric"
+                        value={marks[course] || ""}
+                        onChangeText={(v) => handleMarksChange(course, v)}
                         placeholderTextColor="#94A3B8"
+                        maxLength={5}
                       />
+                      {marks[course] && (
+                        <Text style={styles.gradeIndicator}>
+                          Grade: {getGradeLetter(marks[course])} ({getGradePoint(marks[course]).toFixed(1)} pts)
+                        </Text>
+                      )}
                     </View>
                     
                     <View style={styles.inputGroup}>
@@ -277,6 +331,7 @@ export default function GPACalculationScreen({ route, navigation }) {
                         value={creditUnits[course] || ""}
                         onChangeText={(v) => handleCreditChange(course, v)}
                         placeholderTextColor="#94A3B8"
+                        maxLength={3}
                       />
                     </View>
                   </View>
@@ -314,14 +369,48 @@ export default function GPACalculationScreen({ route, navigation }) {
 
         {/* Grade Guide */}
         <View style={styles.guideCard}>
-          <Text style={styles.guideTitle}>Grade Points Reference</Text>
+          <Text style={styles.guideTitle}>Grading System</Text>
           <View style={styles.gradeGrid}>
-            {Object.entries(GRADE_POINTS).map(([grade, points]) => (
-              <View key={grade} style={styles.gradeItem}>
-                <Text style={styles.gradeText}>{grade}</Text>
-                <Text style={styles.pointsText}>{points.toFixed(1)} pts</Text>
-              </View>
-            ))}
+            <View style={styles.gradeItem}>
+              <Text style={styles.gradeText}>80-100</Text>
+              <Text style={styles.pointsText}>5.0 pts</Text>
+              <Text style={styles.gradeLetter}>A</Text>
+            </View>
+            <View style={styles.gradeItem}>
+              <Text style={styles.gradeText}>75-79</Text>
+              <Text style={styles.pointsText}>4.5 pts</Text>
+              <Text style={styles.gradeLetter}>A-</Text>
+            </View>
+            <View style={styles.gradeItem}>
+              <Text style={styles.gradeText}>70-74</Text>
+              <Text style={styles.pointsText}>4.0 pts</Text>
+              <Text style={styles.gradeLetter}>B+</Text>
+            </View>
+            <View style={styles.gradeItem}>
+              <Text style={styles.gradeText}>65-69</Text>
+              <Text style={styles.pointsText}>3.5 pts</Text>
+              <Text style={styles.gradeLetter}>B</Text>
+            </View>
+            <View style={styles.gradeItem}>
+              <Text style={styles.gradeText}>60-64</Text>
+              <Text style={styles.pointsText}>3.0 pts</Text>
+              <Text style={styles.gradeLetter}>B-</Text>
+            </View>
+            <View style={styles.gradeItem}>
+              <Text style={styles.gradeText}>55-59</Text>
+              <Text style={styles.pointsText}>2.5 pts</Text>
+              <Text style={styles.gradeLetter}>C+</Text>
+            </View>
+            <View style={styles.gradeItem}>
+              <Text style={styles.gradeText}>50-54</Text>
+              <Text style={styles.pointsText}>2.0 pts</Text>
+              <Text style={styles.gradeLetter}>C</Text>
+            </View>
+            <View style={styles.gradeItem}>
+              <Text style={styles.gradeText}>0-49</Text>
+              <Text style={styles.pointsText}>0.0 pts</Text>
+              <Text style={styles.gradeLetter}>F</Text>
+            </View>
           </View>
         </View>
 
@@ -555,7 +644,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#383940",
   },
-  gradeInput: {
+  marksInput: {
     backgroundColor: "#FAFAFA",
     borderWidth: 1,
     borderColor: "#F1F5F9",
@@ -573,6 +662,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#383940",
     textAlign: "center",
+  },
+  gradeIndicator: {
+    fontSize: 12,
+    color: "#535FFD",
+    fontWeight: "500",
+    marginTop: 4,
   },
   calculateButton: {
     backgroundColor: "#535FFD",
@@ -679,17 +774,25 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     backgroundColor: "#FAFAFA",
+    marginBottom: 12,
   },
   gradeText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
     color: "#383940",
     marginBottom: 4,
+    textAlign: "center",
   },
   pointsText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#64748B",
     fontWeight: "500",
+    marginBottom: 2,
+  },
+  gradeLetter: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#535FFD",
   },
   modalOverlay: {
     flex: 1,
