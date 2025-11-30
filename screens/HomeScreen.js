@@ -412,11 +412,11 @@ export default function HomeScreen({ navigation }) {
             />
 
             <MenuItem
-              label="Profile"
+              label="Settings"
               color="#64748B"
-              icon="👤"
+              icon="⚙️"
               subtitle="Your account"
-              action={() => navigation.navigate("Profile")}
+              action={() => navigation.navigate("Settings")}
             />
           </View>
         </View>
