@@ -22,6 +22,7 @@ export default function ProfileScreen({ navigation }) {
   const [userEmail, setUserEmail] = useState("");
   const [profileImage, setProfileImage] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   // AsyncStorage keys
   const PROFILE_IMAGE_KEY = '@profile_image';
@@ -98,6 +99,29 @@ export default function ProfileScreen({ navigation }) {
       throw error;
     }
   };
+
+    const handleLogout = async () => {
+      Alert.alert(
+        "Logout",
+        "Are you sure you want to logout?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Logout", 
+            style: "destructive",
+            onPress: async () => {
+              setSigningOut(true);
+              try {
+                await signOut(auth);
+              } catch (error) {
+                console.log("Logout error:", error);
+                setSigningOut(false);
+              }
+            }
+          }
+        ]
+      );
+    };
 
   // Calculate program completion percentage
   const getCompletionPercentage = () => {
@@ -451,20 +475,8 @@ export default function ProfileScreen({ navigation }) {
               <Text style={styles.actionArrow}>›</Text>
             </TouchableOpacity>
 
-            {/* Debug button - remove in production */}
-            {__DEV__ && (
-              <TouchableOpacity 
-                style={[styles.actionButton, { backgroundColor: '#FF6B6B' }]}
-                onPress={clearAllData}
-              >
-                <Text style={styles.actionIcon}>🐛</Text>
-                <View style={styles.actionTextContainer}>
-                  <Text style={styles.actionTitle}>Clear All Data</Text>
-                  <Text style={styles.actionSubtitle}>Development only - resets app</Text>
-                </View>
-                <Text style={styles.actionArrow}>›</Text>
-              </TouchableOpacity>
-            )}
+
+
           </View>
 
           {/* Account Info */}
@@ -497,6 +509,22 @@ export default function ProfileScreen({ navigation }) {
               </View>
             </View>
           </View>
+
+          <TouchableOpacity 
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            disabled={signingOut}
+          >
+            {signingOut ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+              
+                <Text style={styles.logoutButtonText}>Logout</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
 
           <View style={styles.bottomSpacing} />
         </View>
@@ -790,6 +818,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#383940",
+  },
+  bottomSpacing: {
+    height: 20,
+  },
+    logoutButton: {
+    backgroundColor: "#EF4444",
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+    shadowColor: "#EF4444",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  logoutButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+    marginLeft: 8,
   },
   bottomSpacing: {
     height: 20,
