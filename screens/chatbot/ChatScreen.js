@@ -39,16 +39,17 @@ export default function ChatScreen({ navigation }) {
   const [isTyping, setIsTyping] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [userData, setUserData] = useState(null); // Cache user data
   const flatRef = useRef();
   const inputRef = useRef();
 
   // Simple dots animation state
   const [dots, setDots] = useState("");
 
-  // Animated dots that cycle every 400ms - FIXED LOGIC
+  // Animated dots that cycle every 400ms
   useEffect(() => {
     let interval;
-    if (loading) { // Changed from (loading || isTyping) to just (loading)
+    if (loading) {
       console.log("🔄 Starting dots animation");
       interval = setInterval(() => {
         setDots(prev => {
@@ -66,7 +67,7 @@ export default function ChatScreen({ navigation }) {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [loading]); // Only depend on loading state
+  }, [loading]);
 
   // Keyboard listeners
   useEffect(() => {
@@ -92,12 +93,32 @@ export default function ChatScreen({ navigation }) {
     };
   }, []);
 
-  // Load chat history on mount
+  // Load user data and chat history on mount
   useEffect(() => {
+    loadUserData();
     loadChatHistory();
   }, []);
 
-  // Load entire chat history from Firestore (no limit)
+  // Load user data once and cache it
+  const loadUserData = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+
+      const userDocRef = doc(db, "users", currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setUserData(userData);
+        console.log("📊 User data loaded and cached");
+      }
+    } catch (error) {
+      console.log("Error loading user data:", error);
+    }
+  };
+
+  // Load entire chat history from Firestore
   const loadChatHistory = async () => {
     try {
       const chatRef = collection(db, "users", auth.currentUser.uid, "chat_history");
@@ -222,6 +243,65 @@ export default function ChatScreen({ navigation }) {
     await saveChatMessage(fullText, false);
   };
 
+  // Keywords that indicate timetable/data-related queries
+  const isDataRelatedQuery = (text) => {
+    const dataKeywords = [
+      // Timetable related
+      'timetable', 'schedule', 'class', 'lecture', 'room', 'time', 'today', 'tomorrow',
+      'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+      'when is', 'what time', 'where is', 'which room',
+      
+      // Academic related
+      'gpa', 'grade', 'semester', 'course', 'unit', 'credit', 'exam', 'test',
+      'assignment', 'homework', 'project', 'deadline',
+      
+      // Personal data
+      'my', 'I have', 'do I have', 'what do I have'
+    ];
+
+    const lowerText = text.toLowerCase();
+    return dataKeywords.some(keyword => lowerText.includes(keyword));
+  };
+
+  // Get only necessary data based on query type
+  const getContextData = (queryText) => {
+    if (!isDataRelatedQuery(queryText)) {
+      console.log("🔍 General query - no data needed");
+      return {}; // Return empty object for general queries
+    }
+
+    console.log("📊 Data-related query - loading relevant data");
+    
+    const contextData = {};
+    
+    if (userData) {
+      // Only include timetable if query is timetable-related
+      if (queryText.toLowerCase().includes('timetable') || 
+          queryText.toLowerCase().includes('schedule') ||
+          queryText.toLowerCase().includes('class') ||
+          queryText.toLowerCase().includes('lecture')) {
+        contextData.timetable = userData.timetable || {};
+      }
+
+      // Only include GPA data if query is GPA-related
+      if (queryText.toLowerCase().includes('gpa') || 
+          queryText.toLowerCase().includes('grade')) {
+        contextData.gpa_data = userData.gpa_data || {};
+      }
+
+      // Include basic user info for personal queries
+      if (queryText.toLowerCase().includes('my') || 
+          queryText.toLowerCase().includes('I have')) {
+        contextData.course = userData.course;
+        contextData.current_semester = userData.current_semester;
+        contextData.nickname = userData.nickname;
+      }
+    }
+
+    console.log("📦 Sending context data:", Object.keys(contextData));
+    return contextData;
+  };
+
   const send = async () => {
     const text = input.trim();
     if (!text) return;
@@ -235,38 +315,29 @@ export default function ChatScreen({ navigation }) {
 
     await addMessage(text, "user");
     setInput("");
-    setLoading(true); // This should trigger the thinking indicator immediately
+    setLoading(true);
 
     console.log("📤 Sending message to REMI:", {
       userId: currentUser.uid,
       query: text
     });
 
-    // Get timetable data for context
-    let timetable = {};
     try {
-      const userDocRef = doc(db, "users", currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        timetable = userData.timetable || {};
-        console.log("📅 Loaded timetable data:", Object.keys(timetable));
-      }
-    } catch (error) {
-      console.log("Error loading timetable:", error);
-    }
+      // Smart data loading - only get what's needed
+      const contextData = getContextData(text);
 
-    try {
       const requestBody = {
         userId: currentUser.uid,
         query: text,
-        timetable: timetable
+        ...contextData // Only include relevant data
       };
 
-      console.log("🔄 Sending request to server:", requestBody);
+      console.log("🔄 Sending optimized request to server:", {
+        query: text,
+        dataIncluded: Object.keys(contextData)
+      });
 
-      const res = await fetch("http://192.168.1.64/ask", {
+      const res = await fetch("https://ai-backend-yl4w.onrender.com/ask", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -433,6 +504,7 @@ export default function ChatScreen({ navigation }) {
   );
 }
 
+// ... (keep the same styles as before)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
