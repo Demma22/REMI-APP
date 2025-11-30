@@ -55,11 +55,9 @@ export default function SplashIntro({ navigation }) {
         >
           {/* Logo Section */}
           <View style={styles.logoSection}>
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoIcon}>🎓</Text>
-            </View>
+
             <Text style={styles.appName}>REMI</Text>
-            <Text style={styles.tagline}>Your Smart Academic Companion</Text>
+            <Text style={styles.tagline}>Your Academic Companion</Text>
           </View>
 
           {/* Features Section */}
@@ -69,7 +67,7 @@ export default function SplashIntro({ navigation }) {
                 <Text style={[styles.featureEmoji, { color: '#535FFD' }]}>📅</Text>
               </View>
               <View style={styles.featureText}>
-                <Text style={styles.featureTitle}>Smart Timetable</Text>
+                <Text style={styles.featureTitle}>Timetable Tracker</Text>
                 <Text style={styles.featureDesc}>Organize your classes and schedule</Text>
               </View>
             </View>
@@ -191,7 +189,7 @@ const styles = StyleSheet.create({
     fontSize: 40,
   },
   appName: {
-    fontSize: 48,
+    fontSize: 60,
     fontWeight: "900",
     color: "#383940",
     marginBottom: 8,

@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -28,13 +28,13 @@
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.remi",
       "permissions": [
+        "android.permission.RECORD_AUDIO",
         "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-
     "plugins": [
       [
         "expo-build-properties",
@@ -50,12 +50,17 @@
         }
       ]
     ],
-
     "extra": {
       "eas": {
         "projectId": "887d9c34-e01a-4648-9f5c-234b7c283b39"
       }
     },
-    "owner": "demma44"
+    "owner": "demma44",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/887d9c34-e01a-4648-9f5c-234b7c283b39"
+    }
   }
 }
