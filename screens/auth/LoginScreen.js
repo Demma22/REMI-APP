@@ -43,6 +43,26 @@ export default function LoginScreen({ navigation }) {
     ]).start();
   }, []);
 
+  const validateForm = () => {
+    if (!email.trim()) {
+      setError("Please enter your email address");
+      return false;
+    }
+
+    if (!email.includes('@') || !email.includes('.')) {
+      setError("Please enter a valid email address");
+      return false;
+    }
+
+    if (!password.trim()) {
+      setError("Please enter your password");
+      return false;
+    }
+
+    setError("");
+    return true;
+  };
+
   const checkOnboardingStatus = async (userId) => {
     try {
       const userDocRef = doc(db, "users", userId);
@@ -60,8 +80,8 @@ export default function LoginScreen({ navigation }) {
   };
 
   const login = async () => {
-    if (!email || !password) {
-      setError("Please fill in all fields");
+    // Validate form before attempting login
+    if (!validateForm()) {
       return;
     }
 
@@ -156,7 +176,6 @@ export default function LoginScreen({ navigation }) {
             {/* Header Section */}
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-
                 <Text style={styles.title}>Welcome Back</Text>
                 <Text style={styles.subtitle}>
                   Sign in to continue your academic journey
@@ -186,7 +205,11 @@ export default function LoginScreen({ navigation }) {
                   value={email}
                   autoCapitalize="none"
                   keyboardType="email-address"
-                  onChangeText={setEmail}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    // Clear error when user starts typing
+                    if (error && text.trim()) setError("");
+                  }}
                   onFocus={() => setFocusedInput('email')}
                   onBlur={() => setFocusedInput(null)}
                   placeholderTextColor="#94A3B8"
@@ -206,7 +229,11 @@ export default function LoginScreen({ navigation }) {
                     ]}
                     value={password}
                     secureTextEntry={!showPassword}
-                    onChangeText={setPassword}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      // Clear error when user starts typing
+                      if (error && text.trim()) setError("");
+                    }}
                     onFocus={() => setFocusedInput('password')}
                     onBlur={() => setFocusedInput(null)}
                     placeholderTextColor="#94A3B8"
@@ -230,10 +257,11 @@ export default function LoginScreen({ navigation }) {
               <TouchableOpacity 
                 style={[
                   styles.loginButton,
-                  isLoading && styles.loginButtonDisabled
+                  isLoading && styles.loginButtonDisabled,
+                  (!email.trim() || !password.trim()) && styles.loginButtonDisabled
                 ]}
                 onPress={login}
-                disabled={isLoading}
+                disabled={isLoading || !email.trim() || !password.trim()}
               >
                 <Text style={styles.loginButtonText}>
                   {isLoading ? "Signing In..." : "Sign In"}
@@ -267,7 +295,6 @@ export default function LoginScreen({ navigation }) {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
