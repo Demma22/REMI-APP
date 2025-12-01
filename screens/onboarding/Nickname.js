@@ -96,7 +96,7 @@ export default function Nickname({ navigation }) {
           <View style={styles.titleSection}>
             <Text style={styles.title}>What should I call you?</Text>
             <Text style={styles.subtitle}>
-              Choose a nickname that we can use to personalize your experience
+              Choose a nickname that I can use to personalize your experience
             </Text>
           </View>
 
