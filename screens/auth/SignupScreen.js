@@ -9,13 +9,14 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
-  Animated
+  Alert,
+  ActivityIndicator
 } from "react-native";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase";
 
-const { width, height } = Dimensions.get("window");
+const { height } = Dimensions.get("window");
 
 export default function SignupScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -23,27 +24,8 @@ export default function SignupScreen({ navigation }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [focusedInput, setFocusedInput] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const fadeAnim = new Animated.Value(0);
-  const slideAnim = new Animated.Value(30);
-
-  React.useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
 
   const validateForm = () => {
     if (!email.trim()) {
@@ -81,7 +63,6 @@ export default function SignupScreen({ navigation }) {
   };
 
   const signup = async () => {
-    // Validate form before attempting signup
     if (!validateForm()) {
       return;
     }
@@ -93,7 +74,6 @@ export default function SignupScreen({ navigation }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
       const user = userCredential.user;
       
-      // Create user document in Firestore with onboarding flag
       await setDoc(doc(db, "users", user.uid), {
         email: email.trim(),
         created_at: new Date(),
@@ -109,15 +89,12 @@ export default function SignupScreen({ navigation }) {
         chat_history: []
       });
 
-      console.log("✅ User account created and document initialized");
-      
-      // Navigate to onboarding nickname screen
-      navigation.replace("Nickname");
+      console.log("✅ User account created");
+      navigation.navigate("Nickname");
       
     } catch (error) {
       console.error("Signup error:", error);
       
-      // Handle specific Firebase auth errors
       if (error.code === 'auth/email-already-in-use') {
         setError("An account with this email already exists");
       } else if (error.code === 'auth/invalid-email') {
@@ -127,9 +104,12 @@ export default function SignupScreen({ navigation }) {
       } else {
         setError("Failed to create account. Please try again.");
       }
-    } finally {
+      
       setIsLoading(false);
+      return; // Stay on signup page
     }
+    
+    setIsLoading(false);
   };
 
   const isFormValid = () => {
@@ -142,16 +122,9 @@ export default function SignupScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Background Design Elements */}
-      <View style={styles.background}>
-        <View style={[styles.circle, styles.circle1]} />
-        <View style={[styles.circle, styles.circle2]} />
-        <View style={[styles.circle, styles.circle3]} />
-      </View>
-
       <KeyboardAvoidingView 
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
       >
         <ScrollView 
@@ -159,171 +132,138 @@ export default function SignupScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Animated.View 
-            style={[
-              styles.content,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
-            ]}
-          >
-            {/* Header Section */}
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <Text style={styles.title}>Create Account</Text>
-                <Text style={styles.subtitle}>
-                  Join REMI and take control of your academic journey
-                </Text>
-              </View>
+          {/* Header Section */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>
+              Sign up to get started with REMI
+            </Text>
+          </View>
+
+          {/* Error Message */}
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorIcon}>⚠️</Text>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          {/* Form Section */}
+          <View style={styles.form}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Email Address</Text>
+              <TextInput
+                placeholder="Enter your email"
+                style={styles.input}
+                value={email}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (error) setError("");
+                }}
+                placeholderTextColor="#94A3B8"
+                autoComplete="email"
+                editable={!isLoading}
+              />
             </View>
 
-            {/* Error Message */}
-            {error ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorIcon}>⚠️</Text>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
-
-            {/* Form Section */}
-            <View style={styles.form}>
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Email Address</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <View style={styles.passwordContainer}>
                 <TextInput
-                  placeholder="Enter your email"
-                  style={[
-                    styles.input,
-                    focusedInput === 'email' && styles.inputFocused
-                  ]}
-                  value={email}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
+                  placeholder="Create a password"
+                  style={styles.passwordInput}
+                  value={password}
+                  secureTextEntry={!showPassword}
                   onChangeText={(text) => {
-                    setEmail(text);
-                    // Clear error when user starts typing
-                    if (error && text.trim()) setError("");
+                    setPassword(text);
+                    if (error) setError("");
                   }}
-                  onFocus={() => setFocusedInput('email')}
-                  onBlur={() => setFocusedInput(null)}
                   placeholderTextColor="#94A3B8"
-                  autoComplete="email"
+                  autoComplete="password-new"
+                  editable={!isLoading}
                 />
+                <TouchableOpacity 
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.eyeIcon}>
+                    {showPassword ? "👁️" : "👁️‍🗨️"}
+                  </Text>
+                </TouchableOpacity>
               </View>
+              <Text style={styles.passwordHint}>Must be at least 6 characters</Text>
+            </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Password</Text>
-                <View style={styles.passwordContainer}>
-                  <TextInput
-                    placeholder="Create a password"
-                    style={[
-                      styles.passwordInput,
-                      focusedInput === 'password' && styles.inputFocused
-                    ]}
-                    value={password}
-                    secureTextEntry={!showPassword}
-                    onChangeText={(text) => {
-                      setPassword(text);
-                      // Clear error when user starts typing
-                      if (error && text.trim()) setError("");
-                    }}
-                    onFocus={() => setFocusedInput('password')}
-                    onBlur={() => setFocusedInput(null)}
-                    placeholderTextColor="#94A3B8"
-                    autoComplete="password-new"
-                  />
-                  <TouchableOpacity 
-                    style={styles.eyeButton}
-                    onPress={() => setShowPassword(!showPassword)}
-                  >
-                    <Text style={styles.eyeIcon}>
-                      {showPassword ? "👁️" : "👁️‍🗨️"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.passwordHint}>Must be at least 6 characters</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Confirm Password</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  placeholder="Confirm your password"
+                  style={styles.passwordInput}
+                  value={confirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    if (error) setError("");
+                  }}
+                  placeholderTextColor="#94A3B8"
+                  autoComplete="password-new"
+                  editable={!isLoading}
+                />
+                <TouchableOpacity 
+                  style={styles.eyeButton}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.eyeIcon}>
+                    {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
+                  </Text>
+                </TouchableOpacity>
               </View>
-
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Confirm Password</Text>
-                <View style={styles.passwordContainer}>
-                  <TextInput
-                    placeholder="Confirm your password"
-                    style={[
-                      styles.passwordInput,
-                      focusedInput === 'confirmPassword' && styles.inputFocused
-                    ]}
-                    value={confirmPassword}
-                    secureTextEntry={!showConfirmPassword}
-                    onChangeText={(text) => {
-                      setConfirmPassword(text);
-                      // Clear error when user starts typing
-                      if (error && text.trim()) setError("");
-                    }}
-                    onFocus={() => setFocusedInput('confirmPassword')}
-                    onBlur={() => setFocusedInput(null)}
-                    placeholderTextColor="#94A3B8"
-                    autoComplete="password-new"
-                  />
-                  <TouchableOpacity 
-                    style={styles.eyeButton}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    <Text style={styles.eyeIcon}>
-                      {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <TouchableOpacity 
-                style={[
-                  styles.signupButton,
-                  isLoading && styles.signupButtonDisabled,
-                  !isFormValid() && styles.signupButtonDisabled
-                ]}
-                onPress={signup}
-                disabled={isLoading || !isFormValid()}
-              >
-                <Text style={styles.signupButtonText}>
-                  {isLoading ? "Creating Account..." : "Create Account"}
-                </Text>
-              </TouchableOpacity>
             </View>
 
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
+            <TouchableOpacity 
+              style={[
+                styles.signupButton,
+                isLoading && styles.signupButtonDisabled,
+                !isFormValid() && styles.signupButtonDisabled
+              ]}
+              onPress={signup}
+              disabled={isLoading || !isFormValid()}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.signupButtonText}>Create Account</Text>
+              )}
+            </TouchableOpacity>
+          </View>
 
-            {/* Login Section */}
-            <View style={styles.loginSection}>
-              <Text style={styles.loginText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-                <Text style={styles.loginLink}>Sign In</Text>
-              </TouchableOpacity>
-            </View>
+          {/* Login Section */}
+          <View style={styles.loginSection}>
+            <Text style={styles.loginText}>Already have an account? </Text>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate("Login")}
+              disabled={isLoading}
+            >
+              <Text style={styles.loginLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
 
-            {/* Terms Notice */}
-            <View style={styles.termsContainer}>
-              <Text style={styles.termsText}>
-                By creating an account, you agree to our Terms of Service and Privacy Policy
-              </Text>
-            </View>
-
-            {/* App Info */}
-            <View style={styles.appInfo}>
-              <Text style={styles.appName}>REMI</Text>
-              <Text style={styles.appTagline}>Your Academic Assistant</Text>
-            </View>
-          </Animated.View>
+          {/* App Info */}
+          <View style={styles.appInfo}>
+            <Text style={styles.appName}>REMI</Text>
+            <Text style={styles.appTagline}>Your Academic Assistant</Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -332,58 +272,22 @@ const styles = StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
   },
-  background: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
-  circle: {
-    position: 'absolute',
-    borderRadius: 500,
-  },
-  circle1: {
-    top: -100,
-    right: -100,
-    width: 300,
-    height: 300,
-    backgroundColor: 'rgba(83, 95, 253, 0.08)',
-  },
-  circle2: {
-    bottom: -150,
-    left: -100,
-    width: 350,
-    height: 350,
-    backgroundColor: 'rgba(247, 133, 34, 0.06)',
-  },
-  circle3: {
-    top: '30%',
-    left: -50,
-    width: 200,
-    height: 200,
-    backgroundColor: 'rgba(56, 57, 64, 0.05)',
-  },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    minHeight: height,
-  },
-  content: {
-    paddingHorizontal: 32,
-    paddingVertical: 40,
+    paddingHorizontal: 24,
+    paddingTop: 80,
+    paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
     marginBottom: 40,
-    marginTop: 80,
-  },
-  logoContainer: {
-    alignItems: 'center',
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "800",
     color: "#383940",
     marginBottom: 8,
+    marginTop: 50,
     textAlign: 'center',
   },
   subtitle: {
@@ -398,7 +302,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FEF2F2',
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 12,
     marginBottom: 24,
     borderWidth: 1,
     borderColor: '#FECACA',
@@ -428,15 +332,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 2,
     borderColor: "#F1F5F9",
-    padding: 18,
-    borderRadius: 16,
+    padding: 16,
+    borderRadius: 12,
     fontSize: 16,
     color: "#383940",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
   },
   passwordContainer: {
     position: 'relative',
@@ -445,23 +344,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderWidth: 2,
     borderColor: "#F1F5F9",
-    padding: 18,
-    borderRadius: 16,
+    padding: 16,
+    borderRadius: 12,
     fontSize: 16,
     color: "#383940",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-    paddingRight: 60, // Space for eye button
-  },
-  inputFocused: {
-    borderColor: "#535FFD",
-    shadowColor: "#535FFD",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    paddingRight: 60,
   },
   passwordHint: {
     fontSize: 12,
@@ -482,46 +369,24 @@ const styles = StyleSheet.create({
   },
   signupButton: {
     backgroundColor: "#535FFD",
-    padding: 20,
-    borderRadius: 16,
+    padding: 18,
+    borderRadius: 12,
     alignItems: "center",
-    shadowColor: "#535FFD",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
     marginTop: 10,
   },
   signupButtonDisabled: {
     backgroundColor: "#94A3B8",
-    shadowColor: "#94A3B8",
   },
   signupButtonText: {
     color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "700",
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E2E8F0',
-  },
-  dividerText: {
-    color: '#64748B',
-    fontSize: 14,
-    fontWeight: '500',
-    marginHorizontal: 16,
-  },
   loginSection: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 40,
   },
   loginText: {
     color: "#64748B",
@@ -532,18 +397,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-  termsContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 40,
-  },
-  termsText: {
-    color: "#94A3B8",
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
   appInfo: {
     alignItems: 'center',
+    marginTop: 20,
   },
   appName: {
     fontSize: 24,
