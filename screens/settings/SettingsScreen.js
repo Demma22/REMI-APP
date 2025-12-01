@@ -300,8 +300,8 @@ export default function SettingsScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Data Management Section */}
-          <View style={styles.section}>
+          {/* Data Management Section 
+       /   <View style={styles.section}>
             <Text style={styles.sectionTitle}>Data Management</Text>
             
             <TouchableOpacity 
@@ -315,7 +315,7 @@ export default function SettingsScreen({ navigation }) {
               </View>
               <Text style={styles.menuArrow}>›</Text>
             </TouchableOpacity>
-          </View>
+          </View>  */}
 
           {/* Account Section */}
           <View style={styles.section}>
