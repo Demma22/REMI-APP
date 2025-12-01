@@ -1,4 +1,3 @@
-// screens/SettingsScreen.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -8,6 +7,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { auth, db } from "../../firebase";
 import { signOut } from "firebase/auth";
@@ -18,6 +18,7 @@ export default function SettingsScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -35,7 +36,13 @@ export default function SettingsScreen({ navigation }) {
       console.log("Settings load error:", error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadUserData();
   };
 
   const handleLogout = async () => {
@@ -47,18 +54,29 @@ export default function SettingsScreen({ navigation }) {
         { 
           text: "Logout", 
           style: "destructive",
-          onPress: async () => {
-            setSigningOut(true);
-            try {
-              await signOut(auth);
-            } catch (error) {
-              console.log("Logout error:", error);
-              setSigningOut(false);
-            }
-          }
+          onPress: performLogout
         }
       ]
     );
+  };
+
+  const performLogout = async () => {
+    setSigningOut(true);
+    try {
+      // Sign out from Firebase
+      await signOut(auth);
+      
+      // Navigate to SplashPage immediately
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'SplashIntro' }], // Changed from 'OnboardingSplash' to 'SplashIntro'
+      });
+      
+    } catch (error) {
+      console.log("Logout error:", error);
+      Alert.alert("Logout Error", "Failed to logout. Please try again.");
+      setSigningOut(false);
+    }
   };
 
   const handleChangeCurrentSemester = () => {
@@ -76,7 +94,7 @@ export default function SettingsScreen({ navigation }) {
     });
   };
 
-    const handleEditCourse = () => {
+  const handleEditCourse = () => {
     navigation.navigate("EditCourse", {
       isEditing: true,
       currentCourse: userData?.course
@@ -183,6 +201,14 @@ export default function SettingsScreen({ navigation }) {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#535FFD"]}
+            tintColor="#535FFD"
+          />
+        }
       >
         {/* Header */}
         <View style={styles.header}>
@@ -231,7 +257,7 @@ export default function SettingsScreen({ navigation }) {
               <Text style={styles.menuArrow}>›</Text>
             </TouchableOpacity>
 
-           <TouchableOpacity 
+            <TouchableOpacity 
               style={styles.menuButton}
               onPress={handleEditCourse}
             >
@@ -244,7 +270,6 @@ export default function SettingsScreen({ navigation }) {
               </View>
               <Text style={styles.menuArrow}>›</Text>
             </TouchableOpacity>
-
 
             <TouchableOpacity 
               style={styles.menuButton}
@@ -479,11 +504,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  logoutIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
   logoutButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
-    marginLeft: 8,
   },
   bottomSpacing: {
     height: 20,
