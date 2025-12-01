@@ -106,7 +106,7 @@ export default function Units({ navigation, route }) {
         <View style={styles.headerTop}>
           <TouchableOpacity 
             style={styles.backBtn} 
-            onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate("Semesters")}
           >
             <Text style={styles.backText}>‹</Text>
           </TouchableOpacity>

@@ -70,18 +70,14 @@ export default function CurrentSemester({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      {/* Background Design */}
-      <View style={styles.background}>
-        <View style={[styles.circle, styles.circle1]} />
-        <View style={[styles.circle, styles.circle2]} />
-      </View>
+
 
       {/* Header with Back Button */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity 
             style={styles.backBtn} 
-            onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate("Semesters")}
           >
             <Text style={styles.backText}>‹</Text>
           </TouchableOpacity>
@@ -270,6 +266,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#383940",
     marginBottom: 12,
+    marginTop: 30,
     textAlign: 'center',
   },
   subtitle: {
