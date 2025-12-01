@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { auth, db } from "../firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NavigationBar from "../components/NavigationBar";
@@ -23,6 +24,7 @@ export default function ProfileScreen({ navigation }) {
   const [profileImage, setProfileImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  
 
   // AsyncStorage keys
   const PROFILE_IMAGE_KEY = '@profile_image';
@@ -100,29 +102,40 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-    const handleLogout = async () => {
-      Alert.alert(
-        "Logout",
-        "Are you sure you want to logout?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { 
-            text: "Logout", 
-            style: "destructive",
-            onPress: async () => {
-              setSigningOut(true);
-              try {
-                await signOut(auth);
-              } catch (error) {
-                console.log("Logout error:", error);
-                setSigningOut(false);
-              }
-            }
-          }
-        ]
-      );
-    };
+  const handleLogout = async () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Logout", 
+          style: "destructive",
+          onPress: performLogout
+        }
+      ]
+    );
+  };
 
+  const performLogout = async () => {
+    setSigningOut(true);
+    try {
+      // Sign out from Firebase
+      await signOut(auth);
+      
+      // Navigate to SplashPage immediately
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'SplashIntro' }], // Changed from 'OnboardingSplash' to 'SplashIntro'
+      });
+      
+    } catch (error) {
+      console.log("Logout error:", error);
+      Alert.alert("Logout Error", "Failed to logout. Please try again.");
+      setSigningOut(false);
+    }
+  };
+  
   // Calculate program completion percentage
   const getCompletionPercentage = () => {
     if (!userData?.current_semester || !userData?.total_semesters) return 0;
@@ -510,6 +523,7 @@ export default function ProfileScreen({ navigation }) {
             </View>
           </View>
 
+
           <TouchableOpacity 
             style={styles.logoutButton}
             onPress={handleLogout}
@@ -519,12 +533,12 @@ export default function ProfileScreen({ navigation }) {
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-              
+
                 <Text style={styles.logoutButtonText}>Logout</Text>
               </>
             )}
           </TouchableOpacity>
-
+         
 
           <View style={styles.bottomSpacing} />
         </View>
