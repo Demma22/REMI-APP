@@ -27,12 +27,12 @@ const firebaseConfig = {
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
-// Initialize Auth WITH React Native persistence (important)
+// Initialize Auth WITH React Native persistence to enable session persistence so that users stay logged in
 export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage)
 });
 
-// Initialize Firestore
+// Initialize Firestore (Create database instance)
 export const db = getFirestore(app);
 
 export default app;
