@@ -70,7 +70,7 @@ export default function CurrentSemester({ navigation, route }) {
                 text: "Go Back", 
                 style: "destructive",
                 onPress: () => {
-                  navigation.navigate("Semesters");
+                  navigation.navigate("Units");
                 }
               }
             ]
