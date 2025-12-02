@@ -36,6 +36,7 @@ export default function Nickname({ navigation }) {
     setIsValid(valid);
   };
 
+  // Save nickname to Firestore and navigate to Course screen
   const saveNicknameAndProceed = async () => {
     if (!isValid) {
       Alert.alert("Invalid Nickname", "Please enter a valid nickname.");
@@ -51,6 +52,7 @@ export default function Nickname({ navigation }) {
           nickname: trimmedNick,
           createdAt: new Date(),
         },
+        // Only update Nickname field, don't overwrite other data
         { merge: true }
       );
 
