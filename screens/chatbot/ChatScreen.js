@@ -294,57 +294,60 @@ export default function ChatScreen({ navigation }) {
     return contextData;
   };
 
-  const send = async () => {
-    const text = input.trim();
-    if (!text) return;
+const send = async () => {
+  const text = input.trim();
+  if (!text) return;
 
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      Alert.alert("Error", "You need to be logged in");
-      return;
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    Alert.alert("Error", "You need to be logged in");
+    return;
+  }
+
+  await addMessage(text, "user");
+  setInput("");
+  setLoading(true);
+
+  try {
+    // Get Firebase authentication token
+    const token = await currentUser.getIdToken();
+    
+    const contextData = await getContextData(text);
+
+    const requestBody = {
+      query: text,
+      context: contextData
+    };
+
+    const res = await fetch("https://ai-backend-yl4w.onrender.com/ask", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(requestBody),
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Server error: ${res.status}`);
     }
-
-    await addMessage(text, "user");
-    setInput("");
-    setLoading(true);
-
-    try {
-      const contextData = await getContextData(text);
-
-      const requestBody = {
-        userId: currentUser.uid,
-        query: text,
-        context: contextData
-      };
-
-      const res = await fetch("https://ai-backend-yl4w.onrender.com/ask", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify(requestBody),
-      });
-      
-      if (!res.ok) {
-        throw new Error(`Server error: ${res.status}`);
-      }
-      
-      const json = await res.json();
-      
-      if (json.answer) {
-        await typeResponse(json.answer);
-      } else if (json.error) {
-        await typeResponse(`I encountered an error: ${json.error}`);
-      } else {
-        await typeResponse("I'm here to help with your academic questions!");
-      }
-    } catch (error) {
-      await typeResponse("I'm having connection issues. Please check your internet and try again.");
+    
+    const json = await res.json();
+    
+    if (json.answer) {
+      await typeResponse(json.answer);
+    } else if (json.error) {
+      await typeResponse(`I encountered an error: ${json.error}`);
+    } else {
+      await typeResponse("I'm here to help with your academic questions!");
     }
+  } catch (error) {
+    await typeResponse("I'm having connection issues. Please check your internet and try again.");
+  }
 
-    setLoading(false);
-  };
+  setLoading(false);
+};
 
   const handleClearChat = () => {
     Alert.alert(
