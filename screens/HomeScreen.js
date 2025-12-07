@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Platform, 
   StyleSheet,
   Image,
   ScrollView,
@@ -558,27 +559,31 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: "#EF4444",
   },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  cardIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  cardIconText: {
-    fontSize: 20,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#383940",
-  },
+cardHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 16,
+  width: '100%', // Ensure it takes full card width
+  maxWidth: '100%', // Prevent overflow
+},
+cardIcon: {
+  width: 44,
+  height: 44,
+  borderRadius: 12,
+  justifyContent: "center",
+  alignItems: "center",
+  marginRight: 12,
+  flexShrink: 0, // Prevent icon from shrinking
+},
+cardTitle: {
+  fontSize: Platform.OS === 'ios' ? 14 : 16,
+  fontWeight: "700",
+  color: "#383940",
+  includeFontPadding: false,
+  flex: 1,
+  flexShrink: 1, // Allow text to shrink on Android
+  flexWrap: 'wrap', // Allow wrapping if needed
+},
   examSubtitle: {
     fontSize: 12,
     color: "#64748B",
