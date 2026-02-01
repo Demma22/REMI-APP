@@ -446,7 +446,7 @@ export default function AddExamScreen({ navigation }) {
                     </Text>
                     <TouchableOpacity 
                       style={styles.helpButton}
-                      onPress={() => navigation.navigate("Units")}
+                      onPress={() => navigation.navigate("EditUnits")}
                     >
                       <Text style={styles.helpButtonText}>Add Course Units</Text>
                     </TouchableOpacity>
