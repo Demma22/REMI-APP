@@ -36,6 +36,10 @@ export default function Nickname({ navigation }) {
     setIsValid(valid);
   };
 
+    const handleCancel = () => {
+    navigation.goBack('SplashIntro');
+  };
+
   // Save nickname to Firestore and navigate to Course screen
   const saveNicknameAndProceed = async () => {
     if (!isValid) {
@@ -94,8 +98,15 @@ export default function Nickname({ navigation }) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+
           {/* Header Section */}
           <View style={styles.titleSection}>
+              <TouchableOpacity 
+                style={styles.backBtn} 
+                onPress={handleCancel}
+             >
+                <Text style={styles.backText}>‹</Text>
+                </TouchableOpacity>
             <Text style={styles.title}>What should I call you?</Text>
             <Text style={styles.subtitle}>
               Choose a nickname that I can use to personalize your experience
@@ -260,5 +271,15 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "700",
+  },
+    backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FAFAFA",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
 });

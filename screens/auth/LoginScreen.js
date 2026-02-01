@@ -15,6 +15,7 @@ import {
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../../firebase";
 import { doc, getDoc } from "firebase/firestore";
+import SvgIcon from "../../components/SvgIcon"; // Add this import
 
 const { height } = Dimensions.get("window");
 
@@ -141,29 +142,33 @@ export default function LoginScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header Section */}
+          {/* Welcome Header with Icon */}
           <View style={styles.header}>
+
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>
               Sign in to continue your academic journey
             </Text>
           </View>
 
-          {/* Error Message */}
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorIcon}>⚠️</Text>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+          {/* Form Container with Card Design */}
+          <View style={styles.formCard}>
+            {/* Error Message */}
+            {error ? (
+              <View style={styles.errorContainer}>
+                <SvgIcon name="warning" size={20} color="#DC2626" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
 
-          {/* Form Section */}
-          <View style={styles.form}>
             {/* Email Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email Address</Text>
+              <View style={styles.inputLabelContainer}>
+                <SvgIcon name="email" size={16} color="#64748B" style={styles.inputIcon} />
+                <Text style={styles.inputLabel}>Username</Text>
+              </View>
               <TextInput
-                placeholder="Enter your email"
+                placeholder="john..."
                 style={styles.input}
                 value={email}
                 autoCapitalize="none"
@@ -180,7 +185,10 @@ export default function LoginScreen({ navigation }) {
 
             {/* Password Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Password</Text>
+              <View style={styles.inputLabelContainer}>
+                <SvgIcon name="lock" size={16} color="#64748B" style={styles.inputIcon} />
+                <Text style={styles.inputLabel}>Password</Text>
+              </View>
               <View style={styles.passwordContainer}>
                 <TextInput
                   placeholder="Enter your password"
@@ -200,13 +208,22 @@ export default function LoginScreen({ navigation }) {
                   onPress={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
                 >
-                  <Text style={styles.eyeIcon}>
-                    {showPassword ? "👁️" : "👁️‍🗨️"}
-                  </Text>
+                  <SvgIcon name="eye" size={22} color={showPassword ? "#535FFD" : "#94A3B8"} />
                 </TouchableOpacity>
               </View>
             </View>
 
+            {/* Forgot Password Link 
+            <TouchableOpacity 
+              style={styles.forgotPassword}
+              onPress={() => navigation.navigate("ForgotPassword")}
+              disabled={isLoading}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
+            </TouchableOpacity>
+*/}
+
+            {/* Login Button */}
             <TouchableOpacity 
               style={[
                 styles.loginButton,
@@ -215,31 +232,37 @@ export default function LoginScreen({ navigation }) {
               ]}
               onPress={login}
               disabled={isLoading || !email.trim() || !password.trim()}
+              activeOpacity={0.9}
             >
               {isLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.loginButtonText}>Sign In</Text>
+                <>
+                  <Text style={styles.loginButtonText}>Sign In</Text>
+                </>
               )}
             </TouchableOpacity>
           </View>
 
           {/* Sign Up Section */}
           <View style={styles.signupSection}>
-            <Text style={styles.signupText}>Don't have an account? </Text>
+            <Text style={styles.signupText}>New to REMI? </Text>
             <TouchableOpacity 
               onPress={() => navigation.navigate("Signup")}
               disabled={isLoading}
             >
-              <Text style={styles.signupLink}>Create one</Text>
+              <Text style={styles.signupLink}>Create an account</Text>
             </TouchableOpacity>
           </View>
 
-          {/* App Info */}
-          <View style={styles.appInfo}>
-            <Text style={styles.appName}>REMI</Text>
-            <Text style={styles.appTagline}>Your Academic Assistant</Text>
+          {/* Divider */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>SND</Text>
+            <View style={styles.dividerLine} />
           </View>
+
+       
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -257,19 +280,36 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 80,
+    paddingTop: 40,
     paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
     marginBottom: 40,
+    paddingTop: 20,
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#FFFFFF",
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: "#F1F5F9",
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
+    marginTop: 120,
     fontWeight: "800",
-    color: "#535FFD",
+    color: "#383940",
     marginBottom: 8,
-    marginTop: 60,
     textAlign: 'center',
   },
   subtitle: {
@@ -278,6 +318,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     paddingHorizontal: 20,
+  },
+  formCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
   errorContainer: {
     flexDirection: 'row',
@@ -288,9 +341,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
     borderColor: '#FECACA',
-  },
-  errorIcon: {
-    marginRight: 12,
+    gap: 12,
   },
   errorText: {
     color: '#DC2626',
@@ -298,20 +349,22 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
   },
-  form: {
-    marginBottom: 32,
-  },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  inputLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: "600",
     color: "#383940",
-    marginBottom: 8,
   },
   input: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FAFAFA",
     borderWidth: 2,
     borderColor: "#F1F5F9",
     padding: 16,
@@ -323,7 +376,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   passwordInput: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FAFAFA",
     borderWidth: 2,
     borderColor: "#F1F5F9",
     padding: 16,
@@ -340,29 +393,46 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
-  eyeIcon: {
-    fontSize: 20,
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginBottom: 24,
+  },
+  forgotPasswordText: {
+    color: "#535FFD",
+    fontSize: 14,
+    fontWeight: "600",
   },
   loginButton: {
     backgroundColor: "#535FFD",
     padding: 18,
     borderRadius: 12,
     alignItems: "center",
-    marginTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    shadowColor: "#535FFD",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   loginButtonDisabled: {
     backgroundColor: "#94A3B8",
+    shadowColor: "#94A3B8",
+  },
+  buttonIcon: {
+    marginRight: 4,
   },
   loginButtonText: {
     color: "#FFFFFF",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
   },
   signupSection: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
   },
   signupText: {
     color: "#64748B",
@@ -373,19 +443,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-  appInfo: {
+  divider: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
+    marginBottom: 32,
   },
-  appName: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: "#383940",
-    marginBottom: 4,
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E2E8F0',
   },
-  appTagline: {
+  dividerText: {
+    paddingHorizontal: 16,
+    color: '#94A3B8',
     fontSize: 14,
-    color: "#64748B",
-    fontWeight: "500",
+    fontWeight: '500',
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#F1F5F9',
+    gap: 12,
+  },
+  socialButtonText: {
+    color: '#383940',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

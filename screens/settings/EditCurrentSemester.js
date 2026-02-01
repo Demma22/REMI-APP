@@ -11,6 +11,7 @@ import {
 
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase";
+import { useTheme } from '../../contexts/ThemeContext'; // Add this import
 
 export default function EditCurrentSemester({ navigation, route }) {
   const [current, setCurrent] = useState(null);
@@ -20,6 +21,8 @@ export default function EditCurrentSemester({ navigation, route }) {
   
   const fadeAnim = new Animated.Value(0);
   const slideAnim = new Animated.Value(30);
+  
+  const { theme } = useTheme(); // Get theme from context
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -124,12 +127,14 @@ export default function EditCurrentSemester({ navigation, route }) {
     return semesterNum >= currentSemester && semesterNum <= totalSemesters;
   };
 
+  const styles = getStyles(theme);
+
   return (
     <View style={styles.container}>
       {/* Background Design */}
       <View style={styles.background}>
-        <View style={[styles.circle, styles.circle1]} />
-        <View style={[styles.circle, styles.circle2]} />
+        <View style={[styles.circle, styles.circle1, { backgroundColor: theme.mode === 'dark' ? 'rgba(83, 95, 253, 0.05)' : 'rgba(83, 95, 253, 0.08)' }]} />
+        <View style={[styles.circle, styles.circle2, { backgroundColor: theme.mode === 'dark' ? 'rgba(247, 133, 34, 0.04)' : 'rgba(247, 133, 34, 0.06)' }]} />
       </View>
 
       {/* Header */}
@@ -283,10 +288,10 @@ export default function EditCurrentSemester({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
   },
   background: {
     position: 'absolute',
@@ -302,23 +307,21 @@ const styles = StyleSheet.create({
     right: -100,
     width: 250,
     height: 250,
-    backgroundColor: 'rgba(83, 95, 253, 0.08)',
   },
   circle2: {
     bottom: -150,
     left: -100,
     width: 300,
     height: 300,
-    backgroundColor: 'rgba(247, 133, 34, 0.06)',
   },
   header: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.backgroundSecondary,
     paddingTop: 60,
     paddingHorizontal: 24,
     paddingBottom: 20,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -333,22 +336,22 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: theme.colors.border,
   },
   backText: { 
     fontSize: 24, 
-    color: "#535FFD", 
+    color: theme.colors.primary, 
     fontWeight: "300",
     lineHeight: 24,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     textAlign: "center",
   },
   headerSpacer: {
@@ -366,13 +369,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 12,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     paddingHorizontal: 20,
@@ -381,20 +384,20 @@ const styles = StyleSheet.create({
   currentInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: "rgba(83, 95, 253, 0.1)",
+    backgroundColor: theme.mode === 'dark' ? 'rgba(83, 95, 253, 0.15)' : 'rgba(83, 95, 253, 0.1)',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
   },
   currentLabel: {
     fontSize: 14,
-    color: "#535FFD",
+    color: theme.colors.primary,
     fontWeight: "600",
     marginRight: 8,
   },
   currentSemester: {
     fontSize: 14,
-    color: "#535FFD",
+    color: theme.colors.primary,
     fontWeight: "700",
   },
   selectionSection: {
@@ -413,19 +416,19 @@ const styles = StyleSheet.create({
   },
   noDataText: {
     fontSize: 16,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
   semesterCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     padding: 20,
     borderRadius: 16,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -434,19 +437,19 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   semesterCardSelected: {
-    borderColor: "#535FFD",
-    backgroundColor: "#F0F9FF",
-    shadowColor: "#535FFD",
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.mode === 'dark' ? 'rgba(83, 95, 253, 0.15)' : '#F0F9FF',
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
   },
   semesterCardDisabled: {
-    backgroundColor: "#F8FAFC",
-    borderColor: "#E2E8F0",
+    backgroundColor: theme.colors.disabled,
+    borderColor: theme.colors.border,
   },
   semesterCardCurrent: {
-    borderColor: "#FF8A23",
+    borderColor: theme.colors.secondary,
   },
   semesterContent: {
     flexDirection: 'row',
@@ -457,30 +460,30 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: theme.colors.backgroundTertiary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   semesterNumberSelected: {
-    backgroundColor: "#535FFD",
+    backgroundColor: theme.colors.primary,
   },
   semesterNumberDisabled: {
-    backgroundColor: "#E2E8F0",
+    backgroundColor: theme.colors.disabled,
   },
   semesterNumberCurrent: {
-    backgroundColor: "#FF8A23",
+    backgroundColor: theme.colors.secondary,
   },
   semesterNumberText: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#64748B",
+    color: theme.colors.textSecondary,
   },
   semesterNumberTextSelected: {
     color: "#FFFFFF",
   },
   semesterNumberTextDisabled: {
-    color: "#94A3B8",
+    color: theme.colors.textTertiary,
   },
   semesterInfo: {
     flex: 1,
@@ -494,40 +497,36 @@ const styles = StyleSheet.create({
   semesterTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#383940",
+    color: theme.colors.textPrimary,
   },
   semesterTitleSelected: {
-    color: "#535FFD",
+    color: theme.colors.primary,
   },
   semesterTitleDisabled: {
-    color: "#94A3B8",
+    color: theme.colors.textTertiary,
   },
   semesterStatus: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#64748B",
-    backgroundColor: "#F1F5F9",
+    color: theme.colors.textSecondary,
+    backgroundColor: theme.colors.backgroundTertiary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   semesterStatusCurrent: {
-    color: "#FF8A23",
-    backgroundColor: "#FFF7ED",
+    color: theme.colors.secondary,
+    backgroundColor: theme.mode === 'dark' ? 'rgba(247, 133, 34, 0.2)' : '#FFF7ED',
   },
   semesterStatusDisabled: {
-    color: "#94A3B8",
-    backgroundColor: "#F8FAFC",
-  },
-  semesterSubtitle: {
-    fontSize: 14,
-    color: "#64748B",
+    color: theme.colors.textTertiary,
+    backgroundColor: theme.colors.disabled,
   },
   selectedIndicator: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: "#10B981",
+    backgroundColor: theme.colors.success,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -537,7 +536,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   currentIndicator: {
-    backgroundColor: "#FF8A23",
+    backgroundColor: theme.colors.secondary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -555,19 +554,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
   saveButtonActive: {
-    backgroundColor: "#535FFD",
-    shadowColor: "#535FFD",
+    backgroundColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
     shadowOpacity: 0.3,
   },
   saveButtonDisabled: {
-    backgroundColor: "#E2E8F0",
+    backgroundColor: theme.colors.disabled,
   },
   saveButtonText: {
     color: "#FFFFFF",
@@ -579,11 +578,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderColor: theme.colors.border,
     backgroundColor: "transparent",
   },
   cancelButtonText: {
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     fontSize: 16,
     fontWeight: "600",
   },

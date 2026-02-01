@@ -8,17 +8,21 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Switch,
 } from "react-native";
 import { auth, db } from "../../firebase";
 import { signOut } from "firebase/auth";
 import { doc, getDoc, updateDoc, deleteField } from "firebase/firestore";
 import NavigationBar from "../../components/NavigationBar";
+import SvgIcon from "../../components/SvgIcon";
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function SettingsScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const { theme, toggleTheme, isDarkMode } = useTheme();
 
   useEffect(() => {
     loadUserData();
@@ -69,7 +73,7 @@ export default function SettingsScreen({ navigation }) {
       // Navigate to SplashPage immediately
       navigation.reset({
         index: 0,
-        routes: [{ name: 'SplashIntro' }], // Changed from 'OnboardingSplash' to 'SplashIntro'
+        routes: [{ name: 'SplashIntro' }],
       });
       
     } catch (error) {
@@ -107,6 +111,10 @@ export default function SettingsScreen({ navigation }) {
       currentSemesters: userData?.total_semesters,
       currentUnits: userData?.units
     });
+  };
+
+  const handleNotificationSettings = () => {
+    navigation.navigate("NotificationsSettings");
   };
 
   const handleDeleteAllData = () => {
@@ -169,6 +177,8 @@ export default function SettingsScreen({ navigation }) {
     navigation.navigate("Profile");
   };
 
+  const styles = getStyles(theme);
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -186,7 +196,7 @@ export default function SettingsScreen({ navigation }) {
         </View>
         <View style={styles.content}>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#535FFD" />
+            <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={styles.loadingText}>Loading settings...</Text>
           </View>
         </View>
@@ -205,8 +215,8 @@ export default function SettingsScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#535FFD"]}
-            tintColor="#535FFD"
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
           />
         }
       >
@@ -233,101 +243,159 @@ export default function SettingsScreen({ navigation }) {
               style={styles.menuButton}
               onPress={handleMyProfile}
             >
-              <Text style={styles.menuIcon}>👤</Text>
+              <View style={[styles.menuIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+                <SvgIcon name="user" size={20} color={theme.colors.primary} />
+              </View>
               <View style={styles.menuTextContainer}>
                 <Text style={styles.menuTitle}>My Profile</Text>
                 <Text style={styles.menuSubtitle}>
                   {userData?.nickname ? `Viewing as ${userData.nickname}` : 'View your profile information'}
                 </Text>
               </View>
-              <Text style={styles.menuArrow}>›</Text>
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.menuButton}
               onPress={handleEditNickname}
             >
-              <Text style={styles.menuIcon}>✏️</Text>
+              <View style={[styles.menuIconContainer, { backgroundColor: theme.colors.secondaryLight }]}>
+                <SvgIcon name="edit" size={20} color={theme.colors.secondary} />
+              </View>
               <View style={styles.menuTextContainer}>
                 <Text style={styles.menuTitle}>Edit Nickname</Text>
                 <Text style={styles.menuSubtitle}>
                   {userData?.nickname ? `Current: ${userData.nickname}` : 'Set your display name'}
                 </Text>
               </View>
-              <Text style={styles.menuArrow}>›</Text>
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.menuButton}
               onPress={handleEditCourse}
             >
-              <Text style={styles.menuIcon}>✏️</Text>
+              <View style={[styles.menuIconContainer, { backgroundColor: theme.colors.successLight }]}>
+                <SvgIcon name="graduation-cap" size={20} color={theme.colors.success} />
+              </View>
               <View style={styles.menuTextContainer}>
                 <Text style={styles.menuTitle}>Edit Course</Text>
                 <Text style={styles.menuSubtitle}>
                   {userData?.course ? `Current: ${userData.course}` : 'Set your course name'}
                 </Text>
               </View>
-              <Text style={styles.menuArrow}>›</Text>
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.menuButton}
               onPress={handleChangeCurrentSemester}
             >
-              <Text style={styles.menuIcon}>🎓</Text>
+              <View style={[styles.menuIconContainer, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
+                <SvgIcon name="book" size={20} color="#8B5CF6" />
+              </View>
               <View style={styles.menuTextContainer}>
                 <Text style={styles.menuTitle}>Change Current Semester</Text>
                 <Text style={styles.menuSubtitle}>
                   {userData?.current_semester ? `Current: Semester ${userData.current_semester}` : 'Set your current semester'}
                 </Text>
               </View>
-              <Text style={styles.menuArrow}>›</Text>
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.menuButton}
               onPress={handleEditCourseUnits}
             >
-              <Text style={styles.menuIcon}>📚</Text>
+              <View style={[styles.menuIconContainer, { backgroundColor: theme.colors.dangerLight }]}>
+                <SvgIcon name="file" size={20} color={theme.colors.danger} />
+              </View>
               <View style={styles.menuTextContainer}>
                 <Text style={styles.menuTitle}>Edit Course Units</Text>
                 <Text style={styles.menuSubtitle}>
                   {userData?.course ? `Current: ${userData.course}` : 'Manage your course units'}
                 </Text>
               </View>
-              <Text style={styles.menuArrow}>›</Text>
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          {/* Data Management Section 
-       /   <View style={styles.section}>
+          {/* App Settings Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>App Settings</Text>
+            
+            <TouchableOpacity 
+              style={styles.menuButton}
+              onPress={handleNotificationSettings}
+            >
+              <View style={[styles.menuIconContainer, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                <SvgIcon name="bell" size={20} color="#3B82F6" />
+              </View>
+              <View style={styles.menuTextContainer}>
+                <Text style={styles.menuTitle}>Notifications</Text>
+                <Text style={styles.menuSubtitle}>
+                  Manage lecture and exam reminders
+                </Text>
+              </View>
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+            
+            <View style={styles.menuButton}>
+              <View style={[styles.menuIconContainer, { backgroundColor: 'rgba(56, 57, 64, 0.1)' }]}>
+                <SvgIcon name={isDarkMode ? "sun" : "moon"} size={20} color={theme.colors.textPrimary} />
+              </View>
+              <View style={styles.menuTextContainer}>
+                <Text style={styles.menuTitle}>Dark Mode</Text>
+                <Text style={styles.menuSubtitle}>
+                  {isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'}
+                </Text>
+              </View>
+              <Switch
+                value={isDarkMode}
+                onValueChange={toggleTheme}
+                trackColor={{ false: theme.colors.borderDark, true: theme.colors.primary }}
+                thumbColor="#FFFFFF"
+                ios_backgroundColor={theme.colors.borderDark}
+              />
+            </View>
+          </View>
+
+          {/* Data Management Section */}
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Data Management</Text>
             
             <TouchableOpacity 
               style={[styles.menuButton, styles.dangerButton]}
               onPress={handleDeleteAllData}
             >
-              <Text style={styles.menuIcon}>🗑️</Text>
+              <View style={[styles.menuIconContainer, { backgroundColor: theme.colors.dangerLight }]}>
+                <SvgIcon name="trash" size={20} color={theme.colors.danger} />
+              </View>
               <View style={styles.menuTextContainer}>
                 <Text style={styles.menuTitle}>Delete All Data</Text>
                 <Text style={styles.menuSubtitle}>Reset everything and start over</Text>
               </View>
-              <Text style={styles.menuArrow}>›</Text>
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.danger} />
             </TouchableOpacity>
-          </View>  */}
+          </View>
 
           {/* Account Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Account</Text>
             
             <View style={styles.accountInfo}>
-              <Text style={styles.accountEmail}>{auth.currentUser?.email}</Text>
-              <Text style={styles.accountStatus}>Active</Text>
+              <View style={styles.emailContainer}>
+                <SvgIcon name="email" size={16} color={theme.colors.textSecondary} style={styles.accountIcon} />
+                <Text style={styles.accountEmail}>{auth.currentUser?.email}</Text>
+              </View>
+              <View style={styles.statusBadge}>
+                <SvgIcon name="check-circle" size={12} color={theme.colors.success} />
+                <Text style={[styles.accountStatus, { color: theme.colors.success }]}>Active</Text>
+              </View>
             </View>
 
             <TouchableOpacity 
-              style={styles.logoutButton}
+              style={[styles.logoutButton, { backgroundColor: theme.colors.danger }]}
               onPress={handleLogout}
               disabled={signingOut}
             >
@@ -335,7 +403,7 @@ export default function SettingsScreen({ navigation }) {
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
-
+                  <SvgIcon name="logout" size={18} color="white" />
                   <Text style={styles.logoutButtonText}>Logout</Text>
                 </>
               )}
@@ -351,10 +419,10 @@ export default function SettingsScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
   },
   scrollView: {
     flex: 1,
@@ -363,13 +431,13 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   header: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.backgroundSecondary,
     paddingTop: 60,
     paddingHorizontal: 24,
     paddingBottom: 20,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -384,22 +452,22 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: theme.colors.border,
   },
   backText: { 
     fontSize: 24, 
-    color: "#535FFD", 
+    color: theme.colors.primary, 
     fontWeight: "300",
     lineHeight: 24,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     textAlign: "center",
   },
   headerSpacer: {
@@ -416,7 +484,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     fontSize: 16,
   },
   section: {
@@ -425,28 +493,30 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 16,
   },
   menuButton: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  dangerButton: {
-    borderLeftWidth: 4,
-    borderLeftColor: "#EF4444",
-  },
-  menuIcon: {
-    fontSize: 20,
+  menuIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   menuTextContainer: {
@@ -455,58 +525,67 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 2,
   },
   menuSubtitle: {
     fontSize: 12,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
   },
-  menuArrow: {
-    fontSize: 20,
-    color: "#64748B",
-    fontWeight: "300",
+  dangerButton: {
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.danger,
   },
   accountInfo: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  emailContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  accountIcon: {
+    marginRight: 8,
   },
   accountEmail: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#383940",
-    marginBottom: 4,
+    color: theme.colors.textPrimary,
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
   },
   accountStatus: {
     fontSize: 12,
-    color: "#10B981",
     fontWeight: "600",
   },
   logoutButton: {
-    backgroundColor: "#EF4444",
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
     marginTop: 8,
-    shadowColor: "#EF4444",
+    shadowColor: theme.colors.danger,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
-  },
-  logoutIcon: {
-    fontSize: 18,
-    marginRight: 8,
   },
   logoutButtonText: {
     color: "#FFFFFF",

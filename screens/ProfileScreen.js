@@ -16,6 +16,8 @@ import { signOut } from "firebase/auth";
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NavigationBar from "../components/NavigationBar";
+import SvgIcon from "../components/SvgIcon";
+import { useTheme } from '../contexts/ThemeContext'; // Add this import
 
 export default function ProfileScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
@@ -25,6 +27,7 @@ export default function ProfileScreen({ navigation }) {
   const [uploading, setUploading] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   
+  const { theme } = useTheme(); // Get theme from context
 
   // AsyncStorage keys
   const PROFILE_IMAGE_KEY = '@profile_image';
@@ -298,6 +301,8 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  const styles = getStyles(theme);
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -307,7 +312,7 @@ export default function ProfileScreen({ navigation }) {
               style={styles.backBtn} 
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.backText}>‹</Text>
+              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>PROFILE</Text>
             <View style={styles.headerSpacer} />
@@ -315,7 +320,7 @@ export default function ProfileScreen({ navigation }) {
         </View>
         <View style={styles.content}>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#535FFD" />
+            <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={styles.loadingText}>Loading your profile...</Text>
           </View>
         </View>
@@ -339,7 +344,7 @@ export default function ProfileScreen({ navigation }) {
               style={styles.backBtn} 
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.backText}>‹</Text>
+              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>PROFILE</Text>
             <View style={styles.headerSpacer} />
@@ -355,7 +360,7 @@ export default function ProfileScreen({ navigation }) {
               disabled={uploading}
             >
               {uploading ? (
-                <View style={styles.profileImage}>
+                <View style={[styles.profileImage, { backgroundColor: theme.colors.primary }]}>
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 </View>
               ) : profileImage ? (
@@ -364,14 +369,12 @@ export default function ProfileScreen({ navigation }) {
                   style={styles.profileImage}
                 />
               ) : (
-                <View style={styles.profileImage}>
-                  <Text style={styles.profileInitial}>
-                    {userData?.nickname?.charAt(0)?.toUpperCase() || "U"}
-                  </Text>
+                <View style={[styles.profileImage, { backgroundColor: theme.colors.primary }]}>
+                  <SvgIcon name="user" size={32} color="white" />
                 </View>
               )}
-              <View style={styles.cameraBadge}>
-                <Text style={styles.cameraIcon}>📷</Text>
+              <View style={[styles.cameraBadge, { backgroundColor: theme.colors.primary }]}>
+                <SvgIcon name="camera" size={12} color="white" />
               </View>
             </TouchableOpacity>
             
@@ -380,7 +383,7 @@ export default function ProfileScreen({ navigation }) {
                 {userData?.nickname || "User"}
               </Text>
               <Text style={styles.profileEmail}>{userEmail}</Text>
-              <Text style={styles.profileCourse}>
+              <Text style={[styles.profileCourse, { color: theme.colors.primary }]}>
                 {getCourseName()} • {getAcademicYear()}
               </Text>
             </View>
@@ -392,25 +395,25 @@ export default function ProfileScreen({ navigation }) {
             
             <View style={styles.infoGrid}>
               <View style={styles.infoCard}>
-                <Text style={styles.infoIcon}>🎓</Text>
+                <SvgIcon name="graduation-cap" size={24} color={theme.colors.primary} />
                 <Text style={styles.infoLabel}>Course</Text>
                 <Text style={styles.infoValue}>{getCourseName()}</Text>
               </View>
 
               <View style={styles.infoCard}>
-                <Text style={styles.infoIcon}>📚</Text>
+                <SvgIcon name="book" size={24} color={theme.colors.primary} />
                 <Text style={styles.infoLabel}>Current Semester</Text>
                 <Text style={styles.infoValue}>{getSemesterDisplay()}</Text>
               </View>
 
               <View style={styles.infoCard}>
-                <Text style={styles.infoIcon}>📅</Text>
+                <SvgIcon name="calendar" size={24} color={theme.colors.primary} />
                 <Text style={styles.infoLabel}>Academic Year</Text>
                 <Text style={styles.infoValue}>{getAcademicYear()}</Text>
               </View>
 
               <View style={styles.infoCard}>
-                <Text style={styles.infoIcon}>⏱️</Text>
+                <SvgIcon name="chart-line" size={24} color={theme.colors.primary} />
                 <Text style={styles.infoLabel}>Program Progress</Text>
                 <Text style={styles.infoValue}>{Math.round(completionPercentage)}%</Text>
               </View>
@@ -420,13 +423,16 @@ export default function ProfileScreen({ navigation }) {
             <View style={styles.progressContainer}>
               <View style={styles.progressLabels}>
                 <Text style={styles.progressLabel}>Program Completion</Text>
-                <Text style={styles.progressPercentage}>{Math.round(completionPercentage)}%</Text>
+                <Text style={[styles.progressPercentage, { color: theme.colors.primary }]}>{Math.round(completionPercentage)}%</Text>
               </View>
               <View style={styles.progressBar}>
                 <View 
                   style={[
                     styles.progressFill,
-                    { width: `${completionPercentage}%` }
+                    { 
+                      width: `${completionPercentage}%`,
+                      backgroundColor: theme.colors.primary
+                    }
                   ]} 
                 />
               </View>
@@ -444,52 +450,57 @@ export default function ProfileScreen({ navigation }) {
               style={styles.actionButton}
               onPress={() => navigation.navigate("EditNickname")}
             >
-              <Text style={styles.actionIcon}>👤</Text>
+              <View style={[styles.actionIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+                <SvgIcon name="edit" size={20} color={theme.colors.primary} />
+              </View>
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>Edit Nickname</Text>
                 <Text style={styles.actionSubtitle}>Change how you appear in the app</Text>
               </View>
-              <Text style={styles.actionArrow}>›</Text>
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.actionButton}
               onPress={() => navigation.navigate("EditCourse")}
             >
-              <Text style={styles.actionIcon}>🎓</Text>
+              <View style={[styles.actionIconContainer, { backgroundColor: theme.colors.secondaryLight }]}>
+                <SvgIcon name="graduation-cap" size={20} color={theme.colors.secondary} />
+              </View>
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>Edit Course</Text>
                 <Text style={styles.actionSubtitle}>Update your course information</Text>
               </View>
-              <Text style={styles.actionArrow}>›</Text>
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.actionButton}
               onPress={() => navigation.navigate("EditCurrentSemester")}
             >
-              <Text style={styles.actionIcon}>📚</Text>
+              <View style={[styles.actionIconContainer, { backgroundColor: theme.colors.successLight }]}>
+                <SvgIcon name="book" size={20} color={theme.colors.success} />
+              </View>
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>Update Semester</Text>
                 <Text style={styles.actionSubtitle}>Change your current semester</Text>
               </View>
-              <Text style={styles.actionArrow}>›</Text>
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.actionButton}
               onPress={() => navigation.navigate("EditUnits")}
             >
-              <Text style={styles.actionIcon}>📝</Text>
+              <View style={[styles.actionIconContainer, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
+                <SvgIcon name="file" size={20} color="#8B5CF6" />
+              </View>
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>Manage Course Units</Text>
                 <Text style={styles.actionSubtitle}>Add or remove course units</Text>
               </View>
-              <Text style={styles.actionArrow}>›</Text>
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
-
-
-
           </View>
 
           {/* Account Info */}
@@ -523,9 +534,8 @@ export default function ProfileScreen({ navigation }) {
             </View>
           </View>
 
-
           <TouchableOpacity 
-            style={styles.logoutButton}
+            style={[styles.logoutButton, { backgroundColor: theme.colors.danger }]}
             onPress={handleLogout}
             disabled={signingOut}
           >
@@ -533,12 +543,11 @@ export default function ProfileScreen({ navigation }) {
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-
+                <SvgIcon name="logout" size={20} color="white" />
                 <Text style={styles.logoutButtonText}>Logout</Text>
               </>
             )}
           </TouchableOpacity>
-         
 
           <View style={styles.bottomSpacing} />
         </View>
@@ -549,11 +558,10 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
-// ... (keep the same styles as before)
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
   },
   scrollView: {
     flex: 1,
@@ -562,13 +570,13 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   header: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.backgroundSecondary,
     paddingTop: 60,
     paddingHorizontal: 24,
     paddingBottom: 20,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -583,22 +591,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-  },
-  backText: { 
-    fontSize: 24, 
-    color: "#535FFD", 
-    fontWeight: "300",
-    lineHeight: 24,
+    borderColor: theme.colors.border,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     textAlign: "center",
   },
   headerSpacer: {
@@ -615,16 +617,16 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     fontSize: 16,
   },
   profileHeaderCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     borderRadius: 24,
     padding: 24,
     flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -639,30 +641,20 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#535FFD",
     justifyContent: "center",
     alignItems: "center",
-  },
-  profileInitial: {
-    color: "#FFFFFF",
-    fontSize: 32,
-    fontWeight: "bold",
   },
   cameraBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: "#535FFD",
     width: 28,
     height: 28,
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  cameraIcon: {
-    fontSize: 12,
+    borderColor: theme.colors.backgroundSecondary,
   },
   profileInfo: {
     flex: 1,
@@ -670,17 +662,16 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 4,
   },
   profileEmail: {
     fontSize: 16,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     marginBottom: 8,
   },
   profileCourse: {
     fontSize: 14,
-    color: "#535FFD",
     fontWeight: "600",
   },
   section: {
@@ -689,7 +680,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 16,
   },
   infoGrid: {
@@ -699,24 +690,20 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     width: "48%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
   },
-  infoIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
   infoLabel: {
     fontSize: 12,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     fontWeight: "600",
     marginBottom: 4,
     textAlign: "center",
@@ -724,15 +711,15 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     textAlign: "center",
   },
   progressContainer: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     borderRadius: 16,
     padding: 20,
     marginTop: 12,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -747,45 +734,47 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#383940",
+    color: theme.colors.textPrimary,
   },
   progressPercentage: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#535FFD",
   },
   progressBar: {
     height: 8,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: theme.colors.borderLight,
     borderRadius: 4,
     overflow: "hidden",
     marginBottom: 8,
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#535FFD",
     borderRadius: 4,
   },
   progressText: {
     fontSize: 12,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     textAlign: "center",
   },
   actionButton: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
   },
-  actionIcon: {
-    fontSize: 20,
+  actionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   actionTextContainer: {
@@ -794,23 +783,18 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 2,
   },
   actionSubtitle: {
     fontSize: 12,
-    color: "#64748B",
-  },
-  actionArrow: {
-    fontSize: 20,
-    color: "#64748B",
-    fontWeight: "300",
+    color: theme.colors.textSecondary,
   },
   accountCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     borderRadius: 20,
     padding: 20,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -822,29 +806,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: theme.colors.border,
   },
   accountLabel: {
     fontSize: 14,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
   },
   accountValue: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#383940",
+    color: theme.colors.textPrimary,
   },
-  bottomSpacing: {
-    height: 20,
-  },
-    logoutButton: {
-    backgroundColor: "#EF4444",
+  logoutButton: {
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
-    shadowColor: "#EF4444",
+    shadowColor: theme.colors.danger,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

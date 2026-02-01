@@ -12,6 +12,7 @@ import {
 
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase";
+import { useTheme } from '../../contexts/ThemeContext'; // Add this import
 
 export default function EditUnits({ navigation }) {
   const [units, setUnits] = useState({});
@@ -20,6 +21,8 @@ export default function EditUnits({ navigation }) {
   
   const fadeAnim = new Animated.Value(0);
   const slideAnim = new Animated.Value(30);
+  
+  const { theme } = useTheme(); // Get theme from context
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -115,12 +118,14 @@ export default function EditUnits({ navigation }) {
     navigation.goBack();
   };
 
+  const styles = getStyles(theme);
+
   return (
     <View style={styles.container}>
       {/* Background Design */}
       <View style={styles.background}>
-        <View style={[styles.circle, styles.circle1]} />
-        <View style={[styles.circle, styles.circle2]} />
+        <View style={[styles.circle, styles.circle1, { backgroundColor: theme.mode === 'dark' ? 'rgba(83, 95, 253, 0.05)' : 'rgba(83, 95, 253, 0.08)' }]} />
+        <View style={[styles.circle, styles.circle2, { backgroundColor: theme.mode === 'dark' ? 'rgba(247, 133, 34, 0.04)' : 'rgba(247, 133, 34, 0.06)' }]} />
       </View>
 
       {/* Header */}
@@ -184,7 +189,7 @@ export default function EditUnits({ navigation }) {
                           placeholder={`Course ${unitIndex + 1}`}
                           value={unit}
                           onChangeText={(v) => updateUnit(semesterNum, unitIndex, v)}
-                          placeholderTextColor="#94A3B8"
+                          placeholderTextColor={theme.colors.textTertiary}
                         />
                         {semesterUnits.length > 1 && (
                           <TouchableOpacity 
@@ -244,10 +249,10 @@ export default function EditUnits({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
   },
   background: {
     position: 'absolute',
@@ -263,23 +268,21 @@ const styles = StyleSheet.create({
     right: -100,
     width: 250,
     height: 250,
-    backgroundColor: 'rgba(83, 95, 253, 0.08)',
   },
   circle2: {
     bottom: -150,
     left: -100,
     width: 300,
     height: 300,
-    backgroundColor: 'rgba(247, 133, 34, 0.06)',
   },
   header: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.backgroundSecondary,
     paddingTop: 60,
     paddingHorizontal: 24,
     paddingBottom: 20,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -294,22 +297,22 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: theme.colors.border,
   },
   backText: { 
     fontSize: 24, 
-    color: "#535FFD", 
+    color: theme.colors.primary, 
     fontWeight: "300",
     lineHeight: 24,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     textAlign: "center",
   },
   headerSpacer: {
@@ -327,13 +330,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 12,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     paddingHorizontal: 20,
@@ -350,16 +353,16 @@ const styles = StyleSheet.create({
   },
   noDataText: {
     fontSize: 16,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
   semesterCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     padding: 24,
     borderRadius: 20,
     marginBottom: 20,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -372,21 +375,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: theme.colors.border,
   },
   semesterTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
   },
   courseCount: {
-    backgroundColor: "rgba(83, 95, 253, 0.1)",
+    backgroundColor: theme.mode === 'dark' ? 'rgba(83, 95, 253, 0.15)' : 'rgba(83, 95, 253, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
   },
   courseCountText: {
-    color: "#535FFD",
+    color: theme.colors.primary,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -401,26 +404,26 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: theme.colors.border,
     padding: 16,
     borderRadius: 12,
     fontSize: 16,
-    color: "#383940",
+    color: theme.colors.textPrimary,
   },
   removeBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FEF2F2",
+    backgroundColor: theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.2)' : '#FEF2F2',
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: theme.mode === 'dark' ? 'rgba(220, 38, 38, 0.3)' : '#FECACA',
   },
   removeBtnText: {
-    color: "#DC2626",
+    color: theme.colors.error,
     fontSize: 18,
     fontWeight: "700",
   },
@@ -429,11 +432,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#535FFD",
+    borderColor: theme.colors.primary,
     borderStyle: "dashed",
   },
   addBtnText: {
-    color: "#535FFD",
+    color: theme.colors.primary,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -445,15 +448,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
   saveButtonActive: {
-    backgroundColor: "#535FFD",
-    shadowColor: "#535FFD",
+    backgroundColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
     shadowOpacity: 0.3,
   },
   saveButtonText: {
@@ -466,11 +469,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderColor: theme.colors.border,
     backgroundColor: "transparent",
   },
   cancelButtonText: {
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     fontSize: 16,
     fontWeight: "600",
   },

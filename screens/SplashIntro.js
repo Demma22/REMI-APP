@@ -8,6 +8,7 @@ import {
   Animated,
   ScrollView
 } from "react-native";
+import SvgIcon from "../components/SvgIcon"; 
 
 const { width, height } = Dimensions.get("window");
 
@@ -55,7 +56,6 @@ export default function SplashIntro({ navigation }) {
         >
           {/* Logo Section */}
           <View style={styles.logoSection}>
-
             <Text style={styles.appName}>REMI</Text>
             <Text style={styles.tagline}>Your Academic Companion</Text>
           </View>
@@ -64,7 +64,7 @@ export default function SplashIntro({ navigation }) {
           <View style={styles.featuresSection}>
             <View style={styles.featureItem}>
               <View style={[styles.featureIcon, { backgroundColor: 'rgba(83, 95, 253, 0.1)' }]}>
-                <Text style={[styles.featureEmoji, { color: '#535FFD' }]}>📅</Text>
+                <SvgIcon name="calendar" size={28} color="#535FFD" />
               </View>
               <View style={styles.featureText}>
                 <Text style={styles.featureTitle}>Timetable Tracker</Text>
@@ -74,7 +74,7 @@ export default function SplashIntro({ navigation }) {
 
             <View style={styles.featureItem}>
               <View style={[styles.featureIcon, { backgroundColor: 'rgba(247, 133, 34, 0.1)' }]}>
-                <Text style={[styles.featureEmoji, { color: '#F78522' }]}>📊</Text>
+                <SvgIcon name="chart-line" size={28} color="#F78522" />
               </View>
               <View style={styles.featureText}>
                 <Text style={styles.featureTitle}>GPA Tracker</Text>
@@ -84,7 +84,7 @@ export default function SplashIntro({ navigation }) {
 
             <View style={styles.featureItem}>
               <View style={[styles.featureIcon, { backgroundColor: 'rgba(56, 57, 64, 0.1)' }]}>
-                <Text style={[styles.featureEmoji, { color: '#383940' }]}>🤖</Text>
+                <SvgIcon name="robot" size={28} color="#383940" />
               </View>
               <View style={styles.featureText}>
                 <Text style={styles.featureTitle}>AI Assistant</Text>
@@ -185,9 +185,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#535FFD",
   },
-  logoIcon: {
-    fontSize: 40,
-  },
   appName: {
     fontSize: 60,
     fontWeight: "900",
@@ -226,9 +223,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
-  },
-  featureEmoji: {
-    fontSize: 24,
   },
   featureText: {
     flex: 1,

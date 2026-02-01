@@ -2,39 +2,42 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import SvgIcon from './SvgIcon';
+import { useTheme } from '../contexts/ThemeContext';
 
 const NavigationBar = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const { theme } = useTheme();
 
   const navItems = [
     { 
       name: 'Home', 
-      icon: '🏠', 
+      svgName: 'home',
       screen: 'Home',
       label: 'Home'
     },
     { 
       name: 'Timetable', 
-      icon: '📅', 
+      svgName: 'calendar',
       screen: 'Timetable',
       label: 'Timetable'
     },
     { 
       name: 'Chat', 
-      icon: '💬', 
+      svgName: 'message',
       screen: 'Chat',
       label: 'Chat'
     },
     { 
       name: 'GPA', 
-      icon: '📊', 
+      svgName: 'chart-line',
       screen: 'GPA',
       label: 'GPA'
     },
     { 
       name: 'Profile', 
-      icon: '👤', 
+      svgName: 'user',
       screen: 'Profile',
       label: 'Profile'
     },
@@ -43,6 +46,8 @@ const NavigationBar = () => {
   const isActive = (screenName) => {
     return route.name === screenName;
   };
+
+  const styles = getStyles(theme);
 
   return (
     <View style={styles.container}>
@@ -53,12 +58,16 @@ const NavigationBar = () => {
           onPress={() => navigation.navigate(item.screen)}
           activeOpacity={0.7}
         >
-          <Text style={[
-            styles.navIcon,
-            isActive(item.screen) && styles.activeIcon
+          <View style={[
+            styles.navIconContainer,
+            isActive(item.screen) && styles.activeIconContainer
           ]}>
-            {item.icon}
-          </Text>
+            <SvgIcon 
+              name={item.svgName} 
+              size={22} 
+              color={isActive(item.screen) ? theme.colors.primary : theme.colors.navText} 
+            />
+          </View>
           <Text style={[
             styles.navText,
             isActive(item.screen) && styles.activeText
@@ -71,44 +80,53 @@ const NavigationBar = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
+    backgroundColor: theme.colors.navBackground,
+    paddingVertical: 8,
     paddingHorizontal: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-    shadowColor: '#000',
+    borderRadius: 24,
+    shadowColor: theme.colors.shadow,
     shadowOffset: {
       width: 0,
-      height: -2,
+      height: 3,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.navBorder,
   },
   navItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
-  navIcon: {
-    fontSize: 22,
-    marginBottom: 4,
-    color: '#666666',
+  navIconContainer: {
+    width: 40,
+    height: 30,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 3,
+    backgroundColor: 'transparent',
+  },
+  activeIconContainer: {
+    backgroundColor: theme.colors.primaryLight,
   },
   navText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
-    color: '#666666',
-  },
-  activeIcon: {
-    color: '#535FFD',
+    color: theme.colors.navText,
   },
   activeText: {
-    color: '#535FFD',
+    color: theme.colors.navActive,
     fontWeight: '600',
   },
 });

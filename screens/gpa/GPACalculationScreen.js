@@ -12,10 +12,12 @@ import {
 import { auth, db } from "../../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import NavigationBar from "../../components/NavigationBar";
+import SvgIcon from "../../components/SvgIcon"; // Assuming you have this component
+import { useTheme } from '../../contexts/ThemeContext'; // Add this import
 
 export default function GPACalculationScreen({ route, navigation }) {
   if (!auth.currentUser) {
-    return <Text style={styles.center}>Not logged in</Text>;
+    return <Text style={[styles.center, { color: theme.colors.textPrimary }]}>Not logged in</Text>;
   }
 
   const { semesterKey: initialSemesterKey } = route.params || {};
@@ -26,6 +28,8 @@ export default function GPACalculationScreen({ route, navigation }) {
   const [creditUnits, setCreditUnits] = useState({});
   const [calculatedGPA, setCalculatedGPA] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const { theme } = useTheme(); // Get theme from context
 
   // ISBAT University Grading System (NCHE Uganda)
   const getGradePoint = (marks) => {
@@ -224,6 +228,8 @@ export default function GPACalculationScreen({ route, navigation }) {
   const courses = getCurrentCourses();
   const availableSemesters = getAvailableSemesters();
 
+  const styles = getStyles(theme);
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -233,7 +239,7 @@ export default function GPACalculationScreen({ route, navigation }) {
               style={styles.backBtn} 
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.backText}>‹</Text>
+              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>CALCULATE GPA</Text>
             <View style={styles.headerSpacer} />
@@ -256,7 +262,7 @@ export default function GPACalculationScreen({ route, navigation }) {
             style={styles.backBtn} 
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.backText}>‹</Text>
+            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>CALCULATE GPA</Text>
           <View style={styles.headerSpacer} />
@@ -278,7 +284,7 @@ export default function GPACalculationScreen({ route, navigation }) {
             <Text style={styles.dropdownText}>
               {selectedSemester ? selectedSemester.toUpperCase() : "Choose Semester"}
             </Text>
-            <Text style={styles.dropdownIcon}>▼</Text>
+            <SvgIcon name="chevron-down" size={14} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -312,7 +318,7 @@ export default function GPACalculationScreen({ route, navigation }) {
                         keyboardType="numeric"
                         value={marks[course] || ""}
                         onChangeText={(v) => handleMarksChange(course, v)}
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={theme.colors.textPlaceholder}
                         maxLength={5}
                       />
                       {marks[course] && (
@@ -330,7 +336,7 @@ export default function GPACalculationScreen({ route, navigation }) {
                         keyboardType="numeric"
                         value={creditUnits[course] || ""}
                         onChangeText={(v) => handleCreditChange(course, v)}
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={theme.colors.textPlaceholder}
                         maxLength={3}
                       />
                     </View>
@@ -345,13 +351,15 @@ export default function GPACalculationScreen({ route, navigation }) {
               onPress={calculateGPA}
             >
               <Text style={styles.calculateButtonText}>
-                {calculatedGPA ? "🔄 RECALCULATE GPA" : "📊 CALCULATE GPA"}
+                {calculatedGPA ? "🔄 RECALCULATE GPA" : "CALCULATE GPA"}
               </Text>
             </TouchableOpacity>
           </>
         ) : selectedSemester ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📚</Text>
+            <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+              <SvgIcon name="book" size={32} color={theme.colors.primary} />
+            </View>
             <Text style={styles.emptyTitle}>No Courses Found</Text>
             <Text style={styles.emptySubtitle}>
               No courses found for {selectedSemester}. Please check your academic profile.
@@ -359,7 +367,9 @@ export default function GPACalculationScreen({ route, navigation }) {
           </View>
         ) : (
           <View style={styles.instructionState}>
-            <Text style={styles.instructionIcon}>🎯</Text>
+            <View style={[styles.instructionIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+              <SvgIcon name="target" size={32} color={theme.colors.primary} />
+            </View>
             <Text style={styles.instructionTitle}>Select a Semester</Text>
             <Text style={styles.instructionSubtitle}>
               Choose a semester from the dropdown above to start calculating your GPA
@@ -371,45 +381,45 @@ export default function GPACalculationScreen({ route, navigation }) {
         <View style={styles.guideCard}>
           <Text style={styles.guideTitle}>Grading System</Text>
           <View style={styles.gradeGrid}>
-            <View style={styles.gradeItem}>
+            <View style={[styles.gradeItem, { backgroundColor: theme.colors.backgroundTertiary }]}>
               <Text style={styles.gradeText}>80-100</Text>
               <Text style={styles.pointsText}>5.0 pts</Text>
-              <Text style={styles.gradeLetter}>A</Text>
+              <Text style={[styles.gradeLetter, { color: theme.colors.success }]}>A</Text>
             </View>
-            <View style={styles.gradeItem}>
+            <View style={[styles.gradeItem, { backgroundColor: theme.colors.backgroundTertiary }]}>
               <Text style={styles.gradeText}>75-79</Text>
               <Text style={styles.pointsText}>4.5 pts</Text>
-              <Text style={styles.gradeLetter}>A-</Text>
+              <Text style={[styles.gradeLetter, { color: theme.colors.success }]}>A-</Text>
             </View>
-            <View style={styles.gradeItem}>
+            <View style={[styles.gradeItem, { backgroundColor: theme.colors.backgroundTertiary }]}>
               <Text style={styles.gradeText}>70-74</Text>
               <Text style={styles.pointsText}>4.0 pts</Text>
-              <Text style={styles.gradeLetter}>B+</Text>
+              <Text style={[styles.gradeLetter, { color: theme.colors.warning }]}>B+</Text>
             </View>
-            <View style={styles.gradeItem}>
+            <View style={[styles.gradeItem, { backgroundColor: theme.colors.backgroundTertiary }]}>
               <Text style={styles.gradeText}>65-69</Text>
               <Text style={styles.pointsText}>3.5 pts</Text>
-              <Text style={styles.gradeLetter}>B</Text>
+              <Text style={[styles.gradeLetter, { color: theme.colors.warning }]}>B</Text>
             </View>
-            <View style={styles.gradeItem}>
+            <View style={[styles.gradeItem, { backgroundColor: theme.colors.backgroundTertiary }]}>
               <Text style={styles.gradeText}>60-64</Text>
               <Text style={styles.pointsText}>3.0 pts</Text>
-              <Text style={styles.gradeLetter}>B-</Text>
+              <Text style={[styles.gradeLetter, { color: theme.colors.warning }]}>B-</Text>
             </View>
-            <View style={styles.gradeItem}>
+            <View style={[styles.gradeItem, { backgroundColor: theme.colors.backgroundTertiary }]}>
               <Text style={styles.gradeText}>55-59</Text>
               <Text style={styles.pointsText}>2.5 pts</Text>
-              <Text style={styles.gradeLetter}>C+</Text>
+              <Text style={[styles.gradeLetter, { color: '#FF9800' }]}>C+</Text>
             </View>
-            <View style={styles.gradeItem}>
+            <View style={[styles.gradeItem, { backgroundColor: theme.colors.backgroundTertiary }]}>
               <Text style={styles.gradeText}>50-54</Text>
               <Text style={styles.pointsText}>2.0 pts</Text>
-              <Text style={styles.gradeLetter}>C</Text>
+              <Text style={[styles.gradeLetter, { color: '#FF9800' }]}>C</Text>
             </View>
-            <View style={styles.gradeItem}>
+            <View style={[styles.gradeItem, { backgroundColor: theme.colors.backgroundTertiary }]}>
               <Text style={styles.gradeText}>0-49</Text>
               <Text style={styles.pointsText}>0.0 pts</Text>
-              <Text style={styles.gradeLetter}>F</Text>
+              <Text style={[styles.gradeLetter, { color: theme.colors.error }]}>F</Text>
             </View>
           </View>
         </View>
@@ -424,7 +434,7 @@ export default function GPACalculationScreen({ route, navigation }) {
         animationType="slide"
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
             <Text style={styles.modalTitle}>Select Semester</Text>
             <ScrollView style={styles.modalList}>
               {availableSemesters.map((semesterKey) => {
@@ -458,7 +468,7 @@ export default function GPACalculationScreen({ route, navigation }) {
               })}
             </ScrollView>
             <TouchableOpacity
-              style={styles.modalClose}
+              style={[styles.modalClose, { backgroundColor: theme.colors.backgroundTertiary }]}
               onPress={() => setShowSemesterPicker(false)}
             >
               <Text style={styles.modalCloseText}>Cancel</Text>
@@ -472,19 +482,18 @@ export default function GPACalculationScreen({ route, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
   },
   center: {
     textAlign: "center",
     marginTop: 40,
-    color: "#383940",
   },
   loadingText: {
     textAlign: "center",
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     fontSize: 16,
     marginTop: 20,
   },
@@ -500,13 +509,13 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   header: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.backgroundSecondary,
     paddingTop: 60,
     paddingHorizontal: 24,
     paddingBottom: 20,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -521,22 +530,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-  },
-  backText: { 
-    fontSize: 24, 
-    color: "#535FFD", 
-    fontWeight: "300",
-    lineHeight: 24,
+    borderColor: theme.colors.border,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     textAlign: "center",
   },
   headerSpacer: {
@@ -548,19 +551,19 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   dropdown: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-    shadowColor: "#000",
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -568,20 +571,16 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 16,
-    color: "#383940",
+    color: theme.colors.textPrimary,
     fontWeight: "600",
   },
-  dropdownIcon: {
-    fontSize: 12,
-    color: "#64748B",
-  },
   resultCard: {
-    backgroundColor: "#10B981",
+    backgroundColor: theme.colors.success,
     margin: 24,
     padding: 24,
     borderRadius: 24,
     alignItems: "center",
-    shadowColor: "#10B981",
+    shadowColor: theme.colors.success,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
@@ -611,15 +610,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 20,
   },
   courseCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     padding: 20,
     borderRadius: 16,
     marginBottom: 16,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -628,7 +627,7 @@ const styles = StyleSheet.create({
   courseName: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 16,
   },
   inputRow: {
@@ -642,40 +641,43 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#383940",
+    color: theme.colors.textPrimary,
   },
   marksInput: {
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.backgroundTertiary,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: theme.colors.border,
     padding: 16,
     borderRadius: 12,
     fontSize: 16,
-    color: "#383940",
+    color: theme.colors.textPrimary,
   },
   creditInput: {
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.backgroundTertiary,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: theme.colors.border,
     padding: 16,
     borderRadius: 12,
     fontSize: 16,
-    color: "#383940",
+    color: theme.colors.textPrimary,
     textAlign: "center",
   },
   gradeIndicator: {
     fontSize: 12,
-    color: "#535FFD",
+    color: theme.colors.primary,
     fontWeight: "500",
     marginTop: 4,
   },
   calculateButton: {
-    backgroundColor: "#535FFD",
+    backgroundColor: theme.colors.primary,
     margin: 24,
     padding: 20,
     borderRadius: 16,
     alignItems: "center",
-    shadowColor: "#535FFD",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 10,
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -687,69 +689,77 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   emptyState: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     margin: 24,
     padding: 40,
     borderRadius: 20,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 5,
   },
   instructionState: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     margin: 24,
     padding: 40,
     borderRadius: 20,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 5,
   },
-  emptyIcon: {
-    fontSize: 48,
+  emptyIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
   },
-  instructionIcon: {
-    fontSize: 48,
+  instructionIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 8,
     textAlign: "center",
   },
   instructionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 8,
     textAlign: "center",
   },
   emptySubtitle: {
     fontSize: 14,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
   },
   instructionSubtitle: {
     fontSize: 14,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
   },
   guideCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     margin: 24,
     padding: 20,
     borderRadius: 20,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -758,7 +768,7 @@ const styles = StyleSheet.create({
   guideTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 16,
     textAlign: "center",
   },
@@ -773,26 +783,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 12,
     borderRadius: 12,
-    backgroundColor: "#FAFAFA",
     marginBottom: 12,
   },
   gradeText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 4,
     textAlign: "center",
   },
   pointsText: {
     fontSize: 11,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     fontWeight: "500",
     marginBottom: 2,
   },
   gradeLetter: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#535FFD",
   },
   modalOverlay: {
     flex: 1,
@@ -800,7 +808,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -809,7 +816,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 16,
     textAlign: "center",
   },
@@ -822,31 +829,30 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   modalItemSelected: {
-    backgroundColor: "rgba(83, 95, 253, 0.1)",
+    backgroundColor: theme.colors.primary + '20',
   },
   modalItemText: {
     fontSize: 16,
-    color: "#383940",
+    color: theme.colors.textPrimary,
     fontWeight: "500",
   },
   modalItemTextSelected: {
-    color: "#535FFD",
+    color: theme.colors.primary,
     fontWeight: "700",
   },
   modalItemSubtext: {
     fontSize: 12,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     marginTop: 4,
   },
   modalClose: {
-    backgroundColor: "#F1F5F9",
     padding: 16,
     borderRadius: 16,
     alignItems: "center",
     marginTop: 16,
   },
   modalCloseText: {
-    color: "#383940",
+    color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: "600",
   },

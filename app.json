@@ -17,7 +17,11 @@
       "bundleIdentifier": "com.anonymous.remi",
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
-        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone.",
+        "UIBackgroundModes": [
+          "remote-notification",
+          "fetch"
+        ]
       }
     },
     "android": {
@@ -29,8 +33,14 @@
       "package": "com.anonymous.remi",
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.RECORD_AUDIO"
-      ]
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.USE_EXACT_ALARM",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.WAKE_LOCK"
+      ],
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -47,6 +57,41 @@
           "ios": {
             "deploymentTarget": "15.1"
           }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#535FFD",
+          "sounds": ["./assets/notification-sound.wav"],
+          "defaultChannel": {
+            "name": "default",
+            "importance": "max",
+            "vibrationPattern": [0, 250, 250, 250],
+            "lightColor": "#FF231F7C",
+            "enableVibrate": true,
+            "enableLights": true,
+            "showBadge": true,
+            "sound": true
+          },
+          "androidMode": "default",
+          "iosDisplayInForeground": true,
+          "androidNotification": {
+            "icon": "./assets/notification-icon.png",
+            "color": "#535FFD",
+            "sound": true,
+            "priority": "max",
+            "vibrate": true
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#535FFD",
+          "resizeMode": "contain",
+          "image": "./assets/splash.png"
         }
       ]
     ],

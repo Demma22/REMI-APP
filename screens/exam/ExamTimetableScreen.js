@@ -1,4 +1,3 @@
-// screens/ExamTimetableScreen.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -13,16 +12,20 @@ import {
 import { auth, db } from "../../firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import NavigationBar from "../../components/NavigationBar";
+import SvgIcon from "../../components/SvgIcon";
+import { useTheme } from '../../contexts/ThemeContext'; // Add this import
 
 export default function ExamTimetableScreen({ navigation }) {
   if (!auth.currentUser) {
-    return <Text style={styles.center}>Not logged in</Text>;
+    return <Text style={[styles.center, { color: theme.colors.textPrimary }]}>Not logged in</Text>;
   }
 
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentSemester, setCurrentSemester] = useState(null);
+  
+  const { theme } = useTheme(); // Get theme from context
 
   useEffect(() => {
     loadExams();
@@ -159,18 +162,19 @@ export default function ExamTimetableScreen({ navigation }) {
             style={styles.deleteBtn}
             onPress={() => deleteExam(item.id)}
           >
-            <Text style={styles.deleteText}>×</Text>
+            <SvgIcon name="close" size={16} color={theme.colors.error} />
           </TouchableOpacity>
         </View>
         
         <View style={styles.examDetails}>
           <View style={styles.examTimeContainer}>
-            <Text style={styles.examTime}>🕒 {item.start} - {item.end}</Text>
+            <SvgIcon name="clock" size={14} color={theme.colors.primary} />
+            <Text style={styles.examTime}> {item.start} - {item.end}</Text>
           </View>
           
           {item.semester && (
-            <View style={styles.semesterBadge}>
-              <Text style={styles.semesterText}>Semester {item.semester}</Text>
+            <View style={[styles.semesterBadge, { backgroundColor: theme.colors.secondary + '20' }]}>
+              <Text style={[styles.semesterText, { color: theme.colors.secondary }]}>Semester {item.semester}</Text>
             </View>
           )}
         </View>
@@ -192,26 +196,33 @@ export default function ExamTimetableScreen({ navigation }) {
           styles.examCard,
           index === groupedExams[date].length - 1 && styles.lastExamCard
         ]}>
-          <View style={styles.examColorBar} />
+          <View style={[styles.examColorBar, { backgroundColor: theme.colors.secondary }]} />
           <View style={styles.examCardContent}>
             <Text style={styles.examCardCourse}>{exam.name}</Text>
             <View style={styles.examCardDetails}>
-              <Text style={styles.examCardTime}>🕒 {exam.start} - {exam.end}</Text>
+              <View style={styles.examCardTimeRow}>
+                <SvgIcon name="clock" size={14} color={theme.colors.primary} />
+                <Text style={styles.examCardTime}> {exam.start} - {exam.end}</Text>
+              </View>
               {exam.semester && (
-                <Text style={styles.examCardSemester}>Semester {exam.semester}</Text>
+                <View style={[styles.examCardSemesterContainer, { backgroundColor: theme.colors.primaryLight }]}>
+                  <Text style={[styles.examCardSemester, { color: theme.colors.primary }]}>Semester {exam.semester}</Text>
+                </View>
               )}
             </View>
           </View>
           <TouchableOpacity 
-            style={styles.examDeleteBtn}
+            style={[styles.examDeleteBtn, { backgroundColor: theme.colors.error + '20' }]}
             onPress={() => deleteExam(exam.id)}
           >
-            <Text style={styles.examDeleteText}>×</Text>
+            <SvgIcon name="trash" size={14} color={theme.colors.error} />
           </TouchableOpacity>
         </View>
       ))}
     </View>
   );
+
+  const styles = getStyles(theme);
 
   if (loading) {
     return (
@@ -222,7 +233,7 @@ export default function ExamTimetableScreen({ navigation }) {
               style={styles.backBtn} 
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.backText}>‹</Text>
+              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>EXAM TIMETABLE</Text>
             <View style={styles.headerSpacer} />
@@ -247,8 +258,8 @@ export default function ExamTimetableScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#535FFD"]}
-            tintColor="#535FFD"
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
           />
         }
       >
@@ -259,7 +270,7 @@ export default function ExamTimetableScreen({ navigation }) {
               style={styles.backBtn} 
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.backText}>‹</Text>
+              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>EXAM TIMETABLE</Text>
             <View style={styles.headerSpacer} />
@@ -277,12 +288,12 @@ export default function ExamTimetableScreen({ navigation }) {
                 </View>
                 
                 <View style={styles.summaryCard}>
-                  <Text style={styles.summaryNumber}>{upcomingExams.length}</Text>
+                  <Text style={[styles.summaryNumber, { color: theme.colors.success }]}>{upcomingExams.length}</Text>
                   <Text style={styles.summaryLabel}>Upcoming</Text>
                 </View>
                 
                 <View style={styles.summaryCard}>
-                  <Text style={styles.summaryNumber}>{pastExams.length}</Text>
+                  <Text style={[styles.summaryNumber, { color: theme.colors.textSecondary }]}>{pastExams.length}</Text>
                   <Text style={styles.summaryLabel}>Completed</Text>
                 </View>
               </View>
@@ -291,9 +302,19 @@ export default function ExamTimetableScreen({ navigation }) {
 
           {/* Current Semester Info */}
           {currentSemester && (
-            <View style={styles.semesterInfo}>
-              <Text style={styles.semesterText}>
-                Current Semester: {currentSemester}
+            <View style={[styles.semesterInfo, { 
+              backgroundColor: theme.mode === 'dark' ? '#3E2A1D' : '#FFF7ED',
+              borderLeftColor: theme.colors.secondary 
+            }]}>
+              <View style={[styles.semesterIconContainer, { 
+                backgroundColor: theme.mode === 'dark' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(146, 64, 14, 0.1)' 
+              }]}>
+                <SvgIcon name="calendar" size={16} color={theme.mode === 'dark' ? '#FBBF24' : '#92400E'} />
+              </View>
+              <Text style={[styles.semesterText, { 
+                color: theme.mode === 'dark' ? '#FBBF24' : '#92400E' 
+              }]}>
+                Semester {currentSemester}
               </Text>
             </View>
           )}
@@ -313,7 +334,9 @@ export default function ExamTimetableScreen({ navigation }) {
                 />
               ) : (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyIcon}>📊</Text>
+                  <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+                    <SvgIcon name="chart" size={32} color={theme.colors.primary} />
+                  </View>
                   <Text style={styles.emptyTitle}>No Exams Scheduled</Text>
                   <Text style={styles.emptySubtitle}>
                     You haven't scheduled any exams yet
@@ -324,8 +347,8 @@ export default function ExamTimetableScreen({ navigation }) {
           ) : (
             /* Empty State */
             <View style={styles.emptyState}>
-              <View style={styles.emptyIconContainer}>
-                <Text style={styles.emptyIcon}>📚</Text>
+              <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
+                <SvgIcon name="book" size={32} color={theme.colors.primary} />
               </View>
               <Text style={styles.emptyTitle}>No exams scheduled yet</Text>
               <Text style={styles.emptySubtitle}>
@@ -333,10 +356,11 @@ export default function ExamTimetableScreen({ navigation }) {
               </Text>
               
               <TouchableOpacity 
-                style={styles.addButton}
+                style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
                 onPress={() => navigation.navigate("AddExam")}
               >
-                <Text style={styles.addButtonText}>+ Schedule Your First Exam</Text>
+                <SvgIcon name="plus" size={18} color="white" />
+                <Text style={styles.addButtonText}>Schedule Your First Exam</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -350,10 +374,10 @@ export default function ExamTimetableScreen({ navigation }) {
       {exams.length > 0 && (
         <View style={styles.floatingActions}>
           <TouchableOpacity
-            style={styles.addFloatingBtn}
+            style={[styles.addFloatingBtn, { backgroundColor: theme.colors.primary }]}
             onPress={() => navigation.navigate("AddExam")}
           >
-            <Text style={styles.addFloatingIcon}>+</Text>
+            <SvgIcon name="plus" size={18} color="white" />
             <Text style={styles.addFloatingText}>Add Exam</Text>
           </TouchableOpacity>
         </View>
@@ -364,28 +388,26 @@ export default function ExamTimetableScreen({ navigation }) {
   );
 }
 
-
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
   },
   center: {
     textAlign: "center",
     marginTop: 40,
-    color: "#383940",
   },
   scrollView: {
     flex: 1,
   },
   header: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.backgroundSecondary,
     paddingTop: 60,
     paddingHorizontal: 24,
     paddingBottom: 20,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -400,22 +422,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-  },
-  backText: { 
-    fontSize: 24, 
-    color: "#535FFD", 
-    fontWeight: "300",
-    lineHeight: 24,
+    borderColor: theme.colors.border,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     textAlign: "center",
   },
   headerSpacer: {
@@ -435,11 +451,11 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     padding: 16,
     borderRadius: 16,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -448,27 +464,34 @@ const styles = StyleSheet.create({
   summaryNumber: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#535FFD",
+    color: theme.colors.primary,
     marginBottom: 4,
   },
   summaryLabel: {
     fontSize: 12,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     fontWeight: "600",
     textAlign: "center",
   },
   semesterInfo: {
-    backgroundColor: "#FFF7ED",
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
     marginBottom: 24,
     borderLeftWidth: 4,
-    borderLeftColor: "#FF8A23",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  semesterIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
   semesterText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#92400E",
     textAlign: "center",
   },
   examsSection: {
@@ -477,7 +500,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 20,
   },
   datesList: {
@@ -496,31 +519,32 @@ const styles = StyleSheet.create({
   dateTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
   },
   examCount: {
     fontSize: 14,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     fontWeight: "600",
   },
   examCard: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     borderRadius: 16,
     marginBottom: 8,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   lastExamCard: {
     marginBottom: 0,
   },
   examColorBar: {
     width: 4,
-    backgroundColor: "#FF8A23",
   },
   examCardContent: {
     flex: 1,
@@ -529,7 +553,7 @@ const styles = StyleSheet.create({
   examCardCourse: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   examCardDetails: {
@@ -537,36 +561,39 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  examCardTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   examCardTime: {
     fontSize: 14,
-    color: "#535FFD",
+    color: theme.colors.primary,
     fontWeight: "600",
   },
-  examCardSemester: {
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "600",
-    backgroundColor: "rgba(83, 95, 253, 0.1)",
+  examCardSemesterContainer: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+  },
+  examCardSemester: {
+    fontSize: 12,
+    fontWeight: "600",
   },
   examDeleteBtn: {
     padding: 16,
     justifyContent: "center",
     alignItems: "center",
-  },
-  examDeleteText: {
-    color: "#EF4444",
-    fontSize: 18,
-    fontWeight: "bold",
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
   },
   emptyState: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     padding: 40,
     borderRadius: 24,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -577,7 +604,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(83, 95, 253, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
@@ -588,27 +614,29 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 8,
     textAlign: "center",
   },
   emptySubtitle: {
     fontSize: 14,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 24,
   },
   addButton: {
-    backgroundColor: "#535FFD",
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 20,
-    shadowColor: "#535FFD",
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   addButtonText: {
     color: "#FFFFFF",
@@ -616,14 +644,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   examItem: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     borderRadius: 12,
     marginBottom: 8,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   examContent: {
     padding: 16,
@@ -637,21 +667,16 @@ const styles = StyleSheet.create({
   examCourse: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     flex: 1,
   },
   deleteBtn: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    backgroundColor: theme.colors.error + '20',
     alignItems: "center",
     justifyContent: "center",
-  },
-  deleteText: {
-    color: "#EF4444",
-    fontSize: 16,
-    fontWeight: "bold",
   },
   examDetails: {
     flexDirection: "row",
@@ -660,21 +685,21 @@ const styles = StyleSheet.create({
   },
   examTimeContainer: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
   },
   examTime: {
     fontSize: 14,
-    color: "#64748B",
+    color: theme.colors.primary,
     fontWeight: "600",
   },
   semesterBadge: {
-    backgroundColor: "rgba(255, 138, 35, 0.1)",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   semesterText: {
     fontSize: 12,
-    color: "#FF8A23",
     fontWeight: "600",
   },
   floatingActions: {
@@ -685,21 +710,15 @@ const styles = StyleSheet.create({
   addFloatingBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#535FFD",
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 25,
-    shadowColor: "#535FFD",
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
-  },
-  addFloatingIcon: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginRight: 8,
+    gap: 8,
   },
   addFloatingText: {
     color: "#FFFFFF",
@@ -707,11 +726,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   emptyCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     padding: 32,
     borderRadius: 24,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -719,7 +738,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   emptySub: { 
-    color: "#666", 
+    color: theme.colors.textSecondary, 
     textAlign: "center",
     lineHeight: 20,
   },

@@ -1,4 +1,3 @@
-// screens/AddLectureScreen.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -19,6 +18,10 @@ import {
 import { auth, db } from "../../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import NavigationBar from "../../components/NavigationBar";
+import SvgIcon from "../../components/SvgIcon";
+import { useTheme } from '../../contexts/ThemeContext';
+import { useNotifications } from '../../hooks/useNotifications'; // Add this import
+import * as Notifications from 'expo-notifications'; // Add with other imports
 
 const { width } = Dimensions.get("window");
 
@@ -26,7 +29,7 @@ export default function AddLectureScreen({ navigation }) {
   if (!auth.currentUser) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.center}>Not logged in</Text>
+        <Text style={[styles.center, { color: theme.colors.textPrimary }]}>Not logged in</Text>
       </View>
     );
   }
@@ -42,6 +45,9 @@ export default function AddLectureScreen({ navigation }) {
   const [showDayDropdown, setShowDayDropdown] = useState(false);
   const [showLecturesDropdown, setShowLecturesDropdown] = useState(false);
   const [showCourseDropdown, setShowCourseDropdown] = useState(null);
+  
+  const { theme } = useTheme(); // Get theme from context
+  const { scheduleLectureNotifications } = useNotifications(); // Add notifications hook
 
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const lectureOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -98,48 +104,76 @@ export default function AddLectureScreen({ navigation }) {
     copy[idx] = { ...copy[idx], [key]: val };
     setEntries(copy);
   };
-
-  const save = async () => {
-    try {
-      // Validate all entries
-      for (let i = 0; i < entries.length; i++) {
-        const lec = entries[i];
-        if (!lec.name.trim()) {
-          Alert.alert("Error", `Please select a course for Lecture ${i + 1}`);
-          return;
-        }
-        if (!lec.start.trim() || !lec.end.trim()) {
-          Alert.alert("Error", `Please enter both start and end times for Lecture ${i + 1}`);
-          return;
-        }
+const save = async () => {
+  try {
+    // Validate all entries
+    for (let i = 0; i < entries.length; i++) {
+      const lec = entries[i];
+      if (!lec.name.trim()) {
+        Alert.alert("Error", `Please select a course for Lecture ${i + 1}`);
+        return;
       }
-
-      // Save to Firestore
-      await saveToFirestore();
-      
-      Alert.alert("Success", "Lecture(s) added successfully!");
-      navigation.goBack();
-    } catch (error) {
-      console.log("Save error:", error);
-      Alert.alert("Error", "Could not save lecture(s)");
+      if (!lec.start.trim() || !lec.end.trim()) {
+        Alert.alert("Error", `Please enter both start and end times for Lecture ${i + 1}`);
+        return;
+      }
     }
-  };
 
-  // Save lectures to Firestore
-  const saveToFirestore = async () => {
-    try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      let timetableData = {};
-      if (userDoc.exists() && userDoc.data().timetable) {
-        timetableData = userDoc.data().timetable;
+    // Save to Firestore
+    await saveToFirestore();
+    
+    // Schedule notifications for the new lectures
+    const userDocRef = doc(db, "users", auth.currentUser.uid);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (userDoc.exists()) {
+      try {
+        console.log("🔔 Scheduling lecture notifications...");
+        await scheduleLectureNotifications(userDoc.data());
+        console.log("✅ Lecture notifications scheduled");
+        
+        // DEBUG: List all scheduled notifications
+        const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+        console.log(`📋 Total scheduled notifications: ${scheduled.length}`);
+        scheduled.forEach((n, i) => {
+          console.log(`#${i + 1}: ${n.content.title} - ${n.content.body}`);
+          console.log("   Trigger:", n.trigger);
+        });
+      } catch (notificationError) {
+        console.error("❌ Lecture notification error:", notificationError);
+        Alert.alert("Warning", "Lecture saved but notifications failed to schedule");
+        navigation.goBack();
+        return;
       }
+    }
+    
+    Alert.alert(
+      "Success ✅", 
+      "Lecture(s) added!\n\n" +
+      "• Lecture reminders will notify you weekly"
+    );
+    navigation.goBack();
+  } catch (error) {
+    console.log("Save error:", error);
+    Alert.alert("Error", "Could not save lecture(s)");
+  }
+};
 
-      const dayKey = day.toLowerCase();
-      if (!timetableData[dayKey]) {
-        timetableData[dayKey] = [];
-      }
+// Save lectures to Firestore
+const saveToFirestore = async () => {
+  try {
+    const userDocRef = doc(db, "users", auth.currentUser.uid);
+    const userDoc = await getDoc(userDocRef);
+    
+    let timetableData = {};
+    if (userDoc.exists() && userDoc.data().timetable) {
+      timetableData = userDoc.data().timetable;
+    }
+
+    const dayKey = day.toLowerCase();
+    if (!timetableData[dayKey]) {
+      timetableData[dayKey] = [];
+    }
 
       // Add new lectures with semester info
       const lecturesWithSemester = entries.map(lecture => ({
@@ -182,7 +216,7 @@ export default function AddLectureScreen({ navigation }) {
         {item}
       </Text>
       {day === item && (
-        <Text style={styles.checkmark}>✓</Text>
+        <SvgIcon name="check" size={16} color={theme.colors.secondary} />
       )}
     </TouchableOpacity>
   );
@@ -205,7 +239,7 @@ export default function AddLectureScreen({ navigation }) {
         {item} lecture{item !== 1 ? 's' : ''}
       </Text>
       {numLectures === item && (
-        <Text style={styles.checkmark}>✓</Text>
+        <SvgIcon name="check" size={16} color={theme.colors.secondary} />
       )}
     </TouchableOpacity>
   );
@@ -228,7 +262,7 @@ export default function AddLectureScreen({ navigation }) {
         {item}
       </Text>
       {entries[showCourseDropdown]?.name === item && (
-        <Text style={styles.checkmark}>✓</Text>
+        <SvgIcon name="check" size={16} color={theme.colors.secondary} />
       )}
     </TouchableOpacity>
   );
@@ -236,6 +270,8 @@ export default function AddLectureScreen({ navigation }) {
   const dismissKeyboard = () => {
     Keyboard.dismiss();
   };
+
+  const styles = getStyles(theme);
 
   if (loading) {
     return (
@@ -263,7 +299,7 @@ export default function AddLectureScreen({ navigation }) {
                 onPress={() => navigation.goBack()}
                 activeOpacity={0.7}
               >
-                <Text style={styles.backText}>‹</Text>
+                <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>ADD LECTURE</Text>
               <View style={styles.placeholder} />
@@ -271,12 +307,39 @@ export default function AddLectureScreen({ navigation }) {
 
             <View style={styles.content}>
               {/* Current Semester Info */}
-              <View style={styles.infoCard}>
-                <Text style={styles.infoTitle}>Current Semester: {currentSemester}</Text>
-                <Text style={styles.infoSubtitle}>
-                  {coursesForSemester.length > 0 
-                    ? `${coursesForSemester.length} courses available` 
-                    : "No courses found for this semester"}
+              <View style={[styles.infoCard, { 
+                backgroundColor: theme.mode === 'dark' ? '#3E2A1D' : '#FFF7ED',
+                borderLeftColor: theme.colors.secondary 
+              }]}>
+                <View style={[styles.infoIconContainer, { 
+                  backgroundColor: theme.mode === 'dark' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(146, 64, 14, 0.1)' 
+                }]}>
+                  <SvgIcon name="calendar" size={16} color={theme.mode === 'dark' ? '#FBBF24' : '#92400E'} />
+                </View>
+                <View style={styles.infoTextContainer}>
+                  <Text style={[styles.infoTitle, { 
+                    color: theme.mode === 'dark' ? '#FBBF24' : '#92400E' 
+                  }]}>
+                    Semester {currentSemester}
+                  </Text>
+                  <Text style={[styles.infoSubtitle, { 
+                    color: theme.mode === 'dark' ? '#FBBF24' : '#92400E' 
+                  }]}>
+                    {coursesForSemester.length > 0 
+                      ? `${coursesForSemester.length} courses available` 
+                      : "No courses found for this semester"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Notification Info */}
+              <View style={[styles.notificationInfo, { 
+                backgroundColor: theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(37, 99, 235, 0.1)',
+                borderLeftColor: theme.colors.primary 
+              }]}>
+                <SvgIcon name="bell" size={16} color={theme.colors.primary} />
+                <Text style={[styles.notificationText, { color: theme.colors.primary }]}>
+                  Notifications will be scheduled automatically
                 </Text>
               </View>
 
@@ -288,8 +351,9 @@ export default function AddLectureScreen({ navigation }) {
                   onPress={() => setShowDayDropdown(true)}
                   activeOpacity={0.7}
                 >
+                  <SvgIcon name="calendar" size={16} color={theme.colors.primary} />
                   <Text style={styles.dropdownButtonText}>{day}</Text>
-                  <Text style={styles.dropdownArrow}>▼</Text>
+                  <SvgIcon name="chevron-down" size={14} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
@@ -301,10 +365,11 @@ export default function AddLectureScreen({ navigation }) {
                   onPress={() => setShowLecturesDropdown(true)}
                   activeOpacity={0.7}
                 >
+                  <SvgIcon name="book" size={16} color={theme.colors.primary} />
                   <Text style={styles.dropdownButtonText}>
                     {numLectures} lecture{numLectures !== 1 ? 's' : ''}
                   </Text>
-                  <Text style={styles.dropdownArrow}>▼</Text>
+                  <SvgIcon name="chevron-down" size={14} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
@@ -312,11 +377,16 @@ export default function AddLectureScreen({ navigation }) {
               {entries.map((lec, i) => (
                 <View key={i} style={styles.lectureCard}>
                   <View style={styles.lectureHeader}>
-                    <Text style={styles.lectureTitle}>
-                      Lecture {i + 1}
-                    </Text>
+                    <View style={styles.lectureHeaderLeft}>
+                      <View style={[styles.lectureNumber, { backgroundColor: theme.colors.primaryLight }]}>
+                        <Text style={[styles.lectureNumberText, { color: theme.colors.primary }]}>#{i + 1}</Text>
+                      </View>
+                      <Text style={styles.lectureTitle}>
+                        Lecture {i + 1}
+                      </Text>
+                    </View>
                     {coursesForSemester.length === 0 && (
-                      <Text style={styles.warningText}>No courses available</Text>
+                      <Text style={styles.warningText}>No courses</Text>
                     )}
                   </View>
 
@@ -335,59 +405,74 @@ export default function AddLectureScreen({ navigation }) {
                     }}
                     disabled={coursesForSemester.length === 0}
                   >
+                    <SvgIcon name="book" size={16} color={theme.colors.textSecondary} />
                     <Text style={[
                       styles.courseDropdownButtonText,
                       !lec.name && styles.courseDropdownButtonTextEmpty
                     ]}>
                       {lec.name || "Select a course"}
                     </Text>
-                    <Text style={styles.dropdownArrow}>▼</Text>
+                    <SvgIcon name="chevron-down" size={14} color={theme.colors.textSecondary} />
                   </TouchableOpacity>
 
                   {/* Time Inputs Row */}
                   <View style={styles.timeRow}>
                     <View style={styles.timeInputContainer}>
                       <Text style={styles.inputLabel}>Start Time *</Text>
-                      <TextInput 
-                        style={styles.timeInput} 
-                        value={lec.start} 
-                        onChangeText={(v) => updateEntry(i, "start", v)}
-                        placeholder="9:00 AM"
-                        placeholderTextColor="#94A3B8"
-                      />
+                      <View style={styles.timeInputWrapper}>
+                        <SvgIcon name="clock" size={16} color={theme.colors.textSecondary} />
+                        <TextInput 
+                          style={styles.timeInput} 
+                          value={lec.start} 
+                          onChangeText={(v) => updateEntry(i, "start", v)}
+                          placeholder="9:00 AM"
+                          placeholderTextColor={theme.colors.textPlaceholder}
+                        />
+                      </View>
+                      <Text style={[styles.timeHint, { color: theme.colors.textTertiary }]}>Format: 9:00 AM</Text>
                     </View>
                     
                     <View style={styles.timeInputContainer}>
                       <Text style={styles.inputLabel}>End Time *</Text>
-                      <TextInput 
-                        style={styles.timeInput} 
-                        value={lec.end} 
-                        onChangeText={(v) => updateEntry(i, "end", v)}
-                        placeholder="10:00 AM"
-                        placeholderTextColor="#94A3B8"
-                      />
+                      <View style={styles.timeInputWrapper}>
+                        <SvgIcon name="clock" size={16} color={theme.colors.textSecondary} />
+                        <TextInput 
+                          style={styles.timeInput} 
+                          value={lec.end} 
+                          onChangeText={(v) => updateEntry(i, "end", v)}
+                          placeholder="10:00 AM"
+                          placeholderTextColor={theme.colors.textPlaceholder}
+                        />
+                      </View>
+                      <Text style={[styles.timeHint, { color: theme.colors.textTertiary }]}>Format: 10:00 AM</Text>
                     </View>
                   </View>
 
                   {/* Lecturer Input */}
                   <Text style={styles.inputLabel}>Lecturer</Text>
-                  <TextInput 
-                    style={styles.input} 
-                    value={lec.lecturer} 
-                    onChangeText={(v) => updateEntry(i, "lecturer", v)}
-                    placeholder="Enter lecturer name"
-                    placeholderTextColor="#94A3B8"
-                  />
+                  <View style={styles.inputWrapper}>
+                    <SvgIcon name="user" size={16} color={theme.colors.textSecondary} />
+                    <TextInput 
+                      style={styles.input} 
+                      value={lec.lecturer} 
+                      onChangeText={(v) => updateEntry(i, "lecturer", v)}
+                      placeholder="Enter lecturer name"
+                      placeholderTextColor={theme.colors.textPlaceholder}
+                    />
+                  </View>
 
                   {/* Room Input */}
                   <Text style={styles.inputLabel}>Room</Text>
-                  <TextInput 
-                    style={styles.input} 
-                    value={lec.room} 
-                    onChangeText={(v) => updateEntry(i, "room", v)}
-                    placeholder="Enter room number"
-                    placeholderTextColor="#94A3B8"
-                  />
+                  <View style={styles.inputWrapper}>
+                    <SvgIcon name="location" size={16} color={theme.colors.textSecondary} />
+                    <TextInput 
+                      style={styles.input} 
+                      value={lec.room} 
+                      onChangeText={(v) => updateEntry(i, "room", v)}
+                      placeholder="Enter room number"
+                      placeholderTextColor={theme.colors.textPlaceholder}
+                    />
+                  </View>
                 </View>
               ))}
 
@@ -401,25 +486,35 @@ export default function AddLectureScreen({ navigation }) {
                 activeOpacity={0.8}
                 disabled={coursesForSemester.length === 0}
               >
+                <SvgIcon name="save" size={18} color="white" />
                 <Text style={styles.saveBtnText}>
                   {coursesForSemester.length === 0 
                     ? "ADD COURSES FIRST" 
-                    : `💾 SAVE ${entries.length} LECTURE${entries.length > 1 ? 'S' : ''}`}
+                    : `SAVE ${entries.length} LECTURE${entries.length > 1 ? 'S' : ''}`}
                 </Text>
               </TouchableOpacity>
 
               {/* Help Text */}
               {coursesForSemester.length === 0 && (
-                <View style={styles.helpCard}>
-                  <Text style={styles.helpText}>
-                    You need to add course units for Semester {currentSemester} before scheduling lectures.
-                  </Text>
-                  <TouchableOpacity 
-                    style={styles.helpButton}
-                    onPress={() => navigation.navigate("EditUnits")}
-                  >
-                    <Text style={styles.helpButtonText}>Add Course Units</Text>
-                  </TouchableOpacity>
+                <View style={[styles.helpCard, { 
+                  backgroundColor: theme.mode === 'dark' ? '#3E2A1D' : '#FFF7ED',
+                  borderLeftColor: theme.colors.secondary 
+                }]}>
+                  <SvgIcon name="alert-circle" size={16} color={theme.mode === 'dark' ? '#FBBF24' : '#92400E'} />
+                  <View style={styles.helpContent}>
+                    <Text style={[styles.helpText, { 
+                      color: theme.mode === 'dark' ? '#FBBF24' : '#92400E' 
+                    }]}>
+                      You need to add course units for Semester {currentSemester} before scheduling lectures.
+                    </Text>
+                    <TouchableOpacity 
+                      style={[styles.helpButton, { backgroundColor: theme.colors.secondary }]}
+                      onPress={() => navigation.navigate("EditUnits")}
+                    >
+                      <SvgIcon name="plus" size={14} color="white" />
+                      <Text style={styles.helpButtonText}>Add Course Units</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
 
@@ -435,11 +530,11 @@ export default function AddLectureScreen({ navigation }) {
               onRequestClose={() => setShowDayDropdown(false)}
             >
               <View style={styles.modalOverlay}>
-                <View style={styles.modalContent}>
+                <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
                   <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>Select Day</Text>
                     <TouchableOpacity onPress={() => setShowDayDropdown(false)}>
-                      <Text style={styles.modalClose}>✕</Text>
+                      <SvgIcon name="close" size={20} color={theme.colors.textSecondary} />
                     </TouchableOpacity>
                   </View>
                   <FlatList
@@ -460,11 +555,11 @@ export default function AddLectureScreen({ navigation }) {
               onRequestClose={() => setShowLecturesDropdown(false)}
             >
               <View style={styles.modalOverlay}>
-                <View style={styles.modalContent}>
+                <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
                   <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>Number of Lectures</Text>
                     <TouchableOpacity onPress={() => setShowLecturesDropdown(false)}>
-                      <Text style={styles.modalClose}>✕</Text>
+                      <SvgIcon name="close" size={20} color={theme.colors.textSecondary} />
                     </TouchableOpacity>
                   </View>
                   <FlatList
@@ -485,11 +580,11 @@ export default function AddLectureScreen({ navigation }) {
               onRequestClose={() => setShowCourseDropdown(null)}
             >
               <View style={styles.modalOverlay}>
-                <View style={styles.modalContent}>
+                <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
                   <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>Select Course</Text>
                     <TouchableOpacity onPress={() => setShowCourseDropdown(null)}>
-                      <Text style={styles.modalClose}>✕</Text>
+                      <SvgIcon name="close" size={20} color={theme.colors.textSecondary} />
                     </TouchableOpacity>
                   </View>
                   <FlatList
@@ -511,24 +606,23 @@ export default function AddLectureScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
   },
   wrap: { 
     flex: 1, 
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
   },
   center: { 
     fontSize: 16,
-    color: "#64748B"
   },
 
   // Header Styles
@@ -539,10 +633,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 60,
     paddingBottom: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.backgroundSecondary,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -552,20 +646,14 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-  },
-  backText: { 
-    fontSize: 24, 
-    color: "#535FFD", 
-    fontWeight: "300",
-    lineHeight: 24,
+    borderColor: theme.colors.border,
   },
   headerTitle: { 
-    color: "#383940", 
+    color: theme.colors.textPrimary, 
     fontSize: 24, 
     fontWeight: "800",
     textAlign: "center"
@@ -581,22 +669,47 @@ const styles = StyleSheet.create({
 
   // Info Card
   infoCard: {
-    backgroundColor: "#FFF7ED",
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
+    borderRadius: 16,
+    marginBottom: 16,
     borderLeftWidth: 4,
-    borderLeftColor: "#FF8A23",
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  infoIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  infoTextContainer: {
+    flex: 1,
   },
   infoTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#383940",
     marginBottom: 4,
   },
   infoSubtitle: {
     fontSize: 14,
-    color: "#64748B",
+  },
+
+  // Notification Info
+  notificationInfo: {
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 24,
+    borderLeftWidth: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  notificationText: {
+    fontSize: 14,
+    fontWeight: "500",
+    flex: 1,
   },
 
   // Section Styles
@@ -606,62 +719,62 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 12,
   },
 
   // Dropdown Styles
   dropdownButton: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: theme.colors.border,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+    gap: 8,
   },
   dropdownButtonText: {
     fontSize: 16,
-    color: "#383940",
+    color: theme.colors.textPrimary,
     fontWeight: "500",
-  },
-  dropdownArrow: {
-    fontSize: 12,
-    color: "#64748B",
+    flex: 1,
   },
 
   // Course Selection Styles
   courseDropdownButton: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.backgroundTertiary,
     borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 8,
   },
   courseDropdownButtonEmpty: {
-    borderColor: "#FDBA74",
+    borderColor: theme.colors.secondary + '50',
   },
   courseDropdownButtonActive: {
-    borderColor: "#FF8A23",
+    borderColor: theme.colors.secondary,
   },
   courseDropdownButtonText: {
     fontSize: 16,
-    color: "#1E293B",
+    color: theme.colors.textPrimary,
     fontWeight: "500",
+    flex: 1,
   },
   courseDropdownButtonTextEmpty: {
-    color: "#94A3B8",
+    color: theme.colors.textPlaceholder,
   },
 
   // Modal Styles
@@ -672,11 +785,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 24,
     marginHorizontal: 20,
     maxHeight: "60%",
     width: "90%",
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
   modalHeader: {
     flexDirection: "row",
@@ -684,17 +801,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: theme.colors.border,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1E293B",
-  },
-  modalClose: {
     fontSize: 20,
-    color: "#64748B",
-    fontWeight: "bold",
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
   },
   dropdownList: {
     maxHeight: 300,
@@ -703,56 +815,69 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: theme.colors.border,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   dropdownItemSelected: {
-    backgroundColor: "#FFF7ED",
+    backgroundColor: theme.colors.primary + '10',
   },
   dropdownItemText: {
     fontSize: 16,
-    color: "#374151",
+    color: theme.colors.textPrimary,
   },
   dropdownItemTextSelected: {
-    color: "#FF8A23",
+    color: theme.colors.secondary,
     fontWeight: "600",
-  },
-  checkmark: {
-    color: "#FF8A23",
-    fontWeight: "bold",
-    fontSize: 16,
   },
 
   // Lecture Card Styles
   lectureCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    backgroundColor: theme.colors.card,
+    borderRadius: 20,
     padding: 20,
     marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-    borderLeftWidth: 3,
-    borderLeftColor: "#FF8A23",
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.secondary,
   },
   lectureHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 20,
+  },
+  lectureHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   lectureTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#1E293B",
+    color: theme.colors.textPrimary,
+  },
+  lectureNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  lectureNumberText: {
+    fontSize: 14,
+    fontWeight: "700",
   },
   warningText: {
     fontSize: 12,
-    color: "#EF4444",
+    color: theme.colors.error,
     fontWeight: "600",
   },
 
@@ -760,19 +885,26 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#374151",
+    color: theme.colors.textPrimary,
     marginBottom: 8,
     marginTop: 12,
   },
-  input: {
-    backgroundColor: "#FFFFFF",
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.backgroundTertiary,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    gap: 8,
+  },
+  input: {
+    flex: 1,
     fontSize: 16,
-    color: "#1E293B",
+    color: theme.colors.textPrimary,
+    padding: 0,
   },
 
   // Time Input Styles
@@ -783,35 +915,50 @@ const styles = StyleSheet.create({
   timeInputContainer: {
     width: (width - 72) / 2,
   },
-  timeInput: {
-    backgroundColor: "#FFFFFF",
+  timeInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.backgroundTertiary,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    gap: 8,
+  },
+  timeInput: {
+    flex: 1,
     fontSize: 16,
-    color: "#1E293B",
+    color: theme.colors.textPrimary,
     textAlign: "center",
+    padding: 0,
+  },
+  timeHint: {
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: 4,
   },
 
   // Save Button Styles
   saveBtn: {
-    backgroundColor: "#FF8A23",
+    backgroundColor: theme.colors.secondary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: "center",
     marginTop: 10,
     marginBottom: 20,
-    shadowColor: "#FF8A23",
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: theme.colors.secondary,
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: 12,
     elevation: 6,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
   },
   saveBtnDisabled: {
-    backgroundColor: "#94A3B8",
-    shadowColor: "#94A3B8",
+    backgroundColor: theme.colors.textSecondary,
+    shadowColor: theme.colors.textSecondary,
   },
   saveBtnText: {
     color: "#FFFFFF",
@@ -821,24 +968,29 @@ const styles = StyleSheet.create({
 
   // Help Card
   helpCard: {
-    backgroundColor: "#FFF7ED",
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderLeftWidth: 4,
-    borderLeftColor: "#FF8A23",
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  helpContent: {
+    flex: 1,
   },
   helpText: {
     fontSize: 14,
-    color: "#92400E",
     marginBottom: 12,
     lineHeight: 20,
   },
   helpButton: {
-    backgroundColor: "#FF8A23",
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignSelf: 'flex-start',
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   helpButtonText: {
     color: "#FFFFFF",

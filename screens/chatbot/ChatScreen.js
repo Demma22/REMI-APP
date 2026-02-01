@@ -18,6 +18,8 @@ import {
 } from "react-native";
 import { auth, db } from "../../firebase";
 import { doc, getDoc, collection, addDoc, query, orderBy, getDocs, deleteDoc, serverTimestamp } from "firebase/firestore";
+import SvgIcon from "../../components/SvgIcon";
+import { useTheme } from '../../contexts/ThemeContext'; // Add this import
 
 const { height: screenHeight } = Dimensions.get("window");
 
@@ -43,6 +45,8 @@ export default function ChatScreen({ navigation }) {
   
   const [thinkingDots, setThinkingDots] = useState("");
   const dotsIntervalRef = useRef(null);
+  
+  const { theme } = useTheme(); // Get theme from context
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
@@ -371,21 +375,27 @@ const send = async () => {
   const hasMessages = messages.length > 0;
   const contentHeight = screenHeight - (keyboardVisible ? keyboardHeight : 0) - 180;
 
+  const styles = getStyles(theme);
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backText}>‹</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>REMI</Text>
+            <TouchableOpacity 
+              style={styles.backBtn} 
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.backText}>‹</Text>
+            </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <SvgIcon name="robot" size={24} color={theme.colors.primary} style={styles.headerIcon} />
+            <Text style={styles.headerTitle}>REMI</Text>
+          </View>
           {hasMessages && (
-            <TouchableOpacity onPress={handleClearChat} style={styles.clearButton}>
-              <Text style={styles.clearButtonText}>Clear</Text>
+            <TouchableOpacity onPress={handleClearChat} style={[styles.clearButton, { backgroundColor: theme.mode === 'dark' ? 'rgba(255, 159, 77, 0.2)' : 'rgba(247, 133, 34, 0.1)' }]}>
+              <SvgIcon name="trash" size={16} color={theme.colors.secondary} />
+              <Text style={[styles.clearButtonText, { color: theme.colors.secondary }]}> Clear</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -395,8 +405,8 @@ const send = async () => {
       <View style={[styles.content, { height: contentHeight }]}>
         {!hasMessages ? (
           <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Text style={styles.emptyIconText}>💬</Text>
+            <View style={[styles.emptyIcon, { backgroundColor: theme.colors.primaryLight }]}>
+              <SvgIcon name="message" size={32} color={theme.colors.primary} />
             </View>
             <Text style={styles.emptyTitle}>What would you like to ask today?</Text>
             <Text style={styles.emptySubtitle}>
@@ -416,9 +426,19 @@ const send = async () => {
                   item.sender === "user" ? styles.userBubble : styles.remiBubble,
                 ]}
               >
+                {item.sender === "remi" && (
+                  <View style={[styles.remiAvatar, { backgroundColor: theme.colors.primaryLight }]}>
+                    <SvgIcon name="robot" size={16} color={theme.colors.primary} />
+                  </View>
+                )}
                 <Text style={item.sender === "user" ? styles.userText : styles.remiText}>
                   {item.text}
                 </Text>
+                {item.sender === "user" && (
+                  <View style={[styles.userAvatar, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                    <SvgIcon name="user" size={16} color="white" />
+                  </View>
+                )}
               </View>
             )}
             onContentSizeChange={() => scrollToEnd(false)}
@@ -435,18 +455,21 @@ const send = async () => {
           { bottom: keyboardHeight + 70 } // Position above input bar
         ]}>
           <View style={styles.thinkingDotsBubble}>
-            <ActivityIndicator size="small" color="#535FFD" style={styles.thinkingIndicator} />
-            <Text style={styles.thinkingDotsText}>{thinkingDots}</Text>
+            <ActivityIndicator size="small" color={theme.colors.primary} style={styles.thinkingIndicator} />
+            <SvgIcon name="robot" size={16} color={theme.colors.primary} style={styles.thinkingRobot} />
+            <Text style={[styles.thinkingDotsText, { color: theme.colors.primary }]}>{thinkingDots}</Text>
           </View>
         </View>
       )}
 
-      {/* Input Bar - Simple implementation without KeyboardAvoidingView pushing it */}
+      {/* Input Bar */}
       <View style={[
         styles.inputBar, 
         { 
           bottom: keyboardHeight,
-          marginBottom: 0 // No extra margin
+          marginBottom: 0,
+          backgroundColor: theme.colors.backgroundSecondary,
+          borderTopColor: theme.colors.border,
         }
       ]}>
         <TextInput
@@ -456,7 +479,7 @@ const send = async () => {
           style={styles.input}
           returnKeyType="send"
           onSubmitEditing={send}
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={theme.colors.textTertiary}
           multiline={true}
           maxLength={500}
           onFocus={handleInputFocus}
@@ -466,30 +489,31 @@ const send = async () => {
           onPress={send} 
           style={[
             styles.sendBtn,
+            { backgroundColor: input.trim() ? theme.colors.primary : theme.colors.textTertiary },
             !input.trim() && styles.sendBtnDisabled
           ]}
           disabled={!input.trim()}
         >
-          <Text style={styles.sendBtnText}>Send</Text>
+          <SvgIcon name="send" size={18} color="white" />
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
   },
   header: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.backgroundSecondary,
     paddingTop: 60,
     paddingHorizontal: 24,
     paddingBottom: 20,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -504,32 +528,41 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: theme.colors.border,
   },
   backText: { 
     fontSize: 24, 
-    color: "#535FFD", 
+    color: theme.colors.primary, 
     fontWeight: "300",
     lineHeight: 24,
+  },
+  headerTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  headerIcon: {
+    marginRight: 4,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     textAlign: "center",
   },
   clearButton: {
-    backgroundColor: "rgba(247, 133, 34, 0.1)",
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
   },
   clearButtonText: {
-    color: "#F78522",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -543,10 +576,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     padding: 40,
     borderRadius: 24,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -556,29 +589,25 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(83, 95, 253, 0.1)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
   },
-  emptyIconText: {
-    fontSize: 32,
-  },
   emptyTitle: { 
     fontSize: 20, 
     fontWeight: "700", 
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 8,
     textAlign: "center",
   },
   emptySubtitle: { 
-    color: "#64748B", 
+    color: theme.colors.textSecondary, 
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 16,
   },
 
-  // Simple thinking dots - just dots animation
+  // Simple thinking dots
   thinkingDotsContainer: {
     position: 'absolute',
     left: 16,
@@ -587,13 +616,13 @@ const styles = StyleSheet.create({
   thinkingDotsBubble: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-    shadowColor: "#000",
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -602,14 +631,16 @@ const styles = StyleSheet.create({
   thinkingIndicator: {
     marginRight: 8,
   },
+  thinkingRobot: {
+    marginRight: 8,
+  },
   thinkingDotsText: {
-    color: "#535FFD",
     fontSize: 18,
     fontWeight: "bold",
     width: 30,
   },
 
-  // Input Bar - Simple implementation
+  // Input Bar
   inputBar: {
     position: 'absolute',
     left: 0,
@@ -617,10 +648,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 12,
-    backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -631,37 +660,30 @@ const styles = StyleSheet.create({
     minHeight: 40,
     maxHeight: 80,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: theme.colors.border,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
     fontSize: 16,
-    color: "#383940",
+    color: theme.colors.textPrimary,
     textAlignVertical: "center",
     marginRight: 12,
   },
   sendBtn: {
-    backgroundColor: "#535FFD",
-    paddingHorizontal: 16,
+    width: 40,
     height: 40,
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#535FFD",
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   sendBtnDisabled: {
-    backgroundColor: "#94A3B8",
-    shadowColor: "#94A3B8",
-  },
-  sendBtnText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "700",
+    shadowColor: theme.colors.textTertiary,
   },
 
   // Message Bubbles
@@ -670,32 +692,54 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginVertical: 6,
     maxWidth: "80%",
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   userBubble: {
-    backgroundColor: "#535FFD",
+    backgroundColor: theme.colors.primary,
     alignSelf: "flex-end",
     borderBottomRightRadius: 6,
   },
   remiBubble: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     alignSelf: "flex-start",
     borderBottomLeftRadius: 6,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: theme.colors.border,
   },
   userText: { 
     color: "#fff",
     fontSize: 16,
     lineHeight: 20,
+    flex: 1,
   },
   remiText: { 
-    color: "#383940",
+    color: theme.colors.textPrimary,
     fontSize: 16,
     lineHeight: 20,
+    flex: 1,
+  },
+  userAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
+    marginTop: -2,
+  },
+  remiAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+    marginTop: -2,
   },
 });

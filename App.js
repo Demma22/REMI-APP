@@ -6,6 +6,10 @@ import { auth, db } from "./firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { View, Text, ActivityIndicator } from "react-native";
 
+// Import ThemeProvider and NotificationsProvider
+import { ThemeProvider } from './contexts/ThemeContext';
+import { NotificationsProvider } from './contexts/NotificationsContext';
+
 // AUTH SCREENS
 import SplashIntro from "./screens/SplashIntro";
 import LoginScreen from "./screens/auth/LoginScreen";
@@ -25,6 +29,7 @@ import TimetableScreen from "./screens/timetable/TimetableScreen";
 import EditTimetableScreen from "./screens/timetable/EditTimetableScreen";
 import ChatScreen from "./screens/chatbot/ChatScreen";
 import GPAScreen from "./screens/gpa/GPAScreen";
+import ExportGPAScreen from "./screens/gpa/ExportGPAScreen";
 import GPACalculationScreen from "./screens/gpa/GPACalculationScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import AddExamScreen from "./screens/exam/AddExamScreen";
@@ -34,10 +39,11 @@ import EditNickname from "./screens/settings/EditNickname";
 import EditCurrentSemester from "./screens/settings/EditCurrentSemester";
 import EditUnits from "./screens/settings/EditUnits";
 import EditCourse from "./screens/settings/EditCourse";
+import NotificationsSettingsScreen from "./screens/settings/NotificationsSettingsScreen"; // Add this import
 
 const Stack = createStackNavigator();
 
-export default function App() {
+function AppContent() {
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
@@ -171,15 +177,16 @@ export default function App() {
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="GPA" component={GPAScreen} />
+            <Stack.Screen name="ExportGPA" component={ExportGPAScreen} />
             <Stack.Screen name="GPACalculation" component={GPACalculationScreen} />
             <Stack.Screen name="AddExam" component={AddExamScreen} />
             <Stack.Screen name="ExamTimetable" component={ExamTimetableScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="NotificationsSettings" component={NotificationsSettingsScreen} />
             <Stack.Screen name="EditNickname" component={EditNickname} />
             <Stack.Screen name="EditCurrentSemester" component={EditCurrentSemester} />
             <Stack.Screen name="EditUnits" component={EditUnits} />
             <Stack.Screen name="EditCourse" component={EditCourse} />
-
           </>
         ) : !onboardingCompleted ? (
           // ONBOARDING FLOW - User logged in but hasn't completed onboarding
@@ -198,10 +205,12 @@ export default function App() {
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="GPA" component={GPAScreen} />
+            <Stack.Screen name="ExportGPA" component={ExportGPAScreen} />
             <Stack.Screen name="GPACalculation" component={GPACalculationScreen} />
             <Stack.Screen name="AddExam" component={AddExamScreen} />
             <Stack.Screen name="ExamTimetable" component={ExamTimetableScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="NotificationsSettings" component={NotificationsSettingsScreen} />
             <Stack.Screen name="EditNickname" component={EditNickname} />
             <Stack.Screen name="EditCurrentSemester" component={EditCurrentSemester} />
             <Stack.Screen name="EditUnits" component={EditUnits} />
@@ -222,16 +231,17 @@ export default function App() {
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="GPA" component={GPAScreen} />
+            <Stack.Screen name="ExportGPA" component={ExportGPAScreen} />
             <Stack.Screen name="GPACalculation" component={GPACalculationScreen} />
             <Stack.Screen name="AddExam" component={AddExamScreen} />
             <Stack.Screen name="ExamTimetable" component={ExamTimetableScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="NotificationsSettings" component={NotificationsSettingsScreen} />
             <Stack.Screen name="EditNickname" component={EditNickname} />
             <Stack.Screen name="EditCurrentSemester" component={EditCurrentSemester} />
             <Stack.Screen name="EditUnits" component={EditUnits} />
             <Stack.Screen name="EditCourse" component={EditCourse} />
 
-            
             {/* Onboarding screens for users who want to update info */}
             <Stack.Screen name="Nickname" component={Nickname} />
             <Stack.Screen name="Course" component={Course} />
@@ -247,5 +257,15 @@ export default function App() {
         )}
       </Stack.Navigator>
     </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <NotificationsProvider> {/* Add NotificationsProvider here */}
+        <AppContent />
+      </NotificationsProvider>
+    </ThemeProvider>
   );
 }

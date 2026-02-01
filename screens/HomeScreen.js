@@ -13,8 +13,119 @@ import { signOut } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import SvgIcon from "../components/SvgIcon";
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get("window");
+
+/* Menu Item Component - Updated for 3x2 grid */
+function MenuItem({ label, color, iconName, subtitle, action, theme }) {
+  const opacityColor = `${color}15`; // Add opacity to the color
+  
+  const menuItemStyles = StyleSheet.create({
+    menuItem: {
+      width: (width - 60) / 3, // Changed from /2 to /3 for 3 columns
+      backgroundColor: theme.colors.card,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+      alignItems: "center",
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 5,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    menuIconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 12,
+      backgroundColor: opacityColor,
+    },
+    menuText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: theme.colors.textPrimary,
+      marginBottom: 4,
+      textAlign: "center",
+    },
+    menuSubtitle: {
+      fontSize: 10,
+      color: theme.colors.textSecondary,
+      textAlign: "center",
+    },
+  });
+  
+  return (
+    <TouchableOpacity 
+      style={menuItemStyles.menuItem}
+      onPress={action}
+      activeOpacity={0.7}
+    >
+      <View style={menuItemStyles.menuIconContainer}>
+        <SvgIcon name={iconName} size={24} color={color} />
+      </View>
+      <Text style={menuItemStyles.menuText}>{label}</Text>
+      <Text style={menuItemStyles.menuSubtitle}>{subtitle}</Text>
+    </TouchableOpacity>
+  );
+}
+
+/* Stat Item Component - Updated design */
+function StatItem({ number, label, iconName, theme }) {
+  const statItemStyles = StyleSheet.create({
+    statItem: {
+      flex: 1,
+      backgroundColor: theme.colors.card,
+      borderRadius: 16,
+      padding: 16,
+      marginHorizontal: 6,
+      alignItems: "center",
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 5,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    statIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 8,
+      backgroundColor: theme.colors.primaryLight,
+    },
+    statNumber: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: theme.colors.primary,
+      marginBottom: 4,
+    },
+    statLabel: {
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+      textAlign: "center",
+    },
+  });
+  
+  return (
+    <View style={statItemStyles.statItem}>
+      <View style={statItemStyles.statIconContainer}>
+        <SvgIcon name={iconName} size={18} color={theme.colors.primary} />
+      </View>
+      <Text style={statItemStyles.statNumber}>{number}</Text>
+      <Text style={statItemStyles.statLabel}>{label}</Text>
+    </View>
+  );
+}
 
 export default function HomeScreen({ navigation }) {
   const [todayLectures, setTodayLectures] = useState([]);
@@ -24,6 +135,8 @@ export default function HomeScreen({ navigation }) {
   const [userNickname, setUserNickname] = useState("");
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  const { theme } = useTheme();
 
   // AsyncStorage key for profile image
   const PROFILE_IMAGE_KEY = '@profile_image';
@@ -127,6 +240,14 @@ export default function HomeScreen({ navigation }) {
   const loadUpcomingExam = (userData) => {
     try {
       const exams = userData.exams || [];
+      
+      // Make sure exams is an array
+      if (!Array.isArray(exams)) {
+        console.log("Exams data is not an array, resetting to empty array");
+        setUpcomingExam(null);
+        return;
+      }
+      
       const now = new Date();
       
       // Find the next upcoming exam
@@ -205,12 +326,6 @@ export default function HomeScreen({ navigation }) {
     return userNickname || userName || "User";
   };
 
-  // Get initial for profile icon
-  const getProfileInitial = () => {
-    const name = getDisplayName();
-    return name.charAt(0).toUpperCase();
-  };
-
   // Calculate overall GPA
   const getOverallGPA = () => {
     if (gpaSummary.length === 0) return null;
@@ -229,6 +344,8 @@ export default function HomeScreen({ navigation }) {
     return "Good evening";
   };
 
+  const styles = getStyles(theme);
+
   return (
     <View style={styles.container}>
       {/* Header with profile on the right */}
@@ -236,7 +353,10 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
             <Text style={styles.welcome}>{getGreeting()}</Text>
-            <Text style={styles.userName}>{getDisplayName()} 👋</Text>
+            <View style={styles.userNameRow}>
+              <Text style={styles.userName}>{getDisplayName()}</Text>
+              <SvgIcon name="smile" size={24} color={theme.colors.primary} />
+            </View>
           </View>
 
           <TouchableOpacity 
@@ -250,10 +370,8 @@ export default function HomeScreen({ navigation }) {
                 style={styles.profileImage}
               />
             ) : (
-              <View style={styles.profileIcon}>
-                <Text style={styles.profileInitial}>
-                  {getProfileInitial()}
-                </Text>
+              <View style={[styles.profileIcon, { backgroundColor: theme.colors.primary }]}>
+                <SvgIcon name="user" size={24} color="white" />
               </View>
             )}
           </TouchableOpacity>
@@ -265,13 +383,13 @@ export default function HomeScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Summary Cards */}
+        {/* Summary Cards Row */}
         <View style={styles.summaryRow}>
           {/* TODAY CARD */}
           <View style={styles.summaryCard}>
             <View style={styles.cardHeader}>
-              <View style={[styles.cardIcon, { backgroundColor: "rgba(83, 95, 253, 0.1)" }]}>
-                <Text style={[styles.cardIconText, { color: "#535FFD" }]}>📚</Text>
+              <View style={[styles.cardIcon, { backgroundColor: theme.colors.primaryLight }]}>
+                <SvgIcon name="calendar-clock" size={20} color={theme.colors.primary} />
               </View>
               <Text style={styles.cardTitle}>Today's Schedule</Text>
             </View>
@@ -279,26 +397,29 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.cardContent}>
               {todayLectures.length === 0 ? (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyEmoji}>🎉</Text>
+                  <SvgIcon name="coffee" size={28} color={theme.colors.textTertiary} />
                   <Text style={styles.summaryEmpty}>No lectures today</Text>
                   <Text style={styles.emptySubtitle}>Enjoy your free time!</Text>
                 </View>
               ) : (
-                todayLectures.slice(0, 3).map((lec, idx) => (
+                todayLectures.slice(0, 2).map((lec, idx) => (
                   <View key={idx} style={styles.lectureItem}>
-                    <View style={styles.lectureDot}></View>
+                    <View style={[styles.lectureDot, { backgroundColor: theme.colors.primary }]}></View>
                     <View style={styles.lectureInfo}>
                       <Text style={styles.lectureCourse}>{lec.course}</Text>
                       <Text style={styles.lectureTime}>{lec.time}</Text>
-                      {lec.room && (
-                        <Text style={styles.lectureRoom}>📍 {lec.room}</Text>
-                      )}
                     </View>
                   </View>
                 ))
               )}
-              {todayLectures.length > 3 && (
-                <Text style={styles.moreText}>+{todayLectures.length - 3} more lectures</Text>
+              {todayLectures.length > 2 && (
+                <TouchableOpacity 
+                  style={styles.moreContainer}
+                  onPress={() => navigation.navigate("Timetable")}
+                >
+                  <SvgIcon name="chevron-right" size={12} color={theme.colors.primary} />
+                  <Text style={[styles.moreText, { color: theme.colors.primary }]}> {todayLectures.length - 2} more</Text>
+                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -306,8 +427,8 @@ export default function HomeScreen({ navigation }) {
           {/* GPA CARD */}
           <View style={styles.summaryCard}>
             <View style={styles.cardHeader}>
-              <View style={[styles.cardIcon, { backgroundColor: "rgba(255, 138, 35, 0.1)" }]}>
-                <Text style={[styles.cardIconText, { color: "#FF8A23" }]}>📊</Text>
+              <View style={[styles.cardIcon, { backgroundColor: theme.colors.secondaryLight }]}>
+                <SvgIcon name="chart-line" size={20} color={theme.colors.secondary} />
               </View>
               <Text style={styles.cardTitle}>Academic Progress</Text>
             </View>
@@ -315,26 +436,32 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.cardContent}>
               {gpaSummary.length === 0 ? (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyEmoji}>📈</Text>
-                  <Text style={styles.summaryEmpty}>Track your GPA</Text>
+                  <SvgIcon name="chart-line" size={28} color={theme.colors.textTertiary} />
+                  <Text style={styles.summaryEmpty}>No GPA data</Text>
                   <Text style={styles.emptySubtitle}>Calculate your first GPA</Text>
                 </View>
               ) : (
                 <>
                   {overallGPA && (
-                    <View style={styles.overallGpaItem}>
-                      <Text style={styles.overallGpaLabel}>CGPA</Text>
-                      <Text style={styles.overallGpaValue}>{overallGPA}</Text>
+                    <View style={[styles.overallGpaItem, { borderBottomColor: `${theme.colors.secondary}20` }]}>
+                      <Text style={[styles.overallGpaLabel, { color: theme.colors.secondary }]}>CGPA</Text>
+                      <Text style={[styles.overallGpaValue, { color: theme.colors.secondary }]}>{overallGPA}</Text>
                     </View>
                   )}
                   {gpaSummary.slice(0, 2).map((item, idx) => (
-                    <View key={idx} style={styles.gpaItem}>
+                    <View key={idx} style={[styles.gpaItem, { borderBottomColor: `${theme.colors.border}50` }]}>
                       <Text style={styles.gpaSemester}>{item.semester}</Text>
                       <Text style={styles.gpaValue}>{item.gpa}</Text>
                     </View>
                   ))}
                   {gpaSummary.length > 2 && (
-                    <Text style={styles.moreText}>+{gpaSummary.length - 2} more semesters</Text>
+                    <TouchableOpacity 
+                      style={styles.moreContainer}
+                      onPress={() => navigation.navigate("GPA")}
+                    >
+                      <SvgIcon name="chevron-right" size={12} color={theme.colors.secondary} />
+                      <Text style={[styles.moreText, { color: theme.colors.secondary }]}> {gpaSummary.length - 2} more</Text>
+                    </TouchableOpacity>
                   )}
                 </>
               )}
@@ -342,128 +469,146 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Upcoming Exam Card */}
-        {upcomingExam && (
-          <View style={styles.examCard}>
-            <View style={styles.cardHeader}>
-              <View style={[styles.cardIcon, { backgroundColor: "rgba(239, 68, 68, 0.1)" }]}>
-                <Text style={[styles.cardIconText, { color: "#EF4444" }]}>⏰</Text>
-              </View>
-              <View>
-                <Text style={styles.cardTitle}>UPCOMING EXAM</Text>
-                <Text style={styles.examSubtitle}>Next on your schedule</Text>
-              </View>
-            </View>
-            
-            <View style={styles.examContent}>
-              <Text style={styles.examCourse}>{upcomingExam.name}</Text>
-              <View style={styles.examDetails}>
-                <Text style={styles.examDate}>{upcomingExam.formattedDate}</Text>
-                <Text style={styles.examTime}>🕒 {upcomingExam.start} - {upcomingExam.end}</Text>
-              </View>
-              {upcomingExam.semester && (
-                <Text style={styles.examSemester}>Semester {upcomingExam.semester}</Text>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* Quick Actions Grid */}
+        {/* Quick Actions Grid - 3x2 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Access</Text>
           <View style={styles.grid}>
+            {/* Row 1 */}
             <MenuItem
               label="Timetable"
-              color="#535FFD"
-              icon="⏱️"
+              color={theme.colors.primary}
+              iconName="calendar"
               subtitle="View schedule"
               action={() => navigation.navigate("Timetable")}
+              theme={theme}
             />
 
             <MenuItem
               label="AI Assistant"
-              color="#FF8A23"
-              icon="🤖"
+              color={theme.colors.secondary}
+              iconName="robot"
               subtitle="Chat with Remi"
               action={() => navigation.navigate("Chat")}
+              theme={theme}
             />
 
             <MenuItem
-              label="GPA Calculator"
-              color="#10B981"
-              icon="📊"
+              label="GPA"
+              color={theme.colors.success}
+              iconName="calculator"
               subtitle="Track grades"
               action={() => navigation.navigate("GPA")}
+              theme={theme}
             />
 
+            {/* Row 2 */}
             <MenuItem
               label="Exams"
-              color="#EF4444"
-              icon="📝"
+              color={theme.colors.danger}
+              iconName="file"
               subtitle="Exam schedule"
               action={() => navigation.navigate("ExamTimetable")}
+              theme={theme}
             />
 
             <MenuItem
               label="Edit Timetable"
               color="#8B5CF6"
-              icon="🗓️"
-              subtitle="New schedule"
+              iconName="edit"
               action={() => navigation.navigate("EditTimetable")}
+              theme={theme}
             />
 
             <MenuItem
               label="Settings"
-              color="#64748B"
-              icon="⚙️"
-              subtitle="Your account"
+              color="#10B981"
+              iconName="cog"
               action={() => navigation.navigate("Settings")}
+              theme={theme}
             />
           </View>
         </View>
+
+        {/* Upcoming Exam Card */}
+        {upcomingExam && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Upcoming Exam</Text>
+            <View style={[styles.examCard, { backgroundColor: theme.colors.card }]}>
+              <View style={styles.examHeader}>
+                <View style={[styles.examIcon, { backgroundColor: `${theme.colors.danger}15` }]}>
+                  <SvgIcon name="clock-alert" size={20} color={theme.colors.danger} />
+                </View>
+                <View style={styles.examTitleContainer}>
+                  <Text style={styles.examCourse}>{upcomingExam.name}</Text>
+                  <View style={styles.examDetailsRow}>
+                    <View style={styles.examDetail}>
+                      <SvgIcon name="calendar" size={14} color={theme.colors.textSecondary} />
+                      <Text style={styles.examDetailText}> {upcomingExam.formattedDate}</Text>
+                    </View>
+                    <View style={styles.examDetail}>
+                      <SvgIcon name="clock" size={14} color={theme.colors.textSecondary} />
+                      <Text style={styles.examDetailText}> {upcomingExam.start} - {upcomingExam.end}</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+              {upcomingExam.semester && (
+                <View style={styles.examFooter}>
+                  <View style={[styles.semesterBadge, { backgroundColor: `${theme.colors.secondary}15` }]}>
+                    <SvgIcon name="graduation-cap" size={12} color={theme.colors.secondary} />
+                    <Text style={[styles.semesterText, { color: theme.colors.secondary }]}> Semester {upcomingExam.semester}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.viewDetailsButton}
+                    onPress={() => navigation.navigate("ExamTimetable")}
+                  >
+                    <Text style={[styles.viewDetailsText, { color: theme.colors.primary }]}>View Details</Text>
+                    <SvgIcon name="chevron-right" size={14} color={theme.colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Quick Stats */}
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>Quick Stats</Text>
           <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{todayLectures.length}</Text>
-              <Text style={styles.statLabel}>Today's Lectures</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{gpaSummary.length}</Text>
-              <Text style={styles.statLabel}>Semesters Tracked</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{upcomingExam ? 1 : 0}</Text>
-              <Text style={styles.statLabel}>Upcoming Exams</Text>
-            </View>
+            <StatItem
+              number={todayLectures.length}
+              label="Today's Lectures"
+              iconName="book"
+              theme={theme}
+            />
+            <StatItem
+              number={gpaSummary.length}
+              label="Semesters Tracked"
+              iconName="chart-line"
+              theme={theme}
+            />
+            <StatItem
+              number={upcomingExam ? 1 : 0}
+              label="Upcoming Exams"
+              iconName="clock"
+              theme={theme}
+            />
           </View>
+        </View>
+
+        {/* Bottom Navigation Hint */}
+        <View style={styles.bottomHint}>
+          <Text style={styles.hintText}>Use bottom navigation for full access</Text>
         </View>
       </ScrollView>
     </View>
   );
 }
 
-/* Menu Item Component */
-function MenuItem({ label, color, icon, subtitle, action }) {
-  return (
-    <TouchableOpacity 
-      style={[styles.menuItem, { borderLeftColor: color }]} 
-      onPress={action}
-      activeOpacity={0.7}
-    >
-      <Text style={styles.menuIcon}>{icon}</Text>
-      <Text style={styles.menuText}>{label}</Text>
-      <Text style={styles.menuSubtitle}>{subtitle}</Text>
-    </TouchableOpacity>
-  );
-}
-
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
   },
   scrollView: {
     flex: 1,
@@ -472,17 +617,17 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingHorizontal: 24,
     paddingBottom: 24,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.backgroundSecondary,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   headerTop: {
     flexDirection: "row",
@@ -492,229 +637,167 @@ const styles = StyleSheet.create({
   headerLeft: {
     flex: 1,
   },
+  userNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   profileSection: {
     marginLeft: 15,
   },
   profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     borderWidth: 2,
-    borderColor: "#F1F5F9",
+    borderColor: theme.colors.border,
   },
   profileIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#535FFD",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#F1F5F9",
-  },
-  profileInitial: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
+    borderColor: theme.colors.border,
   },
   welcome: {
-    fontSize: 16,
-    color: "#64748B",
+    fontSize: 14,
+    color: theme.colors.textSecondary,
     marginBottom: 4,
+    fontWeight: '500',
   },
   userName: {
     fontSize: 24,
-    fontWeight: "700",
-    color: "#383940",
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
   },
   summaryRow: {
     flexDirection: "row",
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 24,
     marginTop: 10,
   },
   summaryCard: {
     flex: 1,
-    backgroundColor: "white",
+    backgroundColor: theme.colors.card,
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 6,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 5,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  examCard: {
-    backgroundColor: "white",
-    borderRadius: 20,
-    padding: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
-    borderLeftWidth: 4,
-    borderLeftColor: "#EF4444",
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
   },
-cardHeader: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginBottom: 16,
-  width: '100%', // Ensure it takes full card width
-  maxWidth: '100%', // Prevent overflow
-},
-cardIcon: {
-  width: 44,
-  height: 44,
-  borderRadius: 12,
-  justifyContent: "center",
-  alignItems: "center",
-  marginRight: 12,
-  flexShrink: 0, // Prevent icon from shrinking
-},
-cardTitle: {
-  fontSize: Platform.OS === 'ios' ? 14 : 16,
-  fontWeight: "700",
-  color: "#383940",
-  includeFontPadding: false,
-  flex: 1,
-  flexShrink: 1, // Allow text to shrink on Android
-  flexWrap: 'wrap', // Allow wrapping if needed
-},
-  examSubtitle: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 2,
+  cardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
   },
   cardContent: {
-    minHeight: 100,
-  },
-  examContent: {
-    minHeight: 60,
+    minHeight: 80,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  emptyEmoji: {
-    fontSize: 32,
-    marginBottom: 8,
+    paddingVertical: 10,
   },
   summaryEmpty: {
-    color: "#383940",
-    fontSize: 14,
+    color: theme.colors.textPrimary,
+    fontSize: 13,
     fontWeight: '600',
     textAlign: "center",
-    marginBottom: 4,
+    marginTop: 8,
+    marginBottom: 2,
   },
   emptySubtitle: {
-    color: "#94A3B8",
-    fontSize: 12,
+    color: theme.colors.textTertiary,
+    fontSize: 11,
     textAlign: "center",
   },
   lectureItem: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   lectureDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#535FFD",
-    marginRight: 12,
-    marginTop: 6,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 10,
+    marginTop: 8,
   },
   lectureInfo: {
     flex: 1,
   },
   lectureCourse: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 2,
   },
   lectureTime: {
-    fontSize: 12,
-    color: "#64748B",
-    marginBottom: 2,
-  },
-  lectureRoom: {
     fontSize: 11,
-    color: "#94A3B8",
+    color: theme.colors.textSecondary,
   },
   gpaItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
-    paddingBottom: 10,
+    marginBottom: 8,
+    paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
   },
   overallGpaItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
-    paddingBottom: 12,
+    marginBottom: 10,
+    paddingBottom: 10,
     borderBottomWidth: 2,
-    borderBottomColor: "#FF8A23",
   },
   gpaSemester: {
-    fontSize: 14,
-    color: "#64748B",
+    fontSize: 13,
+    color: theme.colors.textSecondary,
   },
   overallGpaLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
-    color: "#FF8A23",
   },
   gpaValue: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
   },
   overallGpaValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
-    color: "#FF8A23",
+  },
+  moreContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+    padding: 4,
   },
   moreText: {
-    color: "#535FFD",
-    fontSize: 12,
-    fontWeight: "600",
-    textAlign: "center",
-    marginTop: 8,
-  },
-  examCourse: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#383940",
-    marginBottom: 8,
-  },
-  examDetails: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  examDate: {
-    fontSize: 14,
-    color: "#EF4444",
-    fontWeight: "600",
-  },
-  examTime: {
-    fontSize: 14,
-    color: "#64748B",
-    fontWeight: "600",
-  },
-  examSemester: {
-    fontSize: 12,
-    color: "#FF8A23",
+    fontSize: 11,
     fontWeight: "600",
   },
   section: {
@@ -723,12 +806,12 @@ cardTitle: {
   },
   statsSection: {
     paddingHorizontal: 20,
-    marginBottom: 40,
+    marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#383940",
+    fontSize: 18,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
     marginBottom: 16,
   },
   grid: {
@@ -736,59 +819,94 @@ cardTitle: {
     flexWrap: "wrap",
     justifyContent: "space-between",
   },
-  menuItem: {
-    width: (width - 60) / 2,
-    backgroundColor: "white",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  menuIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  menuText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#383940",
-    marginBottom: 4,
-  },
-  menuSubtitle: {
-    fontSize: 11,
-    color: "#64748B",
-  },
   statsGrid: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  statItem: {
-    flex: 1,
-    backgroundColor: "white",
-    borderRadius: 16,
+  examCard: {
+    borderRadius: 20,
     padding: 16,
-    marginHorizontal: 6,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  examHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+  examIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    marginRight: 12,
   },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#535FFD",
-    marginBottom: 4,
+  examTitleContainer: {
+    flex: 1,
   },
-  statLabel: {
+  examCourse: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+    marginBottom: 6,
+  },
+  examDetailsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  examDetail: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  examDetailText: {
     fontSize: 12,
-    color: "#64748B",
-    textAlign: "center",
+    color: theme.colors.textSecondary,
+    fontWeight: "500",
+  },
+  examFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: `${theme.colors.border}50`,
+  },
+  semesterBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  semesterText: {
+    fontSize: 11,
+    fontWeight: "600",
+    marginLeft: 4,
+  },
+  viewDetailsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  viewDetailsText: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginRight: 4,
+  },
+  bottomHint: {
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginTop: 8,
+  },
+  hintText: {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
+    fontStyle: "italic",
   },
 });
