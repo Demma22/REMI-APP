@@ -14,6 +14,8 @@ import { Picker } from "@react-native-picker/picker";
 import { auth, db } from "../../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import NavigationBar from "../../components/NavigationBar";
+import SvgIcon from "../../components/SvgIcon";
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function EditTimetableScreen({ navigation }) {
   if (!auth.currentUser) return <Text style={styles.center}>Not logged in</Text>;
@@ -26,6 +28,8 @@ export default function EditTimetableScreen({ navigation }) {
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [showLecturePicker, setShowLecturePicker] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  const { theme } = useTheme();
 
   useEffect(() => {
     load();
@@ -136,6 +140,8 @@ export default function EditTimetableScreen({ navigation }) {
 
   const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
+  const styles = getStyles(theme);
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -145,7 +151,7 @@ export default function EditTimetableScreen({ navigation }) {
               style={styles.backBtn} 
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.backText}>‹</Text>
+              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>EDIT TIMETABLE</Text>
             <View style={styles.headerSpacer} />
@@ -162,7 +168,7 @@ export default function EditTimetableScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+
         {/* Modern Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -170,18 +176,19 @@ export default function EditTimetableScreen({ navigation }) {
               style={styles.backBtn} 
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.backText}>‹</Text>
+              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>EDIT TIMETABLE</Text>
             <View style={styles.headerSpacer} />
           </View>
         </View>
 
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           {/* Semester Info */}
           {currentSemester && (
-            <View style={styles.semesterInfo}>
-              <Text style={styles.semesterText}>Editing Semester {currentSemester} Timetable</Text>
+            <View style={[styles.semesterInfo, { backgroundColor: theme.colors.warningLight, borderLeftColor: theme.colors.warning }]}>
+              <Text style={[styles.semesterText, { color: theme.colors.warning }]}>Editing Semester {currentSemester} Timetable</Text>
             </View>
           )}
 
@@ -193,13 +200,15 @@ export default function EditTimetableScreen({ navigation }) {
               onPress={() => setShowDayPicker(true)}
             >
               <Text style={styles.dropdownText}>{capitalize(day)}</Text>
-              <Text style={styles.dropdownIcon}>▼</Text>
+              <SvgIcon name="chevron-down" size={16} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {lectures.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>📚</Text>
+              <View style={[styles.emptyIcon, { backgroundColor: theme.colors.primaryLight }]}>
+                <SvgIcon name="calendar" size={32} color={theme.colors.primary} />
+              </View>
               <Text style={styles.emptyTitle}>No lectures scheduled</Text>
               <Text style={styles.emptySubtitle}>No lectures found for {capitalize(day)}</Text>
             </View>
@@ -212,10 +221,10 @@ export default function EditTimetableScreen({ navigation }) {
                   style={styles.dropdown}
                   onPress={() => setShowLecturePicker(true)}
                 >
-                  <Text style={styles.dropdownText}>
+                  <Text style={styles.dropdownText} numberOfLines={1}>
                     {lectures[selectedIndex]?.name} — {lectures[selectedIndex]?.start} - {lectures[selectedIndex]?.end}
                   </Text>
-                  <Text style={styles.dropdownIcon}>▼</Text>
+                  <SvgIcon name="chevron-down" size={16} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
@@ -223,8 +232,8 @@ export default function EditTimetableScreen({ navigation }) {
               <View style={styles.editCard}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardTitle}>Lecture Details</Text>
-                  <View style={styles.lectureNumber}>
-                    <Text style={styles.lectureNumberText}>#{selectedIndex + 1}</Text>
+                  <View style={[styles.lectureNumber, { backgroundColor: theme.colors.primary + '15' }]}>
+                    <Text style={[styles.lectureNumberText, { color: theme.colors.primary }]}>#{selectedIndex + 1}</Text>
                   </View>
                 </View>
 
@@ -236,6 +245,7 @@ export default function EditTimetableScreen({ navigation }) {
                       value={lectures[selectedIndex]?.name || ""}
                       onChangeText={(v) => updateLecture(selectedIndex, "name", v)}
                       placeholder="Enter course name"
+                      placeholderTextColor={theme.colors.textTertiary}
                     />
                   </View>
 
@@ -247,6 +257,7 @@ export default function EditTimetableScreen({ navigation }) {
                         value={lectures[selectedIndex]?.start || ""}
                         onChangeText={(v) => updateLecture(selectedIndex, "start", v)}
                         placeholder="9:00 AM"
+                        placeholderTextColor={theme.colors.textTertiary}
                       />
                     </View>
                     <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
@@ -256,6 +267,7 @@ export default function EditTimetableScreen({ navigation }) {
                         value={lectures[selectedIndex]?.end || ""}
                         onChangeText={(v) => updateLecture(selectedIndex, "end", v)}
                         placeholder="11:00 AM"
+                        placeholderTextColor={theme.colors.textTertiary}
                       />
                     </View>
                   </View>
@@ -267,6 +279,7 @@ export default function EditTimetableScreen({ navigation }) {
                       value={lectures[selectedIndex]?.lecturer || ""}
                       onChangeText={(v) => updateLecture(selectedIndex, "lecturer", v)}
                       placeholder="Enter lecturer name"
+                      placeholderTextColor={theme.colors.textTertiary}
                     />
                   </View>
 
@@ -277,20 +290,22 @@ export default function EditTimetableScreen({ navigation }) {
                       value={lectures[selectedIndex]?.room || ""}
                       onChangeText={(v) => updateLecture(selectedIndex, "room", v)}
                       placeholder="Enter room number"
+                      placeholderTextColor={theme.colors.textTertiary}
                     />
                   </View>
                 </View>
 
                 <View style={styles.actionButtons}>
                   <TouchableOpacity 
-                    style={styles.editButton}
+                    style={[styles.editButton, { backgroundColor: theme.colors.primary }]}
                     onPress={saveTimetable}
                   >
-                    <Text style={styles.editButtonText}>💾 SAVE CHANGES</Text>
+                    <SvgIcon name="content-save" size={20} color="#FFFFFF" />
+                    <Text style={styles.editButtonText}>SAVE CHANGES</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.removeButton}
+                    style={[styles.removeButton, { backgroundColor: theme.colors.danger }]}
                     onPress={() =>
                       Alert.alert(
                         "Remove Lecture",
@@ -306,7 +321,8 @@ export default function EditTimetableScreen({ navigation }) {
                       )
                     }
                   >
-                    <Text style={styles.removeButtonText}>🗑️ REMOVE LECTURE</Text>
+                    <SvgIcon name="delete" size={20} color="#FFFFFF" />
+                    <Text style={styles.removeButtonText}>REMOVE LECTURE</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -325,15 +341,15 @@ export default function EditTimetableScreen({ navigation }) {
         animationType="slide"
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Day</Text>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>Select Day</Text>
             <ScrollView style={styles.modalList}>
               {days.map((d, index) => (
                 <TouchableOpacity
                   key={d}
                   style={[
                     styles.modalItem,
-                    day === d && styles.modalItemSelected
+                    day === d && [styles.modalItemSelected, { backgroundColor: theme.colors.primary + '15' }]
                   ]}
                   onPress={() => {
                     setDay(d);
@@ -342,7 +358,8 @@ export default function EditTimetableScreen({ navigation }) {
                 >
                   <Text style={[
                     styles.modalItemText,
-                    day === d && styles.modalItemTextSelected
+                    { color: theme.colors.textPrimary },
+                    day === d && [styles.modalItemTextSelected, { color: theme.colors.primary }]
                   ]}>
                     {capitalize(d)}
                   </Text>
@@ -350,10 +367,10 @@ export default function EditTimetableScreen({ navigation }) {
               ))}
             </ScrollView>
             <TouchableOpacity
-              style={styles.modalClose}
+              style={[styles.modalClose, { backgroundColor: theme.colors.backgroundSecondary }]}
               onPress={() => setShowDayPicker(false)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={[styles.modalCloseText, { color: theme.colors.textPrimary }]}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -366,15 +383,15 @@ export default function EditTimetableScreen({ navigation }) {
         animationType="slide"
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Lecture</Text>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>Select Lecture</Text>
             <ScrollView style={styles.modalList}>
               {lectures.map((lecture, index) => (
                 <TouchableOpacity
                   key={index}
                   style={[
                     styles.modalItem,
-                    selectedIndex === index && styles.modalItemSelected
+                    selectedIndex === index && [styles.modalItemSelected, { backgroundColor: theme.colors.primary + '15' }]
                   ]}
                   onPress={() => {
                     setSelectedIndex(index);
@@ -383,7 +400,8 @@ export default function EditTimetableScreen({ navigation }) {
                 >
                   <Text style={[
                     styles.modalItemText,
-                    selectedIndex === index && styles.modalItemTextSelected
+                    { color: theme.colors.textPrimary },
+                    selectedIndex === index && [styles.modalItemTextSelected, { color: theme.colors.primary }]
                   ]}>
                     {lecture.name} — {lecture.start} - {lecture.end}
                   </Text>
@@ -391,10 +409,10 @@ export default function EditTimetableScreen({ navigation }) {
               ))}
             </ScrollView>
             <TouchableOpacity
-              style={styles.modalClose}
+              style={[styles.modalClose, { backgroundColor: theme.colors.backgroundSecondary }]}
               onPress={() => setShowLecturePicker(false)}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={[styles.modalCloseText, { color: theme.colors.textPrimary }]}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -408,22 +426,22 @@ export default function EditTimetableScreen({ navigation }) {
 
 const capitalize = (s) => s && s[0].toUpperCase() + s.slice(1);
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
   },
   scrollView: {
     flex: 1,
   },
   header: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.backgroundSecondary,
     paddingTop: 60,
     paddingHorizontal: 24,
     paddingBottom: 20,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -438,22 +456,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-  },
-  backText: { 
-    fontSize: 24, 
-    color: "#535FFD", 
-    fontWeight: "300",
-    lineHeight: 24,
+    borderColor: theme.colors.border,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "800",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     textAlign: "center",
   },
   headerSpacer: {
@@ -463,17 +475,14 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   semesterInfo: {
-    backgroundColor: "#FFF7ED",
     padding: 12,
     borderRadius: 12,
     marginBottom: 16,
     borderLeftWidth: 4,
-    borderLeftColor: "#FF8A23",
   },
   semesterText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#92400E",
     textAlign: "center",
   },
   section: {
@@ -482,19 +491,19 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   dropdown: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
-    shadowColor: "#000",
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -502,46 +511,48 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 16,
-    color: "#383940",
+    color: theme.colors.textPrimary,
     fontWeight: "600",
-  },
-  dropdownIcon: {
-    fontSize: 12,
-    color: "#64748B",
+    flex: 1,
+    marginRight: 8,
   },
   emptyState: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     padding: 40,
     borderRadius: 24,
     alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 5,
   },
   emptyIcon: {
-    fontSize: 48,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 8,
     textAlign: "center",
   },
   emptySubtitle: {
     fontSize: 14,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
   },
   editCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.card,
     borderRadius: 24,
     padding: 24,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -554,21 +565,19 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: theme.colors.border,
   },
   cardTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#383940",
+    color: theme.colors.textPrimary,
   },
   lectureNumber: {
-    backgroundColor: "rgba(83, 95, 253, 0.1)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
   },
   lectureNumberText: {
-    color: "#535FFD",
     fontSize: 14,
     fontWeight: "700",
   },
@@ -581,16 +590,16 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#383940",
+    color: theme.colors.textPrimary,
   },
   input: {
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.mode === 'dark' ? theme.colors.backgroundSecondary : theme.colors.background,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: theme.colors.border,
     padding: 16,
     borderRadius: 12,
     fontSize: 16,
-    color: "#383940",
+    color: theme.colors.textPrimary,
   },
   row: {
     flexDirection: "row",
@@ -600,11 +609,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   editButton: {
-    backgroundColor: "#535FFD",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
     padding: 18,
     borderRadius: 16,
-    alignItems: "center",
-    shadowColor: "#535FFD",
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -616,11 +627,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   removeButton: {
-    backgroundColor: "#F78522",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
     padding: 18,
     borderRadius: 16,
-    alignItems: "center",
-    shadowColor: "#F78522",
+    shadowColor: theme.colors.danger,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -637,7 +650,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -646,7 +658,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#383940",
     marginBottom: 16,
     textAlign: "center",
   },
@@ -658,27 +669,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 8,
   },
-  modalItemSelected: {
-    backgroundColor: "rgba(83, 95, 253, 0.1)",
-  },
+  modalItemSelected: {},
   modalItemText: {
     fontSize: 16,
-    color: "#383940",
     fontWeight: "500",
   },
   modalItemTextSelected: {
-    color: "#535FFD",
     fontWeight: "700",
   },
   modalClose: {
-    backgroundColor: "#F1F5F9",
     padding: 16,
     borderRadius: 16,
     alignItems: "center",
     marginTop: 16,
   },
   modalCloseText: {
-    color: "#383940",
     fontSize: 16,
     fontWeight: "600",
   },
@@ -688,6 +693,6 @@ const styles = StyleSheet.create({
   center: { 
     textAlign: "center", 
     marginTop: 40,
-    color: "#383940",
+    color: theme.colors.textPrimary,
   },
 });

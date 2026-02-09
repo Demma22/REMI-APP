@@ -648,6 +648,7 @@ const getStyles = (theme) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 12,
+    paddingBottom: 50,
     borderTopWidth: 1,
     shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: -2 },

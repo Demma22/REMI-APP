@@ -103,7 +103,7 @@ export default function TimetableScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+
         {/* Modern Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -118,6 +118,7 @@ export default function TimetableScreen({ navigation }) {
           </View>
         </View>
 
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           {/* Semester Info */}
           {currentSemester && (

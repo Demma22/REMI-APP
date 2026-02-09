@@ -8,29 +8,21 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Image,
 } from "react-native";
 import { auth, db } from "../firebase";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
-import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import NavigationBar from "../components/NavigationBar";
 import SvgIcon from "../components/SvgIcon";
-import { useTheme } from '../contexts/ThemeContext'; // Add this import
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function ProfileScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState("");
-  const [profileImage, setProfileImage] = useState(null);
-  const [uploading, setUploading] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   
-  const { theme } = useTheme(); // Get theme from context
-
-  // AsyncStorage keys
-  const PROFILE_IMAGE_KEY = '@profile_image';
+  const { theme } = useTheme();
 
   useEffect(() => {
     loadUserProfile();
@@ -59,49 +51,12 @@ export default function ProfileScreen({ navigation }) {
         const data = userDoc.data();
         setUserData(data);
       }
-
-      // Load profile image from AsyncStorage
-      await loadProfileImage();
       
     } catch (error) {
       console.log("Profile load error:", error);
       Alert.alert("Error", "Failed to load profile data");
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Load profile image from AsyncStorage
-  const loadProfileImage = async () => {
-    try {
-      const savedImage = await AsyncStorage.getItem(PROFILE_IMAGE_KEY);
-      if (savedImage) {
-        setProfileImage(savedImage);
-      }
-    } catch (error) {
-      console.log("Error loading profile image:", error);
-    }
-  };
-
-  // Save profile image to AsyncStorage
-  const saveProfileImage = async (imageUri) => {
-    try {
-      await AsyncStorage.setItem(PROFILE_IMAGE_KEY, imageUri);
-      setProfileImage(imageUri);
-    } catch (error) {
-      console.log("Error saving profile image:", error);
-      throw error;
-    }
-  };
-
-  // Remove profile image from AsyncStorage
-  const removeProfileImage = async () => {
-    try {
-      await AsyncStorage.removeItem(PROFILE_IMAGE_KEY);
-      setProfileImage(null);
-    } catch (error) {
-      console.log("Error removing profile image:", error);
-      throw error;
     }
   };
 
@@ -129,7 +84,7 @@ export default function ProfileScreen({ navigation }) {
       // Navigate to SplashPage immediately
       navigation.reset({
         index: 0,
-        routes: [{ name: 'SplashIntro' }], // Changed from 'OnboardingSplash' to 'SplashIntro'
+        routes: [{ name: 'SplashIntro' }],
       });
       
     } catch (error) {
@@ -184,123 +139,6 @@ export default function ProfileScreen({ navigation }) {
       .trim();
   };
 
-  // Handle profile picture selection
-  const pickImage = async () => {
-    try {
-      console.log("Starting image picker...");
-      
-      // Request permissions
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      console.log("Permission status:", status);
-      
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required', 
-          'To upload profile pictures, please enable photo library access in your device settings.'
-        );
-        return;
-      }
-
-      // Launch image picker
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-        allowsMultipleSelection: false,
-      });
-
-      console.log("Image picker result:", result);
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const selectedImage = result.assets[0];
-        console.log("Selected image URI:", selectedImage.uri);
-        await saveProfileImageToStorage(selectedImage.uri);
-      } else {
-        console.log("User canceled image selection");
-      }
-    } catch (error) {
-      console.error("Image picker error:", error);
-      Alert.alert("Error", "Failed to access photo library. Please try again.");
-    }
-  };
-
-  // Save image to AsyncStorage (much simpler than Firebase Storage)
-  const saveProfileImageToStorage = async (imageUri) => {
-    try {
-      setUploading(true);
-      console.log("Saving image to AsyncStorage...");
-
-      // Validate the image URI
-      if (!imageUri) {
-        throw new Error("Invalid image URI");
-      }
-
-      // Save to AsyncStorage
-      await saveProfileImage(imageUri);
-      
-      console.log("Profile image saved successfully!");
-      Alert.alert("Success", "Profile picture updated successfully!");
-      
-    } catch (error) {
-      console.error("Save image error:", error);
-      Alert.alert("Error", "Failed to save profile picture. Please try again.");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  // Remove profile picture
-  const removeProfileImageFromStorage = async () => {
-    try {
-      setUploading(true);
-      
-      await removeProfileImage();
-      
-      Alert.alert("Success", "Profile picture removed");
-      
-    } catch (error) {
-      console.log("Remove image error:", error);
-      Alert.alert("Error", "Failed to remove profile picture");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  // Handle profile picture press
-  const handleProfilePicturePress = () => {
-    Alert.alert(
-      "Profile Picture",
-      "Choose an option",
-      [
-        {
-          text: "Choose from Library",
-          onPress: pickImage,
-        },
-        ...(profileImage ? [{
-          text: "Remove Current",
-          onPress: removeProfileImageFromStorage,
-          style: "destructive",
-        }] : []),
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-      ]
-    );
-  };
-
-  // Clear all app data (useful for debugging)
-  const clearAllData = async () => {
-    try {
-      await AsyncStorage.clear();
-      setProfileImage(null);
-      Alert.alert("Success", "All app data cleared");
-    } catch (error) {
-      console.log("Error clearing data:", error);
-    }
-  };
-
   const styles = getStyles(theme);
 
   if (loading) {
@@ -333,11 +171,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <TouchableOpacity 
@@ -351,32 +185,20 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.content}>
           {/* Profile Header Card */}
           <View style={styles.profileHeaderCard}>
-            <TouchableOpacity 
-              style={styles.profileImageContainer}
-              onPress={handleProfilePicturePress}
-              disabled={uploading}
-            >
-              {uploading ? (
-                <View style={[styles.profileImage, { backgroundColor: theme.colors.primary }]}>
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                </View>
-              ) : profileImage ? (
-                <Image 
-                  source={{ uri: profileImage }} 
-                  style={styles.profileImage}
-                />
-              ) : (
-                <View style={[styles.profileImage, { backgroundColor: theme.colors.primary }]}>
-                  <SvgIcon name="user" size={32} color="white" />
-                </View>
-              )}
-              <View style={[styles.cameraBadge, { backgroundColor: theme.colors.primary }]}>
-                <SvgIcon name="camera" size={12} color="white" />
+            <View style={styles.profileImageContainer}>
+              <View style={[styles.profileImage, { backgroundColor: theme.colors.primary }]}>
+                <SvgIcon name="user" size={32} color="white" />
               </View>
-            </TouchableOpacity>
+
+            </View>
             
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>
@@ -543,7 +365,6 @@ export default function ProfileScreen({ navigation }) {
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <SvgIcon name="logout" size={20} color="white" />
                 <Text style={styles.logoutButtonText}>Logout</Text>
               </>
             )}
@@ -644,7 +465,7 @@ const getStyles = (theme) => StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  cameraBadge: {
+  profileBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
@@ -655,6 +476,9 @@ const getStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: theme.colors.backgroundSecondary,
+  },
+  profileBadgeText: {
+    fontSize: 12,
   },
   profileInfo: {
     flex: 1,

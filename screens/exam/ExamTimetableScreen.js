@@ -13,7 +13,7 @@ import { auth, db } from "../../firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import NavigationBar from "../../components/NavigationBar";
 import SvgIcon from "../../components/SvgIcon";
-import { useTheme } from '../../contexts/ThemeContext'; // Add this import
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function ExamTimetableScreen({ navigation }) {
   if (!auth.currentUser) {
@@ -25,7 +25,7 @@ export default function ExamTimetableScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [currentSemester, setCurrentSemester] = useState(null);
   
-  const { theme } = useTheme(); // Get theme from context
+  const { theme } = useTheme();
 
   useEffect(() => {
     loadExams();
@@ -43,19 +43,19 @@ export default function ExamTimetableScreen({ navigation }) {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         
-        // Get current semester
         setCurrentSemester(userData.current_semester || null);
         
-        // Get exams data - FIX: Ensure it's always an array
         const examsData = userData.exams || [];
         
-        // FIX: Check if examsData is actually an array before using array methods
         if (Array.isArray(examsData)) {
-          // Sort exams by date (soonest first)
-          const sortedExams = examsData.sort((a, b) => new Date(a.date) - new Date(b.date));
+          // Sort exams by datetime (soonest first)
+          const sortedExams = examsData.sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return dateA - dateB;
+          });
           setExams(sortedExams);
         } else {
-          // If examsData is not an array, set empty array
           console.log("Exams data is not an array, resetting to empty array");
           setExams([]);
         }
@@ -65,7 +65,7 @@ export default function ExamTimetableScreen({ navigation }) {
     } catch (error) {
       console.log("Error loading exams:", error);
       Alert.alert("Error", "Could not load exams");
-      setExams([]); // Set empty array on error
+      setExams([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -91,7 +91,6 @@ export default function ExamTimetableScreen({ navigation }) {
           style: "destructive",
           onPress: async () => {
             try {
-              // FIX: Ensure exams is an array before filtering
               const updatedExams = Array.isArray(exams) ? exams.filter(exam => exam.id !== examId) : [];
               
               const userDocRef = doc(db, "users", auth.currentUser.uid);
@@ -115,7 +114,6 @@ export default function ExamTimetableScreen({ navigation }) {
   const groupExamsByDate = () => {
     const grouped = {};
     
-    // FIX: Ensure exams is an array before forEach
     if (Array.isArray(exams)) {
       exams.forEach(exam => {
         const date = exam.formattedDate || formatDate(new Date(exam.date));
@@ -139,14 +137,18 @@ export default function ExamTimetableScreen({ navigation }) {
 
   const getUpcomingExams = () => {
     const now = new Date();
-    // FIX: Ensure exams is an array before filtering
-    return Array.isArray(exams) ? exams.filter(exam => new Date(exam.date) >= now) : [];
+    return Array.isArray(exams) ? exams.filter(exam => {
+      const examDate = new Date(exam.date);
+      return examDate >= now;
+    }) : [];
   };
 
   const getPastExams = () => {
     const now = new Date();
-    // FIX: Ensure exams is an array before filtering
-    return Array.isArray(exams) ? exams.filter(exam => new Date(exam.date) < now) : [];
+    return Array.isArray(exams) ? exams.filter(exam => {
+      const examDate = new Date(exam.date);
+      return examDate < now;
+    }) : [];
   };
 
   const groupedExams = groupExamsByDate();
@@ -251,6 +253,20 @@ export default function ExamTimetableScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={() => navigation.goBack()}
+          >
+            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>EXAM TIMETABLE</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+      </View>
+
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -263,20 +279,6 @@ export default function ExamTimetableScreen({ navigation }) {
           />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity 
-              style={styles.backBtn} 
-              onPress={() => navigation.goBack()}
-            >
-              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>EXAM TIMETABLE</Text>
-            <View style={styles.headerSpacer} />
-          </View>
-        </View>
-
         <View style={styles.content}>
           {/* Summary Cards */}
           {exams.length > 0 && (
