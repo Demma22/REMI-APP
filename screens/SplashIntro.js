@@ -111,9 +111,6 @@ export default function SplashIntro({ navigation }) {
               <Text style={styles.secondaryButtonText}>Create Account</Text>
             </TouchableOpacity>
 
-            <Text style={styles.termsText}>
-              By continuing, you agree to our Terms of Service and Privacy Policy
-            </Text>
           </View>
         </Animated.View>
       </ScrollView>
