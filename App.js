@@ -5,6 +5,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { View, Image } from "react-native";
+import { deactivateKeepAwake } from "expo-keep-awake"; // ADDED THIS IMPORT
 
 // Import ThemeProvider and NotificationsProvider
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -49,6 +50,22 @@ function AppContent() {
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+
+  // ADDED: Keep-awake management useEffect
+  useEffect(() => {
+    // Disable keep-awake when component mounts
+    deactivateKeepAwake();
+    
+    // Set up periodic check to disable keep-awake (in case a screen activates it)
+    const interval = setInterval(() => {
+      deactivateKeepAwake();
+    }, 30000); // Check every 30 seconds
+    
+    return () => {
+      clearInterval(interval);
+      deactivateKeepAwake();
+    };
+  }, []);
 
   const migrateExistingUser = async (userData, userId) => {
     try {
