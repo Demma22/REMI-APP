@@ -254,14 +254,14 @@ export default function GPAScreen({ navigation }) {
 
         {/* Action Buttons Container */}
         <View style={styles.actionsContainer}>
-          {/* Calculate New Button */}
+          {/* Calculate New Button
           <TouchableOpacity 
             style={[styles.calculateButton, { backgroundColor: theme.colors.primary }]}
             onPress={() => navigation.navigate("GPACalculation", { semesterKey: null })}
           >
             <SvgIcon name="calculator" size={20} color="white" />
             <Text style={styles.calculateButtonText}>Calculate New GPA</Text>
-          </TouchableOpacity>
+          </TouchableOpacity>  */}
 
           {/* Export Button - only show if there's GPA data */}
           {hasGPAData && (
