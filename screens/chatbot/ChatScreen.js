@@ -487,7 +487,7 @@ const send = async () => {
           { bottom: keyboardHeight + 70 } // Position above input bar
         ]}>
           <View style={styles.thinkingDotsBubble}>
-            <ActivityIndicator size="small" color={theme.colors.primary} style={styles.thinkingIndicator} />
+            {/* <ActivityIndicator size="small" color={theme.colors.primary} style={styles.thinkingIndicator} /> */}
             <SvgIcon name="robot" size={16} color={theme.colors.primary} style={styles.thinkingRobot} />
             <Text style={[styles.thinkingDotsText, { color: theme.colors.primary }]}>{thinkingDots}</Text>
           </View>

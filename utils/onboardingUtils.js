@@ -16,7 +16,6 @@ export const checkOnboardingCompletion = async () => {
     // Simply check the onboarding_completed flag
     return userData.onboarding_completed === true;
   } catch (error) {
-    console.error("Error checking onboarding completion:", error);
     return false;
   }
 };
@@ -35,7 +34,6 @@ export const markOnboardingCompleted = async () => {
     
     return true;
   } catch (error) {
-    console.error("Error marking onboarding completed:", error);
     return false;
   }
 };

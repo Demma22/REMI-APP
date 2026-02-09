@@ -40,7 +40,6 @@ export default function EditCourse({ navigation }) {
           validateCourse(currentCourse);
         }
       } catch (error) {
-        console.log("Error loading user data:", error);
         Alert.alert("Error", "Could not load your course information");
       }
     };
@@ -104,7 +103,6 @@ export default function EditCourse({ navigation }) {
       );
       
     } catch (error) {
-      console.error("Firestore Error:", error);
       Alert.alert("Error", "Failed to save your course. Please try again.");
     } finally {
       setLoading(false);

@@ -39,7 +39,6 @@ export default function EditUnits({ navigation }) {
           setUnits(userUnits);
         }
       } catch (error) {
-        console.log("Error loading user data:", error);
         Alert.alert("Error", "Could not load your course units");
       }
     };
@@ -107,7 +106,6 @@ export default function EditUnits({ navigation }) {
       );
       
     } catch (error) {
-      console.error("Firestore Error:", error);
       Alert.alert("Error", "Failed to save course units. Please try again.");
     } finally {
       setLoading(false);

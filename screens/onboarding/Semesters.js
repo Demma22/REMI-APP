@@ -66,7 +66,6 @@ export default function Semesters({ navigation, route }) {
       });
 
     } catch (error) {
-      console.error("Firestore Error:", error);
       Alert.alert("Error", "Failed to save semester count. Please try again.");
     }
   };

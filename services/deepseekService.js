@@ -10,7 +10,6 @@ export const askDeepseek = async (payload) => {
     return data.answer;
 
   } catch (error) {
-    console.log("DeepSeek error:", error);
     return "I could not reach Remi's brain.";
   }
 };

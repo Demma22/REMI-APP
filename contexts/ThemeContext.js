@@ -190,7 +190,6 @@ export const ThemeProvider = ({ children }) => {
         setIsDarkMode(savedTheme === 'dark');
       }
     } catch (error) {
-      console.log('Error loading theme preference:', error);
     }
   };
 
@@ -198,7 +197,6 @@ export const ThemeProvider = ({ children }) => {
     try {
       await AsyncStorage.setItem('@theme_preference', darkMode ? 'dark' : 'light');
     } catch (error) {
-      console.log('Error saving theme preference:', error);
     }
   };
 
