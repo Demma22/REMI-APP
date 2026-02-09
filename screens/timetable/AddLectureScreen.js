@@ -20,8 +20,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import NavigationBar from "../../components/NavigationBar";
 import SvgIcon from "../../components/SvgIcon";
 import { useTheme } from '../../contexts/ThemeContext';
-import { useNotifications } from '../../hooks/useNotifications'; // Add this import
-import * as Notifications from 'expo-notifications'; // Add with other imports
+import { useNotifications } from '../../hooks/useNotifications';
 
 const { width } = Dimensions.get("window");
 
@@ -46,8 +45,8 @@ export default function AddLectureScreen({ navigation }) {
   const [showLecturesDropdown, setShowLecturesDropdown] = useState(false);
   const [showCourseDropdown, setShowCourseDropdown] = useState(null);
   
-  const { theme } = useTheme(); // Get theme from context
-  const { scheduleLectureNotifications } = useNotifications(); // Add notifications hook
+  const { theme } = useTheme();
+  const { scheduleLectureNotifications } = useNotifications();
 
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const lectureOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -56,7 +55,6 @@ export default function AddLectureScreen({ navigation }) {
     loadUserData();
   }, []);
 
-  // Load user data and course units from Firestore - UPDATED
   const loadUserData = async () => {
     try {
       const userDocRef = doc(db, "users", auth.currentUser.uid);
@@ -65,11 +63,9 @@ export default function AddLectureScreen({ navigation }) {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         
-        // Get current semester
         const semester = userData.current_semester || 1;
         setCurrentSemester(semester);
         
-        // UPDATED: Get course units for current semester from new structure
         if (userData.units && userData.units[semester]) {
           setCoursesForSemester(userData.units[semester]);
         } else {
@@ -77,14 +73,12 @@ export default function AddLectureScreen({ navigation }) {
         }
       }
     } catch (error) {
-      console.log("Error loading user data:", error);
       Alert.alert("Error", "Failed to load course data");
     } finally {
       setLoading(false);
     }
   };
 
-  // Update entries when number of lectures changes
   useEffect(() => {
     const arr = Array.from({ length: numLectures }).map((_, i) => {
       const prev = entries[i] || {};
@@ -104,78 +98,69 @@ export default function AddLectureScreen({ navigation }) {
     copy[idx] = { ...copy[idx], [key]: val };
     setEntries(copy);
   };
-const save = async () => {
-  try {
-    // Validate all entries
-    for (let i = 0; i < entries.length; i++) {
-      const lec = entries[i];
-      if (!lec.name.trim()) {
-        Alert.alert("Error", `Please select a course for Lecture ${i + 1}`);
-        return;
+
+  const save = async () => {
+    try {
+      for (let i = 0; i < entries.length; i++) {
+        const lec = entries[i];
+        if (!lec.name.trim()) {
+          Alert.alert("Error", `Please select a course for Lecture ${i + 1}`);
+          return;
+        }
+        if (!lec.start.trim() || !lec.end.trim()) {
+          Alert.alert("Error", `Please enter both start and end times for Lecture ${i + 1}`);
+          return;
+        }
       }
-      if (!lec.start.trim() || !lec.end.trim()) {
-        Alert.alert("Error", `Please enter both start and end times for Lecture ${i + 1}`);
-        return;
+
+      await saveToFirestore();
+      
+      const userDocRef = doc(db, "users", auth.currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        try {
+          await scheduleLectureNotifications(userDoc.data());
+          
+          Alert.alert(
+            "Success", 
+            `Lecture(s) added!\n\n` +
+            `You'll get notifications every week before each lecture`
+          );
+          
+        } catch (notificationError) {
+          Alert.alert(
+            "Lecture Saved",
+            "Lecture was saved successfully!\n\n" +
+            "Weekly notifications may not work on some Android devices.\n\n" +
+            "Tip: Make sure your device allows repeating notifications in system settings.",
+            [{ text: "OK", onPress: () => navigation.goBack() }]
+          );
+          return;
+        }
       }
+      
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert("Error", "Could not save lecture(s)");
     }
+  };
 
-    // Save to Firestore
-    await saveToFirestore();
-    
-    // Schedule notifications for the new lectures
-    const userDocRef = doc(db, "users", auth.currentUser.uid);
-    const userDoc = await getDoc(userDocRef);
-    
-    if (userDoc.exists()) {
-      try {
-        console.log("🔔 Scheduling lecture notifications...");
-        await scheduleLectureNotifications(userDoc.data());
-        console.log("✅ Lecture notifications scheduled");
-        
-        // DEBUG: List all scheduled notifications
-        const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-        console.log(`📋 Total scheduled notifications: ${scheduled.length}`);
-        scheduled.forEach((n, i) => {
-          console.log(`#${i + 1}: ${n.content.title} - ${n.content.body}`);
-          console.log("   Trigger:", n.trigger);
-        });
-      } catch (notificationError) {
-        console.error("❌ Lecture notification error:", notificationError);
-        Alert.alert("Warning", "Lecture saved but notifications failed to schedule");
-        navigation.goBack();
-        return;
+  const saveToFirestore = async () => {
+    try {
+      const userDocRef = doc(db, "users", auth.currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      let timetableData = {};
+      if (userDoc.exists() && userDoc.data().timetable) {
+        timetableData = userDoc.data().timetable;
       }
-    }
-    
-    Alert.alert(
-      "Success ✅", 
-      "Lecture(s) added!\n\n" +
-      "• Lecture reminders will notify you weekly"
-    );
-    navigation.goBack();
-  } catch (error) {
-    console.log("Save error:", error);
-    Alert.alert("Error", "Could not save lecture(s)");
-  }
-};
 
-// Save lectures to Firestore
-const saveToFirestore = async () => {
-  try {
-    const userDocRef = doc(db, "users", auth.currentUser.uid);
-    const userDoc = await getDoc(userDocRef);
-    
-    let timetableData = {};
-    if (userDoc.exists() && userDoc.data().timetable) {
-      timetableData = userDoc.data().timetable;
-    }
+      const dayKey = day.toLowerCase();
+      if (!timetableData[dayKey]) {
+        timetableData[dayKey] = [];
+      }
 
-    const dayKey = day.toLowerCase();
-    if (!timetableData[dayKey]) {
-      timetableData[dayKey] = [];
-    }
-
-      // Add new lectures with semester info
       const lecturesWithSemester = entries.map(lecture => ({
         ...lecture,
         semester: currentSemester,
@@ -186,18 +171,15 @@ const saveToFirestore = async () => {
 
       timetableData[dayKey] = [...timetableData[dayKey], ...lecturesWithSemester];
 
-      // Save back to Firestore
       await setDoc(userDocRef, {
         timetable: timetableData
       }, { merge: true });
 
     } catch (error) {
-      console.log("Firestore save error:", error);
       throw error;
     }
   };
 
-  // Render dropdown items
   const renderDayItem = ({ item }) => (
     <TouchableOpacity
       style={[
@@ -339,7 +321,7 @@ const saveToFirestore = async () => {
               }]}>
                 <SvgIcon name="bell" size={16} color={theme.colors.primary} />
                 <Text style={[styles.notificationText, { color: theme.colors.primary }]}>
-                  Notifications will be scheduled automatically
+                  Weekly notifications will be scheduled automatically
                 </Text>
               </View>
 

@@ -65,7 +65,6 @@ export const NotificationsProvider = ({ children }) => {
     }
 
     return () => {
-      // FIXED: Use correct method to remove listeners
       if (notificationListener.current) {
         notificationListener.current.remove();
       }
@@ -123,8 +122,12 @@ export const NotificationsProvider = ({ children }) => {
         }
       }
       
-      if (Platform.OS === 'android' && !finalTrigger.channelId) {
+      if (Platform.OS === 'android' && finalTrigger.type === 'calendar' && !finalTrigger.channelId) {
         finalTrigger.channelId = 'default';
+      }
+      
+      if (finalTrigger.type === 'calendar' && finalTrigger.repeats === undefined) {
+        finalTrigger.repeats = true;
       }
     } else {
       finalTrigger = {
@@ -137,16 +140,24 @@ export const NotificationsProvider = ({ children }) => {
       }
     }
     
-    return await Notifications.scheduleNotificationAsync({
-      content: {
-        title,
-        body,
-        data,
-        sound: 'default',
-        priority: Notifications.AndroidNotificationPriority.HIGH,
-      },
-      trigger: finalTrigger,
-    });
+    try {
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          data,
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+          autoDismiss: false,
+          sticky: false,
+        },
+        trigger: finalTrigger,
+      });
+      
+      return notificationId;
+    } catch (error) {
+      throw error;
+    }
   };
 
   const scheduleLectureNotifications = async (userData) => {
@@ -158,7 +169,6 @@ export const NotificationsProvider = ({ children }) => {
         await Notifications.cancelScheduledNotificationAsync(notification.identifier);
       }
       
-      const nickname = userData.nickname || userData.name || userData.username || 'Student';
       const timetable = userData.timetable || {};
       
       const weekdayMap = {
@@ -172,6 +182,7 @@ export const NotificationsProvider = ({ children }) => {
       };
       
       let totalScheduled = 0;
+      const now = new Date();
       
       for (const dayKey in timetable) {
         const lectures = timetable[dayKey] || [];
@@ -194,6 +205,7 @@ export const NotificationsProvider = ({ children }) => {
           const expoWeekday = weekdayMap[dayKey.toLowerCase()];
           if (!expoWeekday) continue;
           
+          // Calculate 30 minutes before
           let minute30 = minutes - 30;
           let hour30 = hours;
           if (minute30 < 0) {
@@ -202,27 +214,7 @@ export const NotificationsProvider = ({ children }) => {
           }
           if (hour30 < 0) hour30 += 24;
           
-          await schedulePushNotification(
-            `Lecture Reminder`,
-            `${lecture.name} starts in 30 minutes${lecture.room ? ` in ${lecture.room}` : ''}`,
-            { 
-              type: 'lecture',
-              lectureId: lecture.id,
-              day: dayKey,
-              time: lecture.start 
-            },
-            {
-              type: 'calendar',
-              repeats: true,
-              weekday: expoWeekday,
-              hour: hour30,
-              minute: minute30,
-              second: 0,
-              channelId: 'default',
-            }
-          );
-          totalScheduled++;
-          
+          // Calculate 5 minutes before
           let minute5 = minutes - 5;
           let hour5 = hours;
           if (minute5 < 0) {
@@ -231,32 +223,159 @@ export const NotificationsProvider = ({ children }) => {
           }
           if (hour5 < 0) hour5 += 24;
           
-          await schedulePushNotification(
-            `Time for class!`,
-            `${lecture.name} starts in 5 minutes${lecture.room ? ` in ${lecture.room}` : ''}`,
-            { 
-              type: 'lecture',
-              lectureId: lecture.id,
-              day: dayKey,
-              time: lecture.start 
-            },
-            {
+          if (Platform.OS === 'ios') {
+            const trigger30min = {
+              type: 'calendar',
+              repeats: true,
+              weekday: expoWeekday,
+              hour: hour30,
+              minute: minute30,
+              second: 0,
+            };
+            
+            const trigger5min = {
               type: 'calendar',
               repeats: true,
               weekday: expoWeekday,
               hour: hour5,
               minute: minute5,
               second: 0,
-              channelId: 'default',
+            };
+            
+            try {
+              await schedulePushNotification(
+                `Lecture Reminder`,
+                `${lecture.name} starts in 30 minutes${lecture.room ? ` in ${lecture.room}` : ''}`,
+                { 
+                  type: 'lecture',
+                  lectureId: lecture.id || Date.now().toString(),
+                  day: dayKey,
+                  time: lecture.start,
+                  course: lecture.name
+                },
+                trigger30min
+              );
+              totalScheduled++;
+              
+              await schedulePushNotification(
+                `Time for class!`,
+                `${lecture.name} starts in 5 minutes${lecture.room ? ` in ${lecture.room}` : ''}`,
+                { 
+                  type: 'lecture',
+                  lectureId: lecture.id || Date.now().toString(),
+                  day: dayKey,
+                  time: lecture.start,
+                  course: lecture.name
+                },
+                trigger5min
+              );
+              totalScheduled++;
+              
+            } catch (error) {
+              // Continue with other lectures
             }
-          );
-          totalScheduled++;
+          } else {
+            const today = now.getDay();
+            const targetDay = expoWeekday - 1;
+            
+            let daysUntilTarget = targetDay - today;
+            if (daysUntilTarget < 0) {
+              daysUntilTarget += 7;
+            }
+            
+            // Schedule for 20 weeks (5 months)
+            for (let week = 0; week < 20; week++) {
+              const notificationDate = new Date(now);
+              notificationDate.setDate(now.getDate() + daysUntilTarget + (week * 7));
+              
+              const date30min = new Date(notificationDate);
+              date30min.setHours(hour30, minute30, 0, 0);
+              
+              const date5min = new Date(notificationDate);
+              date5min.setHours(hour5, minute5, 0, 0);
+              
+              if (date30min > now) {
+                try {
+                  await schedulePushNotification(
+                    `Lecture Reminder`,
+                    `${lecture.name} starts in 30 minutes${lecture.room ? ` in ${lecture.room}` : ''}`,
+                    { 
+                      type: 'lecture',
+                      lectureId: `${lecture.id}_${dayKey}_${hour30}_${minute30}_w${week}`,
+                      day: dayKey,
+                      time: lecture.start,
+                      course: lecture.name
+                    },
+                    {
+                      type: 'date',
+                      date: date30min,
+                    }
+                  );
+                  totalScheduled++;
+                } catch (error) {
+                  // Continue
+                }
+              }
+              
+              if (date5min > now) {
+                try {
+                  await schedulePushNotification(
+                    `Time for class!`,
+                    `${lecture.name} starts in 5 minutes${lecture.room ? ` in ${lecture.room}` : ''}`,
+                    { 
+                      type: 'lecture',
+                      lectureId: `${lecture.id}_${dayKey}_${hour5}_${minute5}_w${week}`,
+                      day: dayKey,
+                      time: lecture.start,
+                      course: lecture.name
+                    },
+                    {
+                      type: 'date',
+                      date: date5min,
+                    }
+                  );
+                  totalScheduled++;
+                } catch (error) {
+                  // Continue
+                }
+              }
+            }
+          }
         }
       }
       
       return totalScheduled;
     } catch (error) {
       throw error;
+    }
+  };
+
+  const cancelLectureNotifications = async (lectureIds) => {
+    try {
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      
+      for (const notification of scheduled) {
+        if (notification.content.data?.type === 'lecture') {
+          const lectureId = notification.content.data?.lectureId;
+          
+          // Check if this notification belongs to any of the lectures being removed
+          const shouldCancel = lectureIds.some(idToRemove => {
+            // For iOS: lectureId is the original ID
+            if (lectureId === idToRemove) return true;
+            
+            // For Android: lectureId is in format `${originalId}_${dayKey}_${hour}_${minute}_w${week}`
+            if (lectureId && lectureId.startsWith(`${idToRemove}_`)) return true;
+            
+            return false;
+          });
+          
+          if (shouldCancel) {
+            await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+          }
+        }
+      }
+    } catch (error) {
+      // Silent fail - notifications will be re-scheduled next time
     }
   };
 
@@ -303,7 +422,6 @@ export const NotificationsProvider = ({ children }) => {
           hours = 0;
         }
         
-        // Create exam datetime with proper time - CRITICAL FIX HERE
         const examDateTime = new Date(
           examDate.getFullYear(),
           examDate.getMonth(),
@@ -313,23 +431,17 @@ export const NotificationsProvider = ({ children }) => {
           0
         );
         
-        // FIX: Check if exam is within the next 24 hours
-        // If exam is today but time hasn't passed yet, it should schedule notifications
         const timeUntilExam = examDateTime.getTime() - now.getTime();
         const hoursUntilExam = timeUntilExam / (1000 * 60 * 60);
         
-        // Only skip if exam is already over (more than 2 hours past)
-        // Give a 2-hour buffer for the "Exam Today" notification
         if (hoursUntilExam < -2) {
-          continue; // Exam was more than 2 hours ago
+          continue;
         }
         
-        // Calculate notification times
         const twoDaysBefore = new Date(examDateTime);
         twoDaysBefore.setDate(examDateTime.getDate() - 2);
         twoDaysBefore.setHours(9, 0, 0, 0);
         
-        // Only schedule 2-day reminder if it's more than 2 days away
         if (twoDaysBefore > now) {
           await schedulePushNotification(
             `Exam Reminder`,
@@ -352,7 +464,6 @@ export const NotificationsProvider = ({ children }) => {
         oneDayBefore.setDate(examDateTime.getDate() - 1);
         oneDayBefore.setHours(18, 0, 0, 0);
         
-        // Only schedule 1-day reminder if it's more than 1 day away
         if (oneDayBefore > now) {
           await schedulePushNotification(
             `Exam Tomorrow`,
@@ -374,7 +485,6 @@ export const NotificationsProvider = ({ children }) => {
         const twoHoursBefore = new Date(examDateTime);
         twoHoursBefore.setHours(examDateTime.getHours() - 2);
         
-        // Only schedule 2-hour reminder if exam is more than 2 hours away
         if (twoHoursBefore > now) {
           await schedulePushNotification(
             `Exam Today`,
@@ -415,6 +525,7 @@ export const NotificationsProvider = ({ children }) => {
         schedulePushNotification,
         scheduleLectureNotifications,
         scheduleExamNotifications,
+        cancelLectureNotifications,
         cancelAllNotifications,
         getScheduledNotifications,
       }}
