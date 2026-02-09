@@ -110,7 +110,6 @@ export default function AddExamScreen({ navigation }) {
         }
       }
     } catch (error) {
-      console.error("Error loading user data:", error);
       Alert.alert("Error", "Could not load user data");
     } finally {
       setLoading(false);
@@ -192,7 +191,7 @@ export default function AddExamScreen({ navigation }) {
       
       const newExams = entries.map(paper => ({
         ...paper,
-        date: selectedDate.toISOString(), // Store full ISO string with time
+        date: selectedDate.toISOString(),
         semester: currentSemester,
         id: Date.now() + Math.random(),
         formattedDate: formattedDate,
@@ -236,7 +235,6 @@ export default function AddExamScreen({ navigation }) {
       setNumPapers(1);
       
     } catch (error) {
-      console.error("Save error:", error);
       Alert.alert("Error", "Could not save exam(s)");
     }
   };
@@ -307,7 +305,7 @@ export default function AddExamScreen({ navigation }) {
           <Text style={styles.headerTitle}>ADD EXAM</Text>
           <View style={styles.placeholder} />
         </View>
-        <View style={styles.content}>
+        <View style={styles.loadingContent}>
           <Text style={styles.loadingText}>Loading your data...</Text>
         </View>
         <NavigationBar />
@@ -317,24 +315,25 @@ export default function AddExamScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      {/* Static Header - outside of ScrollView */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backBtn} 
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>ADD EXAM</Text>
+        <View style={styles.placeholder} />
+      </View>
+
       <KeyboardAvoidingView 
         style={styles.wrap}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <TouchableWithoutFeedback onPress={dismissKeyboard}>
           <ScrollView style={styles.wrap} showsVerticalScrollIndicator={false}>
-            <View style={styles.header}>
-              <TouchableOpacity 
-                style={styles.backBtn} 
-                onPress={() => navigation.goBack()}
-                activeOpacity={0.7}
-              >
-                <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>ADD EXAM</Text>
-              <View style={styles.placeholder} />
-            </View>
-
             <View style={styles.content}>
               {currentSemester && (
                 <View style={[styles.semesterInfo, { 
@@ -525,8 +524,9 @@ export default function AddExamScreen({ navigation }) {
                 )}
               </View>
 
+              {/* Reduced margin between buttons from 20 to 5 */}
               <TouchableOpacity 
-                style={[styles.viewTimetableBtn, { backgroundColor: theme.colors.secondary }]}
+                style={[styles.viewTimetableBtn, { backgroundColor: theme.colors.secondary, marginTop: 5 }]}
                 onPress={() => navigation.navigate("ExamTimetable")}
               >
                 <SvgIcon name="list" size={18} color="white" />
@@ -601,11 +601,10 @@ const getStyles = (theme) => StyleSheet.create({
     flex: 1, 
     backgroundColor: theme.colors.background,
   },
-  center: { 
-    textAlign: "center", 
-    marginTop: 40,
-    fontSize: 16,
-    color: theme.colors.textSecondary
+  loadingContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingText: {
     textAlign: "center",
@@ -628,6 +627,11 @@ const getStyles = (theme) => StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 3,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
   },
   backBtn: {
     width: 44,
@@ -650,6 +654,7 @@ const getStyles = (theme) => StyleSheet.create({
   },
   content: {
     padding: 24,
+    marginTop: 140, // Added margin for static header
   },
   addExamSection: {
     marginBottom: 20,
@@ -776,7 +781,7 @@ const getStyles = (theme) => StyleSheet.create({
   },
   courseDropdownButtonText: {
     fontSize: 16,
-    color: theme.colors.textPrimary,
+    color: theme.mode === 'dark' ? '#FFFFFF' : theme.colors.textPrimary, // White text in dark mode
     fontWeight: "500",
     flex: 1,
   },
@@ -865,7 +870,7 @@ const getStyles = (theme) => StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     marginTop: 10,
-    marginBottom: 20,
+    marginBottom: 5, // Reduced from 20 to 5
     shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
@@ -887,7 +892,6 @@ const getStyles = (theme) => StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: "center",
-    marginTop: 10,
     marginBottom: 20,
     shadowColor: theme.colors.secondary,
     shadowOffset: { width: 0, height: 4 },

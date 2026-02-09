@@ -1,4 +1,3 @@
-// screens/EditTimetableScreen.js
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -10,12 +9,12 @@ import {
   Alert,
   Modal,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import { auth, db } from "../../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import NavigationBar from "../../components/NavigationBar";
 import SvgIcon from "../../components/SvgIcon";
 import { useTheme } from '../../contexts/ThemeContext';
+import { useNotifications } from '../../hooks/useNotifications';
 
 export default function EditTimetableScreen({ navigation }) {
   if (!auth.currentUser) return <Text style={styles.center}>Not logged in</Text>;
@@ -30,6 +29,7 @@ export default function EditTimetableScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   
   const { theme } = useTheme();
+  const { cancelLectureNotifications } = useNotifications();
 
   useEffect(() => {
     load();
@@ -41,27 +41,22 @@ export default function EditTimetableScreen({ navigation }) {
     try {
       setLoading(true);
       
-      // Load user data from Firestore
       const userDocRef = doc(db, "users", auth.currentUser.uid);
       const userDoc = await getDoc(userDocRef);
       
       if (userDoc.exists()) {
         const userData = userDoc.data();
         
-        // Get current semester
         setCurrentSemester(userData.current_semester || null);
         
-        // Get timetable data
         const timetableData = userData.timetable || {};
         setTimetable(timetableData);
         
-        // Get lectures for current day
         const dayList = timetableData[day] || [];
         setLectures(dayList);
         setSelectedIndex(0);
       }
     } catch (e) {
-      console.log("Edit timetable load error:", e);
       Alert.alert("Error", "Could not load timetable data");
     } finally {
       setLoading(false);
@@ -82,13 +77,11 @@ export default function EditTimetableScreen({ navigation }) {
 
   const saveTimetable = async () => {
     try {
-      // Update timetable with modified lectures for current day
       const updatedTimetable = { 
         ...timetable, 
         [day]: lectures 
       };
 
-      // Save to Firestore
       const userDocRef = doc(db, "users", auth.currentUser.uid);
       await setDoc(userDocRef, { 
         timetable: updatedTimetable 
@@ -97,34 +90,35 @@ export default function EditTimetableScreen({ navigation }) {
       Alert.alert("Saved", "Timetable updated successfully");
       navigation.goBack();
     } catch (e) {
-      console.log("Save error:", e);
       Alert.alert("Error", "Could not update timetable");
     }
   };
 
   const removeLecture = async (idx) => {
     try {
-      // Create copy of lectures and remove the selected one
+      const lectureToRemove = lectures[idx];
+      
+      // Cancel notifications for this lecture
+      if (lectureToRemove && lectureToRemove.id) {
+        await cancelLectureNotifications([lectureToRemove.id]);
+      }
+      
       const copy = [...lectures];
       copy.splice(idx, 1);
       
-      // Update timetable with removed lecture
       const updatedTimetable = { 
         ...timetable, 
         [day]: copy 
       };
 
-      // Save to Firestore
       const userDocRef = doc(db, "users", auth.currentUser.uid);
       await setDoc(userDocRef, { 
         timetable: updatedTimetable 
       }, { merge: true });
 
-      // Update local state
       setTimetable(updatedTimetable);
       setLectures(copy);
       
-      // Adjust selected index
       if (copy.length === 0) {
         setSelectedIndex(0);
       } else if (selectedIndex >= copy.length) {
@@ -133,7 +127,6 @@ export default function EditTimetableScreen({ navigation }) {
 
       Alert.alert("Removed", "Lecture removed successfully");
     } catch (e) {
-      console.log("Remove error:", e);
       Alert.alert("Error", "Could not remove lecture");
     }
   };

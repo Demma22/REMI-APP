@@ -45,7 +45,7 @@ export default function TermsConditionsScreen({ navigation }) {
 
           {/* Last Updated */}
           <View style={styles.updateContainer}>
-            <Text style={styles.updateText}>📅 Last Updated: {new Date().toLocaleDateString()}</Text>
+            <Text style={styles.updateText}>Last Updated: {new Date().toLocaleDateString()}</Text>
           </View>
 
           {/* Terms Content */}
@@ -131,7 +131,7 @@ export default function TermsConditionsScreen({ navigation }) {
 
             {/* Agreement Confirmation */}
             <View style={styles.agreementContainer}>
-              <Text style={styles.agreementEmoji}>✅</Text>
+
               <Text style={styles.agreementText}>
                 By using REMI, you acknowledge that you have read, understood, and agree to these Terms & Conditions.
               </Text>

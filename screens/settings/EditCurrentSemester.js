@@ -40,7 +40,6 @@ export default function EditCurrentSemester({ navigation, route }) {
           setCurrent(currentSem); // Set current selection to existing semester
         }
       } catch (error) {
-        console.log("Error loading user data:", error);
         Alert.alert("Error", "Could not load your data");
       }
     };
@@ -97,7 +96,6 @@ export default function EditCurrentSemester({ navigation, route }) {
       );
       
     } catch (error) {
-      console.error("Firestore Error:", error);
       Alert.alert("Error", "Failed to save your selection. Please try again.");
     } finally {
       setLoading(false);

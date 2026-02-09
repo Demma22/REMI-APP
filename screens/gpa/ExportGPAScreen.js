@@ -18,7 +18,7 @@ import WebView from 'react-native-webview';
 // Expo packages for PDF generation
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { EncodingType, documentDirectory, readAsStringAsync, writeAsStringAsync, makeDirectoryAsync, getInfoAsync } from 'expo-file-system';
+import { EncodingType, documentDirectory, readAsStringAsync, writeAsStringAsync } from 'expo-file-system';
 
 import { auth, db } from "../../firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -27,6 +27,8 @@ import SvgIcon from "../../components/SvgIcon";
 import { useTheme } from '../../contexts/ThemeContext';
 
 export default function ExportGPAScreen({ navigation }) {
+  const { theme } = useTheme();
+  
   if (!auth.currentUser) {
     return <Text style={styles.center}>Not logged in</Text>;
   }
@@ -41,7 +43,6 @@ export default function ExportGPAScreen({ navigation }) {
   const [pdfUri, setPdfUri] = useState("");
   
   const webViewRef = useRef(null);
-  const { theme } = useTheme();
 
   useEffect(() => { 
     loadGPA();
@@ -52,10 +53,8 @@ export default function ExportGPAScreen({ navigation }) {
   const requestStoragePermission = async () => {
     if (Platform.OS === 'android') {
       try {
-        // For Android 13+, we need MANAGE_EXTERNAL_STORAGE
         const apiLevel = Platform.Version;
         if (apiLevel >= 33) {
-          // Android 13+ uses different permissions
           const granted = await PermissionsAndroid.request(
             PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
             {
@@ -68,7 +67,6 @@ export default function ExportGPAScreen({ navigation }) {
           );
           return granted === PermissionsAndroid.RESULTS.GRANTED;
         } else {
-          // For older Android versions
           const granted = await PermissionsAndroid.request(
             PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
             {
@@ -82,11 +80,10 @@ export default function ExportGPAScreen({ navigation }) {
           return granted === PermissionsAndroid.RESULTS.GRANTED;
         }
       } catch (err) {
-        console.warn(err);
         return false;
       }
     }
-    return true; // iOS doesn't need explicit storage permission for app directories
+    return true;
   };
 
   const loadGPA = async () => {
@@ -100,15 +97,12 @@ export default function ExportGPAScreen({ navigation }) {
         const data = userDoc.data();
         setUserData(data);
         
-        // Get GPA data
         const loadedGpaData = data.gpa_data || {};
         setGpaData(loadedGpaData);
         
-        // Don't auto-select - start with empty selection
         setSelectedSemesters([]);
       }
     } catch (error) {
-      console.log("Load error:", error);
       Alert.alert("Error", "Failed to load GPA data");
     } finally {
       setLoading(false);
@@ -184,7 +178,6 @@ export default function ExportGPAScreen({ navigation }) {
     });
     const overallGPA = getOverallGPA();
     
-    // Calculate totals
     let totalCredits = 0;
     let totalQualityPoints = 0;
     let totalCourses = 0;
@@ -405,24 +398,19 @@ export default function ExportGPAScreen({ navigation }) {
     try {
       setExporting(true);
       
-      // Generate HTML content
       const html = generatePDFHTML();
       
-      // Create PDF using expo-print
       const { uri } = await Print.printToFileAsync({
         html: html,
         base64: false,
       });
       
-      // Save the PDF URI
       setPdfUri(uri);
       setHtmlContent(html);
       
-      // Show success message with download options
       showDownloadOptions(uri);
       
     } catch (error) {
-      console.error("PDF Export Error:", error);
       Alert.alert(
         "Export Failed",
         "Could not generate report. Please try again."
@@ -434,7 +422,7 @@ export default function ExportGPAScreen({ navigation }) {
 
   const showDownloadOptions = (uri) => {
     Alert.alert(
-      "✅ Report Generated Successfully",
+      "Report Generated Successfully",
       "Choose what you'd like to do with the report:",
       [
         { 
@@ -459,7 +447,6 @@ export default function ExportGPAScreen({ navigation }) {
 
   const downloadPDFToDevice = async (uri) => {
     try {
-      // For Android, request storage permission
       if (Platform.OS === 'android') {
         const hasPermission = await requestStoragePermission();
         if (!hasPermission) {
@@ -472,26 +459,22 @@ export default function ExportGPAScreen({ navigation }) {
         }
       }
 
-      // Generate file name with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const fileName = `GPA_Report_${timestamp}.pdf`;
       
-      // Create directory if it doesn't exist
       const documentsDir = documentDirectory;
       const destinationUri = `${documentsDir}${fileName}`;
       
-      // Read the file content
       const fileContent = await readAsStringAsync(uri, {
         encoding: EncodingType.Base64,
       });
       
-      // Write the file to destination
       await writeAsStringAsync(destinationUri, fileContent, {
         encoding: EncodingType.Base64,
       });
       
       Alert.alert(
-        "✅ Download Complete",
+        "Download Complete",
         `Report saved successfully!\n\nFile: ${fileName}`,
         [
           { 
@@ -502,10 +485,7 @@ export default function ExportGPAScreen({ navigation }) {
         ]
       );
       
-      console.log("PDF saved to:", destinationUri);
-      
     } catch (error) {
-      console.error("Download Error:", error);
       Alert.alert(
         "Download Failed",
         "Could not save the file. Please use the Share option to save it to your preferred location.",
@@ -528,7 +508,6 @@ export default function ExportGPAScreen({ navigation }) {
       });
       
     } catch (error) {
-      console.error("Share Error:", error);
       Alert.alert("Sharing Error", "Could not share the file. Please try again.");
     }
   };
@@ -540,14 +519,12 @@ export default function ExportGPAScreen({ navigation }) {
         html: html,
       });
     } catch (error) {
-      console.error("Print Error:", error);
       Alert.alert("Print Error", "Could not print the document.");
     }
   };
 
-  const handleWebViewMessage = (event) => {
-    const message = event.nativeEvent.data;
-    console.log("WebView message:", message);
+  const handleWebViewMessage = () => {
+    // Handle WebView messages if needed
   };
 
   const styles = getStyles(theme);

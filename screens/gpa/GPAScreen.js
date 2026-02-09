@@ -59,7 +59,6 @@ export default function GPAScreen({ navigation }) {
         setGpas(formattedGpas);
       }
     } catch (error) {
-      console.log("Load error:", error);
     } finally {
       setLoading(false);
     }
@@ -235,7 +234,7 @@ export default function GPAScreen({ navigation }) {
                   
                   <View style={[styles.actionIndicator, { borderTopColor: theme.colors.border }]}>
                     <Text style={[styles.actionText, { color: theme.colors.primary }]}>
-                      {hasGPA ? "Tap to recalculate →" : "Tap to calculate →"}
+                      {hasGPA ? "Tap to recalculate" : "Tap to calculate"}
                     </Text>
                   </View>
                 </TouchableOpacity>

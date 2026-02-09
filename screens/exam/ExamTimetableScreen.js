@@ -16,6 +16,8 @@ import SvgIcon from "../../components/SvgIcon";
 import { useTheme } from '../../contexts/ThemeContext';
 
 export default function ExamTimetableScreen({ navigation }) {
+  const { theme } = useTheme();
+  
   if (!auth.currentUser) {
     return <Text style={[styles.center, { color: theme.colors.textPrimary }]}>Not logged in</Text>;
   }
@@ -24,8 +26,6 @@ export default function ExamTimetableScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentSemester, setCurrentSemester] = useState(null);
-  
-  const { theme } = useTheme();
 
   useEffect(() => {
     loadExams();
@@ -48,7 +48,6 @@ export default function ExamTimetableScreen({ navigation }) {
         const examsData = userData.exams || [];
         
         if (Array.isArray(examsData)) {
-          // Sort exams by datetime (soonest first)
           const sortedExams = examsData.sort((a, b) => {
             const dateA = new Date(a.date);
             const dateB = new Date(b.date);
@@ -56,14 +55,12 @@ export default function ExamTimetableScreen({ navigation }) {
           });
           setExams(sortedExams);
         } else {
-          console.log("Exams data is not an array, resetting to empty array");
           setExams([]);
         }
       } else {
         setExams([]);
       }
     } catch (error) {
-      console.log("Error loading exams:", error);
       Alert.alert("Error", "Could not load exams");
       setExams([]);
     } finally {
@@ -101,7 +98,6 @@ export default function ExamTimetableScreen({ navigation }) {
               setExams(updatedExams);
               Alert.alert("Success", "Exam deleted successfully!");
             } catch (error) {
-              console.log("Delete error:", error);
               Alert.alert("Error", "Could not delete exam");
             }
           }
@@ -110,7 +106,6 @@ export default function ExamTimetableScreen({ navigation }) {
     );
   };
 
-  // Group exams by date
   const groupExamsByDate = () => {
     const grouped = {};
     
@@ -154,35 +149,6 @@ export default function ExamTimetableScreen({ navigation }) {
   const groupedExams = groupExamsByDate();
   const upcomingExams = getUpcomingExams();
   const pastExams = getPastExams();
-
-  const renderExamItem = ({ item }) => (
-    <View style={styles.examItem}>
-      <View style={styles.examContent}>
-        <View style={styles.examHeader}>
-          <Text style={styles.examCourse}>{item.name}</Text>
-          <TouchableOpacity 
-            style={styles.deleteBtn}
-            onPress={() => deleteExam(item.id)}
-          >
-            <SvgIcon name="close" size={16} color={theme.colors.error} />
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.examDetails}>
-          <View style={styles.examTimeContainer}>
-            <SvgIcon name="clock" size={14} color={theme.colors.primary} />
-            <Text style={styles.examTime}> {item.start} - {item.end}</Text>
-          </View>
-          
-          {item.semester && (
-            <View style={[styles.semesterBadge, { backgroundColor: theme.colors.secondary + '20' }]}>
-              <Text style={[styles.semesterText, { color: theme.colors.secondary }]}>Semester {item.semester}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </View>
-  );
 
   const renderDateSection = ({ item: date }) => (
     <View style={styles.dateSection}>
@@ -253,7 +219,6 @@ export default function ExamTimetableScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity 
@@ -280,7 +245,6 @@ export default function ExamTimetableScreen({ navigation }) {
         }
       >
         <View style={styles.content}>
-          {/* Summary Cards */}
           {exams.length > 0 && (
             <View style={styles.summarySection}>
               <View style={styles.summaryRow}>
@@ -302,7 +266,6 @@ export default function ExamTimetableScreen({ navigation }) {
             </View>
           )}
 
-          {/* Current Semester Info */}
           {currentSemester && (
             <View style={[styles.semesterInfo, { 
               backgroundColor: theme.mode === 'dark' ? '#3E2A1D' : '#FFF7ED',
@@ -321,7 +284,6 @@ export default function ExamTimetableScreen({ navigation }) {
             </View>
           )}
 
-          {/* Exams List */}
           {exams.length > 0 ? (
             <View style={styles.examsSection}>
               <Text style={styles.sectionTitle}>Your Exam Schedule</Text>
@@ -347,7 +309,6 @@ export default function ExamTimetableScreen({ navigation }) {
               )}
             </View>
           ) : (
-            /* Empty State */
             <View style={styles.emptyState}>
               <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
                 <SvgIcon name="book" size={32} color={theme.colors.primary} />
@@ -367,12 +328,11 @@ export default function ExamTimetableScreen({ navigation }) {
             </View>
           )}
 
-          {/* Bottom spacing for navigation bar */}
           <View style={styles.bottomSpacing} />
         </View>
       </ScrollView>
 
-      {/* Floating Action Button - Only show when there are exams */}
+      {/* Floating Action Button - Higher position to avoid nav bar */}
       {exams.length > 0 && (
         <View style={styles.floatingActions}>
           <TouchableOpacity
@@ -610,9 +570,6 @@ const getStyles = (theme) => StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-  emptyIcon: {
-    fontSize: 32,
-  },
   emptyTitle: {
     fontSize: 20,
     fontWeight: "700",
@@ -645,69 +602,11 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-  examItem: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 12,
-    marginBottom: 8,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  examContent: {
-    padding: 16,
-  },
-  examHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
-  },
-  examCourse: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    flex: 1,
-  },
-  deleteBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: theme.colors.error + '20',
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  examDetails: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  examTimeContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  examTime: {
-    fontSize: 14,
-    color: theme.colors.primary,
-    fontWeight: "600",
-  },
-  semesterBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  semesterText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
   floatingActions: {
     position: "absolute",
-    bottom: 80,
+    bottom: 100, // Increased from 80 to 100 to be higher
     right: 24,
+    zIndex: 1000, // Increased zIndex
   },
   addFloatingBtn: {
     flexDirection: "row",
@@ -745,6 +644,6 @@ const getStyles = (theme) => StyleSheet.create({
     lineHeight: 20,
   },
   bottomSpacing: {
-    height: 100,
+    height: 120, // Increased from 100 to 120 for extra spacing
   },
 });

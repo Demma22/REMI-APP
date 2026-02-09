@@ -44,7 +44,7 @@ function MenuItem({ label, color, iconName, subtitle, action, theme }) {
       justifyContent: "center",
       alignItems: "center",
       marginBottom: 12,
-      backgroundColor: color + '20', // Reduced opacity for icon background
+      backgroundColor: color + '20',
     },
     menuText: {
       fontSize: 12,
@@ -126,22 +126,21 @@ function StatItem({ number, label, iconName, theme }) {
   );
 }
 
-/* Summary Card Component - UPDATED WITH SOLID BACKGROUND COLORS */
+/* Summary Card Component */
 function SummaryCard({ type, data, theme, navigation }) {
   const isToday = type === 'today';
   const isGPA = type === 'gpa';
   
-  // Define solid colors for cards - removed transparency
   const cardColors = {
     today: {
-      background: theme.mode === 'dark' ? '#1E3A8A' : '#3B82F6', // Solid blue
+      background: theme.mode === 'dark' ? '#1E3A8A' : '#3B82F6',
       iconBackground: theme.mode === 'dark' ? '#3B82F6' : '#FFFFFF',
       iconColor: theme.mode === 'dark' ? '#FFFFFF' : '#3B82F6',
       textColor: '#FFFFFF',
       accent: '#FFFFFF',
     },
     gpa: {
-      background: theme.mode === 'dark' ? '#92400E' : '#F59E0B', // Solid amber
+      background: theme.mode === 'dark' ? '#92400E' : '#F59E0B',
       iconBackground: theme.mode === 'dark' ? '#F59E0B' : '#FFFFFF',
       iconColor: theme.mode === 'dark' ? '#FFFFFF' : '#F59E0B',
       textColor: '#FFFFFF',
@@ -399,7 +398,7 @@ export default function HomeScreen({ navigation }) {
   const [todayLectures, setTodayLectures] = useState([]);
   const [gpaSummary, setGpaSummary] = useState([]);
   const [upcomingExam, setUpcomingExam] = useState(null);
-  const [upcomingExamsCount, setUpcomingExamsCount] = useState(0); // ADDED: For stat counter
+  const [upcomingExamsCount, setUpcomingExamsCount] = useState(0);
   const [userName, setUserName] = useState("");
   const [userNickname, setUserNickname] = useState("");
   const [profileImage, setProfileImage] = useState(null);
@@ -437,10 +436,10 @@ export default function HomeScreen({ navigation }) {
         
         loadTodaysLectures(userData);
         loadGPASummary(userData);
-        loadUpcomingExam(userData); // This now also counts all upcoming exams
+        loadUpcomingExam(userData);
       }
     } catch (err) {
-      console.log("Home data load error:", err);
+      // Handle error silently
     } finally {
       setLoading(false);
     }
@@ -465,7 +464,6 @@ export default function HomeScreen({ navigation }) {
       
       setTodayLectures(formattedLectures);
     } catch (err) {
-      console.log("Timetable load error:", err);
       setTodayLectures([]);
     }
   };
@@ -493,7 +491,6 @@ export default function HomeScreen({ navigation }) {
       
       setGpaSummary(gpaSummary);
     } catch (err) {
-      console.log("GPA load error:", err);
       setGpaSummary([]);
     }
   };
@@ -503,7 +500,6 @@ export default function HomeScreen({ navigation }) {
       const exams = userData.exams || [];
       
       if (!Array.isArray(exams)) {
-        console.log("Exams data is not an array, resetting to empty array");
         setUpcomingExam(null);
         setUpcomingExamsCount(0);
         return;
@@ -511,35 +507,28 @@ export default function HomeScreen({ navigation }) {
       
       const now = new Date();
       
-      // Get ALL upcoming exams (not just the first one)
       const upcomingExams = exams
         .filter(exam => {
           try {
             const examDate = new Date(exam.date);
-            // Compare dates only (ignore time) to avoid timezone issues
             const examDateOnly = new Date(examDate.getFullYear(), examDate.getMonth(), examDate.getDate());
             const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             
-            // Exam is upcoming if it's today or in the future
             return examDateOnly >= nowDateOnly;
           } catch (err) {
-            console.log("Error parsing exam date:", err);
             return false;
           }
         })
         .sort((a, b) => new Date(a.date) - new Date(b.date));
       
-      // Update the count for stats
       setUpcomingExamsCount(upcomingExams.length);
       
-      // Set the first upcoming exam for the card
       if (upcomingExams.length > 0) {
         setUpcomingExam(upcomingExams[0]);
       } else {
         setUpcomingExam(null);
       }
     } catch (err) {
-      console.log("Exam load error:", err);
       setUpcomingExam(null);
       setUpcomingExamsCount(0);
     }
@@ -570,7 +559,6 @@ export default function HomeScreen({ navigation }) {
       await loadProfileImage();
       
     } catch (err) {
-      console.log("User data load error:", err);
       setUserName("User");
     }
   };
@@ -582,7 +570,7 @@ export default function HomeScreen({ navigation }) {
         setProfileImage(savedImage);
       }
     } catch (error) {
-      console.log("Error loading profile image:", error);
+      // Handle error silently
     }
   };
 

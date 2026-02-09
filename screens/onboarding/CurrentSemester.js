@@ -122,7 +122,6 @@ export default function CurrentSemester({ navigation, route }) {
         { merge: true }
       );
 
-      console.log("✅ Current semester saved to Firestore");
 
       // Use reset for more reliable navigation on both platforms
       navigation.dispatch(
@@ -133,7 +132,6 @@ export default function CurrentSemester({ navigation, route }) {
       );
       
     } catch (error) {
-      console.error("Firestore Error:", error);
       setIsNavigating(false);
       Alert.alert(
         "Error", 

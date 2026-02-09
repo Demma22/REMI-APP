@@ -11,16 +11,16 @@ import { auth, db } from "../../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import NavigationBar from "../../components/NavigationBar";
 import SvgIcon from "../../components/SvgIcon";
-import { useTheme } from '../../contexts/ThemeContext'; // Add this import
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function TimetableScreen({ navigation }) {
+  const { theme } = useTheme();
+  
   if (!auth.currentUser) return <Text style={styles.center}>Not logged in</Text>;
 
   const [timetable, setTimetable] = useState({});
   const [currentSemester, setCurrentSemester] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  const { theme } = useTheme(); // Get theme from context
 
   useEffect(() => {
     load();
@@ -32,32 +32,25 @@ export default function TimetableScreen({ navigation }) {
     try {
       setLoading(true);
       
-      // Load timetable from Firestore
       const userDocRef = doc(db, "users", auth.currentUser.uid);
       const userDoc = await getDoc(userDocRef);
       
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        
-        // Get current semester
         setCurrentSemester(userData.current_semester || null);
-        
-        // Get timetable data
         const timetableData = userData.timetable || {};
         setTimetable(timetableData);
       }
     } catch (e) {
-      console.log("Timetable load error:", e);
+      // Silently handle error
     } finally {
       setLoading(false);
     }
   };
 
-  // Grouped display: all days or empty state
   const daysOrder = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
   const hasAny = daysOrder.some(d => (timetable[d] && timetable[d].length > 0));
 
-  // Filter lectures for current semester only
   const getFilteredTimetable = () => {
     if (!currentSemester) return timetable;
     
@@ -103,24 +96,21 @@ export default function TimetableScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-
-        {/* Modern Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity 
-              style={styles.backBtn} 
-              onPress={() => navigation.goBack()}
-            >
-              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>TIMETABLE</Text>
-            <View style={styles.headerSpacer} />
-          </View>
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={() => navigation.goBack()}
+          >
+            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>TIMETABLE</Text>
+          <View style={styles.headerSpacer} />
         </View>
+      </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-          {/* Semester Info */}
           {currentSemester && (
             <View style={[styles.semesterInfo, { backgroundColor: theme.mode === 'dark' ? '#3E2A1D' : '#FFF7ED', borderLeftColor: theme.colors.secondary }]}>
               <View style={[styles.semesterIconContainer, { backgroundColor: theme.mode === 'dark' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(146, 64, 14, 0.1)' }]}>
@@ -132,7 +122,6 @@ export default function TimetableScreen({ navigation }) {
             </View>
           )}
 
-          {/* If empty: invite to add lectures */}
           {!hasFilteredLectures ? (
             <View style={styles.emptyCard}>
               <View style={[styles.emptyIcon, { backgroundColor: theme.colors.primaryLight }]}>
@@ -152,7 +141,6 @@ export default function TimetableScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           ) : (
-            // Show grouped timetable for each day (matches wireframe layout)
             <View style={styles.timetableContainer}>
               {daysOrder.map((dayKey) => {
                 const list = filteredTimetable[dayKey] || [];
@@ -201,11 +189,10 @@ export default function TimetableScreen({ navigation }) {
           )}
         </View>
 
-        {/* Bottom spacing for navigation bar */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      {/* Floating Action Buttons - Only show when timetable has content */}
+      {/* Floating Action Buttons - Positioned higher */}
       {hasFilteredLectures && (
         <View style={styles.floatingActions}>
           <TouchableOpacity
@@ -226,7 +213,6 @@ export default function TimetableScreen({ navigation }) {
         </View>
       )}
 
-      {/* Navigation Bar */}
       <NavigationBar />
     </View>
   );
@@ -238,6 +224,10 @@ const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  center: {
+    textAlign: "center",
+    marginTop: 40,
   },
   scrollView: {
     flex: 1,
@@ -438,9 +428,10 @@ const getStyles = (theme) => StyleSheet.create({
   },
   floatingActions: {
     position: "absolute",
-    bottom: 80,
+    bottom: 100, // Increased from 80 to 100
     right: 24,
     gap: 12,
+    zIndex: 1000,
   },
   addFloatingBtn: {
     flexDirection: "row",
@@ -479,6 +470,6 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
   },
   bottomSpacing: {
-    height: 100,
+    height: 170, // Increased from 120 to 170 to accommodate higher floating buttons
   },
 });

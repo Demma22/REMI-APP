@@ -53,7 +53,6 @@ export default function ProfileScreen({ navigation }) {
       }
       
     } catch (error) {
-      console.log("Profile load error:", error);
       Alert.alert("Error", "Failed to load profile data");
     } finally {
       setLoading(false);
@@ -88,7 +87,6 @@ export default function ProfileScreen({ navigation }) {
       });
       
     } catch (error) {
-      console.log("Logout error:", error);
       Alert.alert("Logout Error", "Failed to logout. Please try again.");
       setSigningOut(false);
     }

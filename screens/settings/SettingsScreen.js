@@ -37,7 +37,7 @@ export default function SettingsScreen({ navigation }) {
         setUserData(userDoc.data());
       }
     } catch (error) {
-      console.log("Settings load error:", error);
+
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -77,7 +77,6 @@ export default function SettingsScreen({ navigation }) {
       });
       
     } catch (error) {
-      console.log("Logout error:", error);
       Alert.alert("Logout Error", "Failed to logout. Please try again.");
       setSigningOut(false);
     }
@@ -168,7 +167,6 @@ export default function SettingsScreen({ navigation }) {
         ]
       );
     } catch (error) {
-      console.log("Delete all data error:", error);
       Alert.alert("Error", "Failed to delete data");
     }
   };
@@ -403,7 +401,7 @@ export default function SettingsScreen({ navigation }) {
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
-                  <SvgIcon name="logout" size={18} color="white" />
+
                   <Text style={styles.logoutButtonText}>Logout</Text>
                 </>
               )}

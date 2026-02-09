@@ -27,21 +27,15 @@ export default function LoginScreen({ navigation }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Function to get Firebase email from username
   const getFirebaseEmail = async (input) => {
-    // First, try to see if this is a username (not email format)
     const usernameValidation = validateUsernameFormat(input);
     
     if (usernameValidation.valid) {
-      // It's a valid username format, convert to Firebase email
       return usernameToEmail(input);
     } else {
-      // Check if it's an existing email format (for backward compatibility)
-      // If it contains @, assume it's already in Firebase email format
       if (input.includes('@')) {
         return input;
       }
-      // Otherwise, treat as username and convert
       return usernameToEmail(input);
     }
   };
@@ -77,12 +71,10 @@ export default function LoginScreen({ navigation }) {
       }
       return false;
     } catch (error) {
-      console.error("Error checking onboarding:", error);
       return false;
     }
   };
 
-  // Function to find user by username (for error messages)
   const findUserByUsername = async (usernameInput) => {
     try {
       const usersRef = collection(db, "users");
@@ -90,13 +82,11 @@ export default function LoginScreen({ navigation }) {
       const querySnapshot = await getDocs(q);
       return !querySnapshot.empty;
     } catch (error) {
-      console.error("Error finding user:", error);
       return false;
     }
   };
 
   const login = async () => {
-    // Validate form before attempting login
     if (!validateForm()) {
       return;
     }
@@ -105,22 +95,13 @@ export default function LoginScreen({ navigation }) {
     setIsLoading(true);
 
     try {
-      // Convert username to Firebase email format
       const firebaseEmail = await getFirebaseEmail(username);
       const cleanUsername = username.trim().toLowerCase();
-      
-      console.log("🔄 Attempting login for:", cleanUsername);
-      console.log("📧 Using Firebase email:", firebaseEmail);
       
       const userCredential = await signInWithEmailAndPassword(auth, firebaseEmail, password);
       const user = userCredential.user;
       
-      console.log("✅ Login successful for:", cleanUsername);
-      console.log("📱 User UID:", user.uid);
-      
-      // Check onboarding status and navigate accordingly
       const isOnboardingCompleted = await checkOnboardingStatus(user.uid);
-      console.log("🎯 Onboarding completed:", isOnboardingCompleted);
       
       if (isOnboardingCompleted) {
         navigation.reset({
@@ -135,12 +116,8 @@ export default function LoginScreen({ navigation }) {
       }
       
     } catch (error) {
-      console.error("❌ Login error:", error);
-      
-      // Check if username exists for better error messages
       const userExists = await findUserByUsername(username);
       
-      // Enhanced error handling for username experience
       switch (error.code) {
         case 'auth/invalid-email':
           setError("Invalid username format");
@@ -180,130 +157,144 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <KeyboardAvoidingView 
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
-      >
+      {Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView 
+          style={styles.keyboardAvoid}
+          behavior="padding"
+          keyboardVerticalOffset={60}
+        >
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {renderContent()}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      ) : (
         <ScrollView 
-          contentContainerStyle={styles.scrollContent}
+          style={styles.scrollViewAndroid}
+          contentContainerStyle={styles.scrollContentAndroid}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
-          {/* Welcome Header with Icon */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>
-              Sign in to continue your academic journey
-            </Text>
+          {renderContent()}
+        </ScrollView>
+      )}
+    </View>
+  );
+
+  function renderContent() {
+    return (
+      <>
+        <View style={styles.header}>
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>
+            Sign in to continue your academic journey
+          </Text>
+        </View>
+
+        <View style={styles.formCard}>
+          {error ? (
+            <View style={styles.errorContainer}>
+              <SvgIcon name="warning" size={20} color="#DC2626" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.inputContainer}>
+            <View style={styles.inputLabelContainer}>
+              <SvgIcon name="user" size={16} color="#64748B" style={styles.inputIcon} />
+              <Text style={styles.inputLabel}>Username</Text>
+            </View>
+            <TextInput
+              placeholder="Enter your username"
+              style={styles.input}
+              value={username}
+              autoCapitalize="none"
+              onChangeText={(text) => {
+                setUsername(text);
+                if (error) setError("");
+              }}
+              placeholderTextColor="#94A3B8"
+              editable={!isLoading}
+              maxLength={20}
+            />
+            <View style={styles.usernameHintContainer}>
+              <SvgIcon name="info" size={14} color="#94A3B8" style={styles.hintIcon} />
+              <Text style={styles.usernameHint}>
+                Use the username you created
+              </Text>
+            </View>
           </View>
 
-          {/* Form Container with Card Design */}
-          <View style={styles.formCard}>
-            {/* Error Message */}
-            {error ? (
-              <View style={styles.errorContainer}>
-                <SvgIcon name="warning" size={20} color="#DC2626" />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
-
-            {/* Username Input */}
-            <View style={styles.inputContainer}>
-              <View style={styles.inputLabelContainer}>
-                <SvgIcon name="user" size={16} color="#64748B" style={styles.inputIcon} />
-                <Text style={styles.inputLabel}>Username</Text>
-              </View>
+          <View style={styles.inputContainer}>
+            <View style={styles.inputLabelContainer}>
+              <SvgIcon name="lock" size={16} color="#64748B" style={styles.inputIcon} />
+              <Text style={styles.inputLabel}>Password</Text>
+            </View>
+            <View style={styles.passwordContainer}>
               <TextInput
-                placeholder="Enter your username"
-                style={styles.input}
-                value={username}
-                autoCapitalize="none"
+                placeholder="Enter your password"
+                style={styles.passwordInput}
+                value={password}
+                secureTextEntry={!showPassword}
                 onChangeText={(text) => {
-                  setUsername(text);
+                  setPassword(text);
                   if (error) setError("");
                 }}
                 placeholderTextColor="#94A3B8"
                 editable={!isLoading}
-                maxLength={20}
+                onSubmitEditing={login}
+                returnKeyType="go"
               />
-              <View style={styles.usernameHintContainer}>
-                <SvgIcon name="info" size={14} color="#94A3B8" style={styles.hintIcon} />
-                <Text style={styles.usernameHint}>
-                  Use the username you created
-                </Text>
-              </View>
+              <TouchableOpacity 
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+              >
+                <SvgIcon name="eye" size={22} color={showPassword ? "#535FFD" : "#94A3B8"} />
+              </TouchableOpacity>
             </View>
-
-            {/* Password Input */}
-            <View style={styles.inputContainer}>
-              <View style={styles.inputLabelContainer}>
-                <SvgIcon name="lock" size={16} color="#64748B" style={styles.inputIcon} />
-                <Text style={styles.inputLabel}>Password</Text>
-              </View>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  placeholder="Enter your password"
-                  style={styles.passwordInput}
-                  value={password}
-                  secureTextEntry={!showPassword}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    if (error) setError("");
-                  }}
-                  placeholderTextColor="#94A3B8"
-                  editable={!isLoading}
-                />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                >
-                  <SvgIcon name="eye" size={22} color={showPassword ? "#535FFD" : "#94A3B8"} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Login Button */}
-            <TouchableOpacity 
-              style={[
-                styles.loginButton,
-                isLoading && styles.loginButtonDisabled,
-                (!username.trim() || !password.trim()) && styles.loginButtonDisabled
-              ]}
-              onPress={login}
-              disabled={isLoading || !username.trim() || !password.trim()}
-              activeOpacity={0.9}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.loginButtonText}>Sign In</Text>
-              )}
-            </TouchableOpacity>
           </View>
 
-          {/* Sign Up Section */}
-          <View style={styles.signupSection}>
-            <Text style={styles.signupText}>New to REMI? </Text>
-            <TouchableOpacity 
-              onPress={() => navigation.navigate("Signup")}
-              disabled={isLoading}
-            >
-              <Text style={styles.signupLink}>Create an account</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            style={[
+              styles.loginButton,
+              isLoading && styles.loginButtonDisabled,
+              (!username.trim() || !password.trim()) && styles.loginButtonDisabled
+            ]}
+            onPress={login}
+            disabled={isLoading || !username.trim() || !password.trim()}
+            activeOpacity={0.9}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.loginButtonText}>Sign In</Text>
+            )}
+          </TouchableOpacity>
+        </View>
 
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>Product of the @SND group</Text>
-            <View style={styles.dividerLine} />
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
-  );
+        <View style={styles.signupSection}>
+          <Text style={styles.signupText}>New to REMI? </Text>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate("Signup")}
+            disabled={isLoading}
+          >
+            <Text style={styles.signupLink}>Create an account</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>Product of the @SND group</Text>
+          <View style={styles.dividerLine} />
+        </View>
+      </>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
@@ -314,11 +305,20 @@ const styles = StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
   },
+  scrollViewAndroid: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 40,
     paddingBottom: 40,
+  },
+  scrollContentAndroid: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 100,
   },
   header: {
     alignItems: 'center',

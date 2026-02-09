@@ -4,7 +4,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { View, Image, ActivityIndicator } from "react-native";
+import { View, Image } from "react-native";
 
 // Import ThemeProvider and NotificationsProvider
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -50,13 +50,9 @@ function AppContent() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
-  // Migration function for existing users
   const migrateExistingUser = async (userData, userId) => {
     try {
-      // Check if user has all onboarding data but no completion flag
       if (userData.nickname && userData.course && userData.total_semesters && userData.current_semester) {
-        console.log("🔄 Migrating existing user to onboarding completed");
-        
         const userDocRef = doc(db, "users", userId);
         await updateDoc(userDocRef, {
           onboarding_completed: true,
@@ -64,11 +60,10 @@ function AppContent() {
           migrated_at: new Date()
         });
         
-        console.log("✅ Migration successful");
         return true;
       }
     } catch (error) {
-      console.error("Migration error:", error);
+      // Silent fail for migration
     }
     return false;
   };
@@ -79,17 +74,14 @@ function AppContent() {
       
       if (currentUser) {
         try {
-          // Check if user has completed onboarding
           const userDocRef = doc(db, "users", currentUser.uid);
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
             const userData = userDoc.data();
             
-            // Check the onboarding_completed flag
             let isOnboardingComplete = userData.onboarding_completed === true;
             
-            // If not completed but has all data, migrate the user
             if (!isOnboardingComplete) {
               const wasMigrated = await migrateExistingUser(userData, currentUser.uid);
               if (wasMigrated) {
@@ -98,22 +90,10 @@ function AppContent() {
             }
             
             setOnboardingCompleted(isOnboardingComplete);
-            
-            console.log("User onboarding status:", {
-              email: currentUser.email,
-              onboardingCompleted: isOnboardingComplete,
-              hasNickname: !!userData.nickname,
-              hasCourse: !!userData.course,
-              hasSemesters: !!userData.total_semesters,
-              hasCurrentSemester: !!userData.current_semester
-            });
           } else {
-            // No user document exists, onboarding not completed
             setOnboardingCompleted(false);
-            console.log("No user document found for:", currentUser.email);
           }
         } catch (error) {
-          console.error("Error checking onboarding status:", error);
           setOnboardingCompleted(false);
         }
       } else {
@@ -148,14 +128,12 @@ function AppContent() {
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />
             
-            {/* Onboarding screens for navigation consistency */}
             <Stack.Screen name="Nickname" component={Nickname} />
             <Stack.Screen name="Course" component={Course} />
             <Stack.Screen name="Semesters" component={Semesters} />
             <Stack.Screen name="Units" component={Units} />
             <Stack.Screen name="CurrentSemester" component={CurrentSemester} />
             
-            {/* Main app screens to prevent navigation errors */}
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
@@ -185,7 +163,6 @@ function AppContent() {
             <Stack.Screen name="Units" component={Units} />
             <Stack.Screen name="CurrentSemester" component={CurrentSemester} />
             
-            {/* Main app screens */}
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
@@ -206,7 +183,6 @@ function AppContent() {
             <Stack.Screen name="EditUnits" component={EditUnits} />
             <Stack.Screen name="EditCourse" component={EditCourse} />
 
-            {/* Auth screens for navigation consistency */}
             <Stack.Screen name="SplashIntro" component={SplashIntro} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />
@@ -234,14 +210,12 @@ function AppContent() {
             <Stack.Screen name="EditUnits" component={EditUnits} />
             <Stack.Screen name="EditCourse" component={EditCourse} />
 
-            {/* Onboarding screens for users who want to update info */}
             <Stack.Screen name="Nickname" component={Nickname} />
             <Stack.Screen name="Course" component={Course} />
             <Stack.Screen name="Semesters" component={Semesters} />
             <Stack.Screen name="Units" component={Units} />
             <Stack.Screen name="CurrentSemester" component={CurrentSemester} />
             
-            {/* Auth screens for navigation consistency */}
             <Stack.Screen name="SplashIntro" component={SplashIntro} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />

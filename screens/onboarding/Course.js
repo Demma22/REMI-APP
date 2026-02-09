@@ -58,7 +58,6 @@ export default function Course({ navigation, route }) {
       navigation.replace("Semesters", { nick, course: trimmedCourse });
 
     } catch (error) {
-      console.error("Firestore Error:", error);
       Alert.alert("Error", "Failed to save your course. Please try again.");
     }
   };

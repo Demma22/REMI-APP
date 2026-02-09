@@ -63,7 +63,6 @@ export default function Nickname({ navigation }) {
       navigation.replace("Course", { nick: trimmedNick });
 
     } catch (error) {
-      console.log(error);
       Alert.alert("Error", "Could not save nickname.");
     }
   };

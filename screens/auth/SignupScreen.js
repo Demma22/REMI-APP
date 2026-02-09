@@ -35,9 +35,8 @@ export default function SignupScreen({ navigation }) {
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("username", "==", username.trim().toLowerCase()));
       const querySnapshot = await getDocs(q);
-      return !querySnapshot.empty; // true if username exists
+      return !querySnapshot.empty;
     } catch (error) {
-      console.error("Error checking username:", error);
       return false;
     }
   };
@@ -99,8 +98,8 @@ export default function SignupScreen({ navigation }) {
       const user = userCredential.user;
       
       await setDoc(doc(db, "users", user.uid), {
-        username: cleanUsername, // Store lowercase username
-        email: user.email, // Store Firebase email for reference
+        username: cleanUsername,
+        email: user.email,
         created_at: new Date(),
         onboarding_completed: false,
         nickname: null,
@@ -114,12 +113,9 @@ export default function SignupScreen({ navigation }) {
         chat_history: []
       });
 
-      console.log("✅ User account created with username:", cleanUsername);
       navigation.navigate("Nickname");
       
     } catch (error) {
-      console.error("Signup error:", error);
-      
       if (error.code === 'auth/email-already-in-use') {
         setError("Username already taken. Please choose another.");
       } else if (error.code === 'auth/weak-password') {
@@ -157,174 +153,195 @@ export default function SignupScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <KeyboardAvoidingView 
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
-      >
+      {Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView 
+          style={styles.keyboardAvoid}
+          behavior="padding"
+          keyboardVerticalOffset={60}
+        >
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {renderContent()}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      ) : (
+        // For Android - just use ScrollView with extra bottom padding
         <ScrollView 
-          contentContainerStyle={styles.scrollContent}
+          style={styles.scrollViewAndroid}
+          contentContainerStyle={styles.scrollContentAndroid}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
-          <View style={styles.header}>
-            <Text style={styles.title}>Join REMI</Text>
-            <Text style={styles.subtitle}>
-              Create your account and start your academic journey
-            </Text>
+          {renderContent()}
+        </ScrollView>
+      )}
+    </View>
+  );
+
+  function renderContent() {
+    return (
+      <>
+        <View style={styles.header}>
+          <Text style={styles.title}>Join REMI</Text>
+          <Text style={styles.subtitle}>
+            Create your account and start your academic journey
+          </Text>
+        </View>
+
+        <View style={styles.formCard}>
+          {error ? (
+            <View style={styles.errorContainer}>
+              <SvgIcon name="warning" size={20} color="#DC2626" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          {/* Username Input */}
+          <View style={styles.inputContainer}>
+            <View style={styles.inputLabelContainer}>
+              <Text style={styles.inputLabel}>Username</Text>
+            </View>
+            <TextInput
+              placeholder="john_doe"
+              style={styles.input}
+              value={username}
+              autoCapitalize="none"
+              onChangeText={(text) => {
+                setUsername(text);
+                if (error) setError("");
+              }}
+              placeholderTextColor="#94A3B8"
+              editable={!isLoading}
+              maxLength={20}
+            />
+            <View style={styles.usernameHintContainer}>
+              <SvgIcon name="info" size={14} color="#94A3B8" style={styles.hintIcon} />
+              <Text style={styles.usernameHint}>
+                3-20 characters, letters, numbers, _ and - only
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.formCard}>
-            {error ? (
-              <View style={styles.errorContainer}>
-                <SvgIcon name="warning" size={20} color="#DC2626" />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
-
-            {/* Username Input */}
-            <View style={styles.inputContainer}>
-              <View style={styles.inputLabelContainer}>
-                <Text style={styles.inputLabel}>Username</Text>
-              </View>
+          {/* Password Input */}
+          <View style={styles.inputContainer}>
+            <View style={styles.inputLabelContainer}>
+              <Text style={styles.inputLabel}>Password</Text>
+            </View>
+            <View style={styles.passwordContainer}>
               <TextInput
-                placeholder="john_doe"
-                style={styles.input}
-                value={username}
-                autoCapitalize="none"
+                placeholder="Create a password"
+                style={styles.passwordInput}
+                value={password}
+                secureTextEntry={!showPassword}
                 onChangeText={(text) => {
-                  setUsername(text);
+                  setPassword(text);
+                  if (error) setError("");
+                }}
+                placeholderTextColor="#94A3B8"
+                autoComplete="password-new"
+                editable={!isLoading}
+              />
+              <TouchableOpacity 
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+              >
+                <SvgIcon name="eye" size={22} color={showPassword ? "#535FFD" : "#94A3B8"} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.passwordHintContainer}>
+              <SvgIcon name="info" size={14} color="#94A3B8" style={styles.hintIcon} />
+              <Text style={styles.passwordHint}>Must be at least 6 characters</Text>
+            </View>
+          </View>
+
+          {/* Confirm Password Input */}
+          <View style={styles.inputContainer}>
+            <View style={styles.inputLabelContainer}>
+              <Text style={styles.inputLabel}>Confirm Password</Text>
+            </View>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                placeholder="Confirm your password"
+                style={styles.passwordInput}
+                value={confirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                onChangeText={(text) => {
+                  setConfirmPassword(text);
                   if (error) setError("");
                 }}
                 placeholderTextColor="#94A3B8"
                 editable={!isLoading}
-                maxLength={20}
               />
-              <View style={styles.usernameHintContainer}>
-                <SvgIcon name="info" size={14} color="#94A3B8" style={styles.hintIcon} />
-                <Text style={styles.usernameHint}>
-                  3-20 characters, letters, numbers, _ and - only
-                </Text>
-              </View>
+              <TouchableOpacity 
+                style={styles.eyeButton}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                disabled={isLoading}
+              >
+                <SvgIcon name="eye" size={22} color={showConfirmPassword ? "#535FFD" : "#94A3B8"} />
+              </TouchableOpacity>
             </View>
+            {password !== confirmPassword && confirmPassword.length > 0 && (
+              <View style={styles.passwordMatchContainer}>
+                <SvgIcon name="warning" size={14} color="#DC2626" style={styles.matchIcon} />
+                <Text style={styles.passwordMatchText}>Passwords do not match</Text>
+              </View>
+            )}
+            {password === confirmPassword && confirmPassword.length > 0 && (
+              <View style={[styles.passwordMatchContainer, styles.passwordMatchSuccess]}>
+                <SvgIcon name="check" size={14} color="#10B981" style={styles.matchIcon} />
+                <Text style={[styles.passwordMatchText, styles.passwordMatchSuccessText]}>Passwords match!</Text>
+              </View>
+            )}
+          </View>
 
-            {/* Password Input */}
-            <View style={styles.inputContainer}>
-              <View style={styles.inputLabelContainer}>
-                <Text style={styles.inputLabel}>Password</Text>
-              </View>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  placeholder="Create a password"
-                  style={styles.passwordInput}
-                  value={password}
-                  secureTextEntry={!showPassword}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    if (error) setError("");
-                  }}
-                  placeholderTextColor="#94A3B8"
-                  autoComplete="password-new"
-                  editable={!isLoading}
-                />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                >
-                  <SvgIcon name="eye" size={22} color={showPassword ? "#535FFD" : "#94A3B8"} />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.passwordHintContainer}>
-                <SvgIcon name="info" size={14} color="#94A3B8" style={styles.hintIcon} />
-                <Text style={styles.passwordHint}>Must be at least 6 characters</Text>
-              </View>
-            </View>
+          <TouchableOpacity 
+            style={[
+              styles.signupButton,
+              isLoading && styles.signupButtonDisabled,
+              !isFormValid() && styles.signupButtonDisabled
+            ]}
+            onPress={signup}
+            disabled={isLoading || !isFormValid()}
+            activeOpacity={0.9}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Text style={styles.signupButtonText}>Create Account</Text>
+              </>
+            )}
+          </TouchableOpacity>
 
-            {/* Confirm Password Input */}
-            <View style={styles.inputContainer}>
-              <View style={styles.inputLabelContainer}>
-                <Text style={styles.inputLabel}>Confirm Password</Text>
-              </View>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  placeholder="Confirm your password"
-                  style={styles.passwordInput}
-                  value={confirmPassword}
-                  secureTextEntry={!showConfirmPassword}
-                  onChangeText={(text) => {
-                    setConfirmPassword(text);
-                    if (error) setError("");
-                  }}
-                  placeholderTextColor="#94A3B8"
-                  editable={!isLoading}
-                />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={isLoading}
-                >
-                  <SvgIcon name="eye" size={22} color={showConfirmPassword ? "#535FFD" : "#94A3B8"} />
-                </TouchableOpacity>
-              </View>
-              {password !== confirmPassword && confirmPassword.length > 0 && (
-                <View style={styles.passwordMatchContainer}>
-                  <SvgIcon name="warning" size={14} color="#DC2626" style={styles.matchIcon} />
-                  <Text style={styles.passwordMatchText}>Passwords do not match</Text>
-                </View>
-              )}
-              {password === confirmPassword && confirmPassword.length > 0 && (
-                <View style={[styles.passwordMatchContainer, styles.passwordMatchSuccess]}>
-                  <SvgIcon name="check" size={14} color="#10B981" style={styles.matchIcon} />
-                  <Text style={[styles.passwordMatchText, styles.passwordMatchSuccessText]}>Passwords match!</Text>
-                </View>
-              )}
-            </View>
-
-            <TouchableOpacity 
-              style={[
-                styles.signupButton,
-                isLoading && styles.signupButtonDisabled,
-                !isFormValid() && styles.signupButtonDisabled
-              ]}
-              onPress={signup}
-              disabled={isLoading || !isFormValid()}
-              activeOpacity={0.9}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <Text style={styles.signupButtonText}>Create Account</Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <Text style={styles.termsText}>
-              By creating an account, you agree to our{" "}
-              <Text style={styles.termsLink} onPress={handleTermsPress}>
-                Terms & Conditions
-              </Text>{" "}
-              and{" "}
-              <Text style={styles.termsLink} onPress={handlePrivacyPress}>
-                Privacy Policy
-              </Text>
+          <Text style={styles.termsText}>
+            By creating an account, you agree to our{" "}
+            <Text style={styles.termsLink} onPress={handleTermsPress}>
+              Terms & Conditions
+            </Text>{" "}
+            and{" "}
+            <Text style={styles.termsLink} onPress={handlePrivacyPress}>
+              Privacy Policy
             </Text>
-          </View>
+          </Text>
+        </View>
 
-          <View style={styles.loginSection}>
-            <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity 
-              onPress={() => navigation.navigate("Login")}
-              disabled={isLoading}
-            >
-              <Text style={styles.loginLink}>Sign In</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
-  );
+        <View style={styles.loginSection}>
+          <Text style={styles.loginText}>Already have an account? </Text>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate("Login")}
+            disabled={isLoading}
+          >
+            <Text style={styles.loginLink}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
@@ -335,11 +352,20 @@ const styles = StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
   },
+  scrollViewAndroid: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 40,
     paddingBottom: 40,
+  },
+  scrollContentAndroid: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 100,
   },
   header: {
     alignItems: 'center',

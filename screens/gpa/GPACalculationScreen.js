@@ -12,10 +12,12 @@ import {
 import { auth, db } from "../../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import NavigationBar from "../../components/NavigationBar";
-import SvgIcon from "../../components/SvgIcon"; // Assuming you have this component
-import { useTheme } from '../../contexts/ThemeContext'; // Add this import
+import SvgIcon from "../../components/SvgIcon";
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function GPACalculationScreen({ route, navigation }) {
+  const { theme } = useTheme();
+  
   if (!auth.currentUser) {
     return <Text style={[styles.center, { color: theme.colors.textPrimary }]}>Not logged in</Text>;
   }
@@ -28,8 +30,6 @@ export default function GPACalculationScreen({ route, navigation }) {
   const [creditUnits, setCreditUnits] = useState({});
   const [calculatedGPA, setCalculatedGPA] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const { theme } = useTheme(); // Get theme from context
 
   // ISBAT University Grading System (NCHE Uganda)
   const getGradePoint = (marks) => {
@@ -79,13 +79,8 @@ export default function GPACalculationScreen({ route, navigation }) {
       if (userDoc.exists()) {
         const data = userDoc.data();
         setUserData(data);
-        
-        if (data.gpa_data) {
-          console.log("Existing GPA data:", data.gpa_data);
-        }
       }
     } catch (error) {
-      console.log("Load error:", error);
       Alert.alert("Error", "Failed to load user data");
     } finally {
       setLoading(false);
@@ -112,14 +107,12 @@ export default function GPACalculationScreen({ route, navigation }) {
   };
 
   const handleMarksChange = (courseName, value) => {
-    // Allow only numbers and decimal point
     const cleanedValue = value.replace(/[^0-9.]/g, '');
     setMarks(prev => ({ ...prev, [courseName]: cleanedValue }));
     setCalculatedGPA(null);
   };
 
   const handleCreditChange = (courseName, value) => {
-    // Allow only numbers and decimal point
     const cleanedValue = value.replace(/[^0-9.]/g, '');
     setCreditUnits(prev => ({ ...prev, [courseName]: cleanedValue }));
     setCalculatedGPA(null);
@@ -147,8 +140,6 @@ export default function GPACalculationScreen({ route, navigation }) {
         totalCreditUnits += creditUnitsValue;
         totalQualityPoints += creditUnitsValue * gradePoint;
         validEntries++;
-        
-        console.log(`📊 ${course}: ${courseMarks} marks = ${gradePoint} points × ${creditUnitsValue} credits = ${creditUnitsValue * gradePoint} quality points`);
       }
     });
 
@@ -161,14 +152,10 @@ export default function GPACalculationScreen({ route, navigation }) {
     const formattedGPA = isNaN(gpa) ? "0.00" : gpa.toFixed(2);
     setCalculatedGPA(formattedGPA);
 
-    console.log(`🎯 GPA Calculation: ${totalQualityPoints} quality points ÷ ${totalCreditUnits} credits = ${formattedGPA} GPA`);
-
-    // Save to Firebase Firestore
     try {
       const userDocRef = doc(db, "users", auth.currentUser.uid);
       const semesterNumber = selectedSemester.replace('semester', '');
       
-      // Prepare GPA data to save
       const gpaData = {
         semester: selectedSemester,
         semesterNumber: parseInt(semesterNumber),
@@ -193,7 +180,6 @@ export default function GPACalculationScreen({ route, navigation }) {
         calculatedAt: new Date().toISOString()
       };
 
-      // Save to Firestore using merge to preserve other data
       await setDoc(userDocRef, {
         gpa_data: {
           ...(userData?.gpa_data || {}),
@@ -209,7 +195,6 @@ export default function GPACalculationScreen({ route, navigation }) {
         `Saved to your profile!`
       );
     } catch (error) {
-      console.log("Save error:", error);
       Alert.alert("Error", "Could not save GPA to your profile");
     }
   };
@@ -351,7 +336,7 @@ export default function GPACalculationScreen({ route, navigation }) {
               onPress={calculateGPA}
             >
               <Text style={styles.calculateButtonText}>
-                {calculatedGPA ? "🔄 RECALCULATE GPA" : "CALCULATE GPA"}
+                {calculatedGPA ? "RECALCULATE GPA" : "CALCULATE GPA"}
               </Text>
             </TouchableOpacity>
           </>
