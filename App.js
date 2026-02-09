@@ -4,7 +4,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { View, Text, ActivityIndicator } from "react-native";
+import { View, Image, ActivityIndicator } from "react-native";
 
 // Import ThemeProvider and NotificationsProvider
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -32,6 +32,8 @@ import GPAScreen from "./screens/gpa/GPAScreen";
 import ExportGPAScreen from "./screens/gpa/ExportGPAScreen";
 import GPACalculationScreen from "./screens/gpa/GPACalculationScreen";
 import ProfileScreen from "./screens/ProfileScreen";
+import TermsConditionsScreen from "./screens/TermsConditionsScreen";
+import PrivacyPolicyScreen from "./screens/PrivacyPolicyScreen";
 import AddExamScreen from "./screens/exam/AddExamScreen";
 import ExamTimetableScreen from "./screens/exam/ExamTimetableScreen";
 import SettingsScreen from "./screens/settings/SettingsScreen";
@@ -39,7 +41,7 @@ import EditNickname from "./screens/settings/EditNickname";
 import EditCurrentSemester from "./screens/settings/EditCurrentSemester";
 import EditUnits from "./screens/settings/EditUnits";
 import EditCourse from "./screens/settings/EditCourse";
-import NotificationsSettingsScreen from "./screens/settings/NotificationsSettingsScreen"; // Add this import
+import NotificationsSettingsScreen from "./screens/settings/NotificationsSettingsScreen";
 
 const Stack = createStackNavigator();
 
@@ -126,28 +128,12 @@ function AppContent() {
 
   if (checkingAuth) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAFA' }}>
-        <View style={{ alignItems: 'center' }}>
-          <View style={{ 
-            width: 80, 
-            height: 80, 
-            borderRadius: 40, 
-            backgroundColor: '#FFFFFF', 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            marginBottom: 20,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: 0.1,
-            shadowRadius: 20,
-            elevation: 10,
-          }}>
-            <Text style={{ fontSize: 32 }}>🎓</Text>
-          </View>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: '#383940', marginBottom: 10 }}>REMI</Text>
-          <Text style={{ fontSize: 14, color: '#64748B', marginBottom: 20 }}>Loading your academic assistant...</Text>
-          <ActivityIndicator size="large" color="#535FFD" />
-        </View>
+      <View style={{ flex: 1, backgroundColor: '#535ffd' }}>
+        <Image
+          source={require('./assets/splash-icon.png')}
+          style={{ flex: 1, width: '100%', height: '100%' }}
+          resizeMode="contain"
+        />
       </View>
     );
   }
@@ -172,6 +158,8 @@ function AppContent() {
             {/* Main app screens to prevent navigation errors */}
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             <Stack.Screen name="Timetable" component={TimetableScreen} />
             <Stack.Screen name="AddLecture" component={AddLectureScreen} />
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
@@ -200,6 +188,8 @@ function AppContent() {
             {/* Main app screens */}
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             <Stack.Screen name="Timetable" component={TimetableScreen} />
             <Stack.Screen name="AddLecture" component={AddLectureScreen} />
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
@@ -226,6 +216,8 @@ function AppContent() {
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             <Stack.Screen name="Timetable" component={TimetableScreen} />
             <Stack.Screen name="AddLecture" component={AddLectureScreen} />
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
@@ -263,7 +255,7 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <NotificationsProvider> {/* Add NotificationsProvider here */}
+      <NotificationsProvider>
         <AppContent />
       </NotificationsProvider>
     </ThemeProvider>
