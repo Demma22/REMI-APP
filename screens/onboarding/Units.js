@@ -6,7 +6,9 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   ScrollView,
-  Alert
+  Alert,
+  KeyboardAvoidingView, // Added import
+  Platform // Added import
 } from "react-native";
 
 // ⭐ Firestore imports - following the same pattern
@@ -84,7 +86,6 @@ export default function Units({ navigation, route }) {
         { merge: true } // Merge with existing data
       );
 
-      console.log("✅ Course units saved to Firestore in new format");
 
       // Navigate to next screen
       navigation.replace("CurrentSemester", { 
@@ -94,19 +95,22 @@ export default function Units({ navigation, route }) {
       });
 
     } catch (error) {
-      console.error("Firestore Error:", error);
       Alert.alert("Error", "Failed to save course units. Please try again.");
     }
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView // Added KeyboardAvoidingView wrapper
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"} // Different behavior for iOS vs Android
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20} // Adjust offset for Android
+    >
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity 
             style={styles.backBtn} 
-          onPress={() => navigation.navigate("Semesters")}
+            onPress={() => navigation.navigate("Semesters")}
           >
             <Text style={styles.backText}>‹</Text>
           </TouchableOpacity>
@@ -121,6 +125,7 @@ export default function Units({ navigation, route }) {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled" // Ensures taps work properly with keyboard
       >
         {/* Page Introduction */}
         <View style={styles.introSection}>
@@ -178,7 +183,7 @@ export default function Units({ navigation, route }) {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView> // Close KeyboardAvoidingView
   );
 }
 
