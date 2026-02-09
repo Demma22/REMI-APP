@@ -13,14 +13,15 @@ import {
   ActivityIndicator
 } from "react-native";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, query, collection, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../../firebase";
-import SvgIcon from "../../components/SvgIcon"; // Add this import
+import SvgIcon from "../../components/SvgIcon";
+import { usernameToEmail, validateUsernameFormat } from "../../utils/usernameHelper";
 
 const { height } = Dimensions.get("window");
 
 export default function SignupScreen({ navigation }) {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -28,17 +29,35 @@ export default function SignupScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const validateForm = () => {
-    if (!email.trim()) {
-      setError("Please enter your username");
+  // Check if username exists in Firestore
+  const checkUsernameExists = async (username) => {
+    try {
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("username", "==", username.trim().toLowerCase()));
+      const querySnapshot = await getDocs(q);
+      return !querySnapshot.empty; // true if username exists
+    } catch (error) {
+      console.error("Error checking username:", error);
+      return false;
+    }
+  };
+
+  const validateForm = async () => {
+    // Validate username format
+    const usernameValidation = validateUsernameFormat(username);
+    if (!usernameValidation.valid) {
+      setError(usernameValidation.error);
       return false;
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
-      setError("Please enter a valid username");
+    // Check if username already exists
+    const usernameExists = await checkUsernameExists(username);
+    if (usernameExists) {
+      setError("Username already taken. Please choose another.");
       return false;
     }
 
+    // Validate password
     if (!password.trim()) {
       setError("Please create a password");
       return false;
@@ -64,7 +83,7 @@ export default function SignupScreen({ navigation }) {
   };
 
   const signup = async () => {
-    if (!validateForm()) {
+    if (!(await validateForm())) {
       return;
     }
 
@@ -72,11 +91,16 @@ export default function SignupScreen({ navigation }) {
     setIsLoading(true);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      // Convert username to Firebase email format
+      const firebaseEmail = usernameToEmail(username);
+      const cleanUsername = username.trim().toLowerCase();
+      
+      const userCredential = await createUserWithEmailAndPassword(auth, firebaseEmail, password);
       const user = userCredential.user;
       
       await setDoc(doc(db, "users", user.uid), {
-        email: email.trim(),
+        username: cleanUsername, // Store lowercase username
+        email: user.email, // Store Firebase email for reference
         created_at: new Date(),
         onboarding_completed: false,
         nickname: null,
@@ -90,35 +114,45 @@ export default function SignupScreen({ navigation }) {
         chat_history: []
       });
 
-      console.log("✅ User account created");
+      console.log("✅ User account created with username:", cleanUsername);
       navigation.navigate("Nickname");
       
     } catch (error) {
       console.error("Signup error:", error);
       
       if (error.code === 'auth/email-already-in-use') {
-        setError("An account with this email already exists");
-      } else if (error.code === 'auth/invalid-email') {
-        setError("Please enter a valid Username");
+        setError("Username already taken. Please choose another.");
       } else if (error.code === 'auth/weak-password') {
         setError("Password is too weak. Please use a stronger password");
+      } else if (error.code === 'auth/operation-not-allowed') {
+        setError("Signup is temporarily unavailable. Please try again later.");
       } else {
         setError("Failed to create account. Please try again.");
       }
       
       setIsLoading(false);
-      return; // Stay on signup page
+      return;
     }
     
     setIsLoading(false);
   };
 
   const isFormValid = () => {
-    return email.trim() && 
+    const usernameValidation = validateUsernameFormat(username);
+    return usernameValidation.valid && 
+           username.trim() && 
            password.trim() && 
            confirmPassword.trim() && 
            password.length >= 6 && 
            password === confirmPassword;
+  };
+
+  const handleTermsPress = () => {
+    navigation.navigate("TermsConditions");
+  };
+
+  const handlePrivacyPress = () => {
+    navigation.navigate("PrivacyPolicy");
   };
 
   return (
@@ -133,18 +167,14 @@ export default function SignupScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Welcome Header */}
           <View style={styles.header}>
-
             <Text style={styles.title}>Join REMI</Text>
             <Text style={styles.subtitle}>
               Create your account and start your academic journey
             </Text>
           </View>
 
-          {/* Form Container with Card Design */}
           <View style={styles.formCard}>
-            {/* Error Message */}
             {error ? (
               <View style={styles.errorContainer}>
                 <SvgIcon name="warning" size={20} color="#DC2626" />
@@ -152,32 +182,35 @@ export default function SignupScreen({ navigation }) {
               </View>
             ) : null}
 
-            {/* Email Input */}
+            {/* Username Input */}
             <View style={styles.inputContainer}>
               <View style={styles.inputLabelContainer}>
-                <SvgIcon name="email" size={16} color="#64748B" style={styles.inputIcon} />
                 <Text style={styles.inputLabel}>Username</Text>
               </View>
               <TextInput
-                placeholder="student@university.edu"
+                placeholder="john_doe"
                 style={styles.input}
-                value={email}
+                value={username}
                 autoCapitalize="none"
-                keyboardType="email-address"
                 onChangeText={(text) => {
-                  setEmail(text);
+                  setUsername(text);
                   if (error) setError("");
                 }}
                 placeholderTextColor="#94A3B8"
-                autoComplete="email"
                 editable={!isLoading}
+                maxLength={20}
               />
+              <View style={styles.usernameHintContainer}>
+                <SvgIcon name="info" size={14} color="#94A3B8" style={styles.hintIcon} />
+                <Text style={styles.usernameHint}>
+                  3-20 characters, letters, numbers, _ and - only
+                </Text>
+              </View>
             </View>
 
             {/* Password Input */}
             <View style={styles.inputContainer}>
               <View style={styles.inputLabelContainer}>
-                <SvgIcon name="lock" size={16} color="#64748B" style={styles.inputIcon} />
                 <Text style={styles.inputLabel}>Password</Text>
               </View>
               <View style={styles.passwordContainer}>
@@ -211,7 +244,6 @@ export default function SignupScreen({ navigation }) {
             {/* Confirm Password Input */}
             <View style={styles.inputContainer}>
               <View style={styles.inputLabelContainer}>
-                <SvgIcon name="lock-check" size={16} color="#64748B" style={styles.inputIcon} />
                 <Text style={styles.inputLabel}>Confirm Password</Text>
               </View>
               <View style={styles.passwordContainer}>
@@ -225,7 +257,6 @@ export default function SignupScreen({ navigation }) {
                     if (error) setError("");
                   }}
                   placeholderTextColor="#94A3B8"
-                  autoComplete="password-new"
                   editable={!isLoading}
                 />
                 <TouchableOpacity 
@@ -250,7 +281,6 @@ export default function SignupScreen({ navigation }) {
               )}
             </View>
 
-            {/* Sign Up Button */}
             <TouchableOpacity 
               style={[
                 styles.signupButton,
@@ -265,21 +295,23 @@ export default function SignupScreen({ navigation }) {
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
-                  <SvgIcon name="user-plus" size={20} color="white" style={styles.buttonIcon} />
                   <Text style={styles.signupButtonText}>Create Account</Text>
                 </>
               )}
             </TouchableOpacity>
 
-            {/* Terms and Conditions */}
             <Text style={styles.termsText}>
               By creating an account, you agree to our{" "}
-              <Text style={styles.termsLink}>Terms of Service</Text> and{" "}
-              <Text style={styles.termsLink}>Privacy Policy</Text>
+              <Text style={styles.termsLink} onPress={handleTermsPress}>
+                Terms & Conditions
+              </Text>{" "}
+              and{" "}
+              <Text style={styles.termsLink} onPress={handlePrivacyPress}>
+                Privacy Policy
+              </Text>
             </Text>
           </View>
 
-          {/* Login Section */}
           <View style={styles.loginSection}>
             <Text style={styles.loginText}>Already have an account? </Text>
             <TouchableOpacity 
@@ -313,22 +345,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
     paddingTop: 20,
-  },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#FFFFFF",
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
-    borderWidth: 2,
-    borderColor: "#F1F5F9",
   },
   title: {
     fontSize: 32,
@@ -397,6 +413,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     fontSize: 16,
     color: "#383940",
+  },
+  usernameHintContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 6,
+    marginLeft: 4,
+  },
+  usernameHint: {
+    fontSize: 12,
+    color: "#94A3B8",
   },
   passwordContainer: {
     position: 'relative',

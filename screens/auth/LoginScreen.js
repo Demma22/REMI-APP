@@ -14,26 +14,46 @@ import {
 } from "react-native";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../../firebase";
-import { doc, getDoc } from "firebase/firestore";
-import SvgIcon from "../../components/SvgIcon"; // Add this import
+import { doc, getDoc, query, collection, where, getDocs } from "firebase/firestore";
+import SvgIcon from "../../components/SvgIcon";
+import { usernameToEmail, validateUsernameFormat } from "../../utils/usernameHelper";
 
 const { height } = Dimensions.get("window");
 
 export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Function to get Firebase email from username
+  const getFirebaseEmail = async (input) => {
+    // First, try to see if this is a username (not email format)
+    const usernameValidation = validateUsernameFormat(input);
+    
+    if (usernameValidation.valid) {
+      // It's a valid username format, convert to Firebase email
+      return usernameToEmail(input);
+    } else {
+      // Check if it's an existing email format (for backward compatibility)
+      // If it contains @, assume it's already in Firebase email format
+      if (input.includes('@')) {
+        return input;
+      }
+      // Otherwise, treat as username and convert
+      return usernameToEmail(input);
+    }
+  };
+
   const validateForm = () => {
-    if (!email.trim()) {
-      setError("Please enter your email address");
+    if (!username.trim()) {
+      setError("Please enter your username");
       return false;
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
-      setError("Please enter a valid email address");
+    if (username.trim().length < 3) {
+      setError("Username must be at least 3 characters");
       return false;
     }
 
@@ -62,6 +82,19 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  // Function to find user by username (for error messages)
+  const findUserByUsername = async (usernameInput) => {
+    try {
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("username", "==", usernameInput.trim().toLowerCase()));
+      const querySnapshot = await getDocs(q);
+      return !querySnapshot.empty;
+    } catch (error) {
+      console.error("Error finding user:", error);
+      return false;
+    }
+  };
+
   const login = async () => {
     // Validate form before attempting login
     if (!validateForm()) {
@@ -72,11 +105,17 @@ export default function LoginScreen({ navigation }) {
     setIsLoading(true);
 
     try {
-      console.log("🔄 Attempting login for:", email);
-      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+      // Convert username to Firebase email format
+      const firebaseEmail = await getFirebaseEmail(username);
+      const cleanUsername = username.trim().toLowerCase();
+      
+      console.log("🔄 Attempting login for:", cleanUsername);
+      console.log("📧 Using Firebase email:", firebaseEmail);
+      
+      const userCredential = await signInWithEmailAndPassword(auth, firebaseEmail, password);
       const user = userCredential.user;
       
-      console.log("✅ Login successful for:", user.email);
+      console.log("✅ Login successful for:", cleanUsername);
       console.log("📱 User UID:", user.uid);
       
       // Check onboarding status and navigate accordingly
@@ -98,16 +137,23 @@ export default function LoginScreen({ navigation }) {
     } catch (error) {
       console.error("❌ Login error:", error);
       
-      // More specific error handling
+      // Check if username exists for better error messages
+      const userExists = await findUserByUsername(username);
+      
+      // Enhanced error handling for username experience
       switch (error.code) {
         case 'auth/invalid-email':
-          setError("Please enter a valid email address");
+          setError("Invalid username format");
           break;
         case 'auth/user-disabled':
           setError("This account has been disabled");
           break;
         case 'auth/user-not-found':
-          setError("No account found with this email");
+          if (userExists) {
+            setError("Incorrect password for this username");
+          } else {
+            setError("No account found with this username");
+          }
           break;
         case 'auth/wrong-password':
           setError("Incorrect password. Please try again.");
@@ -118,13 +164,15 @@ export default function LoginScreen({ navigation }) {
         case 'auth/too-many-requests':
           setError("Too many failed attempts. Please try again later.");
           break;
+        case 'auth/invalid-credential':
+          setError("Invalid login credentials. Please try again.");
+          break;
         default:
           setError("Login failed. Please check your credentials and try again.");
       }
       
-      // IMPORTANT: Don't navigate away - stay on login page
       setIsLoading(false);
-      return; // Stop further execution
+      return;
     }
     
     setIsLoading(false);
@@ -144,7 +192,6 @@ export default function LoginScreen({ navigation }) {
         >
           {/* Welcome Header with Icon */}
           <View style={styles.header}>
-
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>
               Sign in to continue your academic journey
@@ -161,26 +208,31 @@ export default function LoginScreen({ navigation }) {
               </View>
             ) : null}
 
-            {/* Email Input */}
+            {/* Username Input */}
             <View style={styles.inputContainer}>
               <View style={styles.inputLabelContainer}>
-                <SvgIcon name="email" size={16} color="#64748B" style={styles.inputIcon} />
+                <SvgIcon name="user" size={16} color="#64748B" style={styles.inputIcon} />
                 <Text style={styles.inputLabel}>Username</Text>
               </View>
               <TextInput
-                placeholder="john..."
+                placeholder="Enter your username"
                 style={styles.input}
-                value={email}
+                value={username}
                 autoCapitalize="none"
-                keyboardType="email-address"
                 onChangeText={(text) => {
-                  setEmail(text);
+                  setUsername(text);
                   if (error) setError("");
                 }}
                 placeholderTextColor="#94A3B8"
-                autoComplete="email"
                 editable={!isLoading}
+                maxLength={20}
               />
+              <View style={styles.usernameHintContainer}>
+                <SvgIcon name="info" size={14} color="#94A3B8" style={styles.hintIcon} />
+                <Text style={styles.usernameHint}>
+                  Use the username you created
+                </Text>
+              </View>
             </View>
 
             {/* Password Input */}
@@ -200,7 +252,6 @@ export default function LoginScreen({ navigation }) {
                     if (error) setError("");
                   }}
                   placeholderTextColor="#94A3B8"
-                  autoComplete="password"
                   editable={!isLoading}
                 />
                 <TouchableOpacity 
@@ -213,33 +264,21 @@ export default function LoginScreen({ navigation }) {
               </View>
             </View>
 
-            {/* Forgot Password Link 
-            <TouchableOpacity 
-              style={styles.forgotPassword}
-              onPress={() => navigation.navigate("ForgotPassword")}
-              disabled={isLoading}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
-            </TouchableOpacity>
-*/}
-
             {/* Login Button */}
             <TouchableOpacity 
               style={[
                 styles.loginButton,
                 isLoading && styles.loginButtonDisabled,
-                (!email.trim() || !password.trim()) && styles.loginButtonDisabled
+                (!username.trim() || !password.trim()) && styles.loginButtonDisabled
               ]}
               onPress={login}
-              disabled={isLoading || !email.trim() || !password.trim()}
+              disabled={isLoading || !username.trim() || !password.trim()}
               activeOpacity={0.9}
             >
               {isLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <>
-                  <Text style={styles.loginButtonText}>Sign In</Text>
-                </>
+                <Text style={styles.loginButtonText}>Sign In</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -258,11 +297,9 @@ export default function LoginScreen({ navigation }) {
           {/* Divider */}
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>SND</Text>
+            <Text style={styles.dividerText}>Product of the @SND group</Text>
             <View style={styles.dividerLine} />
           </View>
-
-       
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -287,22 +324,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
     paddingTop: 20,
-  },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#FFFFFF",
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
-    borderWidth: 2,
-    borderColor: "#F1F5F9",
   },
   title: {
     fontSize: 32,
@@ -372,6 +393,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#383940",
   },
+  usernameHintContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 6,
+    marginLeft: 4,
+  },
+  usernameHint: {
+    fontSize: 12,
+    color: "#94A3B8",
+  },
   passwordContainer: {
     position: 'relative',
   },
@@ -393,23 +425,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 24,
-  },
-  forgotPasswordText: {
-    color: "#535FFD",
-    fontSize: 14,
-    fontWeight: "600",
-  },
   loginButton: {
     backgroundColor: "#535FFD",
     padding: 18,
     borderRadius: 12,
     alignItems: "center",
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 12,
     shadowColor: "#535FFD",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -419,9 +439,6 @@ const styles = StyleSheet.create({
   loginButtonDisabled: {
     backgroundColor: "#94A3B8",
     shadowColor: "#94A3B8",
-  },
-  buttonIcon: {
-    marginRight: 4,
   },
   loginButtonText: {
     color: "#FFFFFF",
@@ -458,26 +475,5 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 14,
     fontWeight: '500',
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  socialButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#F1F5F9',
-    gap: 12,
-  },
-  socialButtonText: {
-    color: '#383940',
-    fontSize: 14,
-    fontWeight: '600',
   },
 });
