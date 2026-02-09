@@ -18,7 +18,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Define background task
 const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND_NOTIFICATION_TASK';
 
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async () => {
@@ -32,12 +31,10 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async () => {
     
     if (userDoc.exists()) {
       const userData = userDoc.data();
-      console.log('Background fetch: Checking for updates');
     }
     
     return BackgroundFetch.BackgroundFetchResult.NewData;
   } catch (error) {
-    console.error('Background task error:', error);
     return BackgroundFetch.BackgroundFetchResult.Failed;
   }
 });
@@ -54,26 +51,26 @@ export const NotificationsProvider = ({ children }) => {
     });
 
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log('📱 Notification received:', notification);
       setNotification(notification);
     });
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('👆 Notification tapped:', response);
+      // Handle notification tap if needed
     });
 
     try {
       registerBackgroundTask();
     } catch (err) {
-      console.log("Background fetch optional:", err.message);
+      // Background fetch is optional
     }
 
     return () => {
+      // FIXED: Use correct method to remove listeners
       if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+        notificationListener.current.remove();
       }
       if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+        responseListener.current.remove();
       }
       try {
         unregisterBackgroundTask();
@@ -90,9 +87,8 @@ export const NotificationsProvider = ({ children }) => {
         stopOnTerminate: false,
         startOnBoot: true,
       });
-      console.log('✅ Background fetch registered');
     } catch (err) {
-      console.log("⚠️ Background fetch optional:", err.message);
+      // Background fetch is optional
     }
   };
 
@@ -141,8 +137,6 @@ export const NotificationsProvider = ({ children }) => {
       }
     }
     
-    console.log('📅 Scheduling notification:', { title, trigger: finalTrigger });
-    
     return await Notifications.scheduleNotificationAsync({
       content: {
         title,
@@ -163,9 +157,8 @@ export const NotificationsProvider = ({ children }) => {
       for (const notification of lectureNotifications) {
         await Notifications.cancelScheduledNotificationAsync(notification.identifier);
       }
-      console.log(`🗑️ Cancelled ${lectureNotifications.length} old lecture notifications`);
       
-      const username = userData.name || userData.username || 'Student';
+      const nickname = userData.nickname || userData.name || userData.username || 'Student';
       const timetable = userData.timetable || {};
       
       const weekdayMap = {
@@ -186,8 +179,6 @@ export const NotificationsProvider = ({ children }) => {
         for (const lecture of lectures) {
           if (!lecture.start || !lecture.day) continue;
           
-          console.log(`\nProcessing ${lecture.name} on ${dayKey} at ${lecture.start}`);
-          
           const [time, modifier] = lecture.start.split(' ');
           let [hours, minutes] = time.split(':').map(Number);
           
@@ -203,9 +194,6 @@ export const NotificationsProvider = ({ children }) => {
           const expoWeekday = weekdayMap[dayKey.toLowerCase()];
           if (!expoWeekday) continue;
           
-          console.log(`Time: ${hours}:${minutes}, Weekday: ${expoWeekday} (${dayKey})`);
-          
-          // 30-minute reminder
           let minute30 = minutes - 30;
           let hour30 = hours;
           if (minute30 < 0) {
@@ -235,7 +223,6 @@ export const NotificationsProvider = ({ children }) => {
           );
           totalScheduled++;
           
-          // 5-minute reminder
           let minute5 = minutes - 5;
           let hour5 = hours;
           if (minute5 < 0) {
@@ -245,7 +232,7 @@ export const NotificationsProvider = ({ children }) => {
           if (hour5 < 0) hour5 += 24;
           
           await schedulePushNotification(
-            `⏰ Time for class!`,
+            `Time for class!`,
             `${lecture.name} starts in 5 minutes${lecture.room ? ` in ${lecture.room}` : ''}`,
             { 
               type: 'lecture',
@@ -267,10 +254,8 @@ export const NotificationsProvider = ({ children }) => {
         }
       }
       
-      console.log(`✅ Total lecture notifications: ${totalScheduled}`);
       return totalScheduled;
     } catch (error) {
-      console.error('❌ Error scheduling lecture notifications:', error);
       throw error;
     }
   };
@@ -283,110 +268,134 @@ export const NotificationsProvider = ({ children }) => {
       for (const notification of examNotifications) {
         await Notifications.cancelScheduledNotificationAsync(notification.identifier);
       }
-      console.log(`🗑️ Cancelled ${examNotifications.length} old exam notifications`);
       
-      const username = userData.name || userData.username || 'Student';
+      const nickname = userData.nickname || userData.name || userData.username || 'Student';
       const exams = Array.isArray(userData.exams) ? userData.exams : [];
       
       let totalScheduled = 0;
+      const now = new Date();
       
       for (const exam of exams) {
-        if (!exam.date || !exam.name) {
-          console.log(`⚠️ Skipping exam - missing date or name:`, exam);
+        if (!exam.date || !exam.name || !exam.start) {
           continue;
         }
         
-        console.log(`\nProcessing exam: ${exam.name} on ${exam.date}`);
-        
-        const examDate = new Date(exam.date);
+        let examDate;
+        if (exam.date instanceof Date) {
+          examDate = exam.date;
+        } else if (exam.date.toDate) {
+          examDate = exam.date.toDate();
+        } else {
+          examDate = new Date(exam.date);
+        }
         
         if (isNaN(examDate.getTime())) {
-          console.log(`❌ Invalid date for exam: ${exam.date}`);
           continue;
         }
         
-        // 2 days before (9:00 AM)
-        const twoDaysBefore = new Date(examDate);
-        twoDaysBefore.setDate(examDate.getDate() - 2);
+        const [timeStr, period] = exam.start.split(' ');
+        let [hours, minutes] = timeStr.split(':').map(Number);
+        
+        if (period && period.toUpperCase() === 'PM' && hours < 12) {
+          hours += 12;
+        }
+        if (period && period.toUpperCase() === 'AM' && hours === 12) {
+          hours = 0;
+        }
+        
+        // Create exam datetime with proper time - CRITICAL FIX HERE
+        const examDateTime = new Date(
+          examDate.getFullYear(),
+          examDate.getMonth(),
+          examDate.getDate(),
+          hours,
+          minutes,
+          0
+        );
+        
+        // FIX: Check if exam is within the next 24 hours
+        // If exam is today but time hasn't passed yet, it should schedule notifications
+        const timeUntilExam = examDateTime.getTime() - now.getTime();
+        const hoursUntilExam = timeUntilExam / (1000 * 60 * 60);
+        
+        // Only skip if exam is already over (more than 2 hours past)
+        // Give a 2-hour buffer for the "Exam Today" notification
+        if (hoursUntilExam < -2) {
+          continue; // Exam was more than 2 hours ago
+        }
+        
+        // Calculate notification times
+        const twoDaysBefore = new Date(examDateTime);
+        twoDaysBefore.setDate(examDateTime.getDate() - 2);
         twoDaysBefore.setHours(9, 0, 0, 0);
         
-        if (twoDaysBefore > new Date()) {
-          console.log(`⏰ Scheduling 2-day reminder: ${twoDaysBefore.toLocaleString()}`);
-          
+        // Only schedule 2-day reminder if it's more than 2 days away
+        if (twoDaysBefore > now) {
           await schedulePushNotification(
-            `📖 Exam Reminder`,
-            `${exam.name} is in 2 days! Time to review ${username}`,
+            `Exam Reminder`,
+            `${exam.name} is in 2 days! Time to review ${nickname}`,
             { 
               type: 'exam',
               examId: exam.id || exam.name,
               examName: exam.name,
-              date: exam.date 
+              date: examDate.toISOString().split('T')[0]
             },
             {
               type: 'date',
-              timestamp: twoDaysBefore.getTime(),
-              channelId: 'default',
+              date: twoDaysBefore,
             }
           );
           totalScheduled++;
         }
         
-        // 1 day before (6:00 PM)
-        const oneDayBefore = new Date(examDate);
-        oneDayBefore.setDate(examDate.getDate() - 1);
+        const oneDayBefore = new Date(examDateTime);
+        oneDayBefore.setDate(examDateTime.getDate() - 1);
         oneDayBefore.setHours(18, 0, 0, 0);
         
-        if (oneDayBefore > new Date()) {
-          console.log(`Scheduling 1-day reminder: ${oneDayBefore.toLocaleString()}`);
-          
+        // Only schedule 1-day reminder if it's more than 1 day away
+        if (oneDayBefore > now) {
           await schedulePushNotification(
             `Exam Tomorrow`,
-            `${exam.name} is tomorrow! Make sure you're prepared ${username}`,
+            `${exam.name} is tomorrow! Make sure you're prepared ${nickname}`,
             { 
               type: 'exam',
               examId: exam.id || exam.name,
               examName: exam.name,
-              date: exam.date 
+              date: examDate.toISOString().split('T')[0]
             },
             {
               type: 'date',
-              timestamp: oneDayBefore.getTime(),
-              channelId: 'default',
+              date: oneDayBefore,
             }
           );
           totalScheduled++;
         }
         
-        // Day of (2 hours before)
-        const dayOf = new Date(examDate);
-        dayOf.setHours(examDate.getHours() - 2);
+        const twoHoursBefore = new Date(examDateTime);
+        twoHoursBefore.setHours(examDateTime.getHours() - 2);
         
-        if (dayOf > new Date()) {
-          console.log(`Scheduling day-of reminder: ${dayOf.toLocaleString()}`);
-          
+        // Only schedule 2-hour reminder if exam is more than 2 hours away
+        if (twoHoursBefore > now) {
           await schedulePushNotification(
             `Exam Today`,
-            `Your ${exam.name} exam is in 2 hours! Good luck ${username}!`,
+            `Your ${exam.name} exam is in 2 hours! Good luck ${nickname}!`,
             { 
               type: 'exam',
               examId: exam.id || exam.name,
               examName: exam.name,
-              date: exam.date 
+              date: examDate.toISOString().split('T')[0]
             },
             {
               type: 'date',
-              timestamp: dayOf.getTime(),
-              channelId: 'default',
+              date: twoHoursBefore,
             }
           );
           totalScheduled++;
         }
       }
       
-      console.log(`✅ Total exam notifications: ${totalScheduled}`);
       return totalScheduled;
     } catch (error) {
-      console.error('❌ Error scheduling exam notifications:', error);
       throw error;
     }
   };
@@ -436,12 +445,10 @@ async function registerForPushNotificationsAsync() {
   }
   
   if (finalStatus !== 'granted') {
-    console.log('⚠️ Push notification permission not granted');
     return '';
   }
   
   token = (await Notifications.getExpoPushTokenAsync()).data;
-  console.log('📱 Push token:', token);
   
   return token;
 }

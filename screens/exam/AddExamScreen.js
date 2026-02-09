@@ -22,13 +22,11 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import NavigationBar from "../../components/NavigationBar";
 import SvgIcon from "../../components/SvgIcon";
 import { useTheme } from '../../contexts/ThemeContext';
-import { useNotifications } from '../../hooks/useNotifications'; // Add this import
+import { useNotifications } from '../../hooks/useNotifications';
 
 const { width } = Dimensions.get("window");
 
 export default function AddExamScreen({ navigation }) {
-  if (!auth.currentUser) return <Text style={[styles.center, { color: theme.colors.textPrimary }]}>Not logged in</Text>;
-
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [numPapers, setNumPapers] = useState(1);
@@ -37,12 +35,11 @@ export default function AddExamScreen({ navigation }) {
   const [currentSemester, setCurrentSemester] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // Dropdown states - EXACTLY like AddLectureScreen
   const [showPaperPicker, setShowPaperPicker] = useState(false);
   const [showCourseDropdown, setShowCourseDropdown] = useState(null);
   
-  const { theme } = useTheme(); // Get theme from context
-  const { scheduleExamNotifications } = useNotifications(); // Add notifications hook
+  const { theme } = useTheme();
+  const { scheduleExamNotifications } = useNotifications();
 
   useEffect(() => {
     loadUserData();
@@ -70,19 +67,50 @@ export default function AddExamScreen({ navigation }) {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         
-        // Get current semester
         const semester = userData.current_semester || null;
         setCurrentSemester(semester);
         
-        // Get courses for current semester - EXACTLY like AddLectureScreen
-        if (semester && userData.units && userData.units[semester - 1]) {
-          setCoursesForSemester(userData.units[semester - 1] || []);
+        if (semester !== null && userData.units) {
+          if (Array.isArray(userData.units)) {
+            if (semester <= userData.units.length) {
+              const coursesIndex = semester;
+              const coursesAltIndex = semester - 1;
+              
+              if (userData.units[coursesIndex]) {
+                setCoursesForSemester(userData.units[coursesIndex] || []);
+              } else if (userData.units[coursesAltIndex]) {
+                setCoursesForSemester(userData.units[coursesAltIndex] || []);
+              } else {
+                const allUnits = userData.units.flat();
+                if (allUnits.length > 0) {
+                  setCoursesForSemester(allUnits);
+                } else {
+                  setCoursesForSemester([]);
+                }
+              }
+            } else {
+              const allUnits = userData.units.flat();
+              setCoursesForSemester(allUnits.length > 0 ? allUnits : []);
+            }
+          } else if (typeof userData.units === 'object') {
+            const semesterKey = `semester${semester}`;
+            if (userData.units[semesterKey]) {
+              setCoursesForSemester(userData.units[semesterKey] || []);
+            } else if (userData.units[semester]) {
+              setCoursesForSemester(userData.units[semester] || []);
+            } else {
+              const allCourses = Object.values(userData.units).flat();
+              setCoursesForSemester(allCourses);
+            }
+          } else {
+            setCoursesForSemester([]);
+          }
         } else {
           setCoursesForSemester([]);
         }
       }
     } catch (error) {
-      console.log("Error loading user data:", error);
+      console.error("Error loading user data:", error);
       Alert.alert("Error", "Could not load user data");
     } finally {
       setLoading(false);
@@ -110,13 +138,11 @@ export default function AddExamScreen({ navigation }) {
     });
   };
 
-  // Validate time format (HH:MM AM/PM)
   const validateTime = (time) => {
     const timeRegex = /^(0?[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$/i;
     return timeRegex.test(time);
   };
 
-  // Validate start time is before end time
   const validateTimeOrder = (start, end) => {
     const convertTo24Hour = (time) => {
       const [timePart, period] = time.split(' ');
@@ -133,7 +159,6 @@ export default function AddExamScreen({ navigation }) {
 
   const saveExams = async () => {
     try {
-      // Validate entries
       for (let i = 0; i < entries.length; i++) {
         const paper = entries[i];
         
@@ -163,44 +188,39 @@ export default function AddExamScreen({ navigation }) {
         }
       }
 
+      const formattedDate = formatDate(selectedDate);
+      
       const newExams = entries.map(paper => ({
         ...paper,
-        date: selectedDate.toISOString(),
+        date: selectedDate.toISOString(), // Store full ISO string with time
         semester: currentSemester,
         id: Date.now() + Math.random(),
-        formattedDate: formatDate(selectedDate),
+        formattedDate: formattedDate,
       }));
 
       const userDocRef = doc(db, "users", auth.currentUser.uid);
       
-      // Get existing exams and add new ones - FIXED VERSION
       const userDoc = await getDoc(userDocRef);
       let existingExams = [];
       
       if (userDoc.exists()) {
         const userData = userDoc.data();
         
-        // FIX: Properly handle the exams data structure
         if (userData.exams) {
           if (Array.isArray(userData.exams)) {
-            // If it's already an array, use it directly
             existingExams = userData.exams;
           } else if (typeof userData.exams === 'object' && userData.exams !== null) {
-            // If it's an object, convert it to array of values
             existingExams = Object.values(userData.exams);
           }
-          // If it's neither array nor object, existingExams remains empty array
         }
       }
       
-      // FIX: Ensure we're working with arrays
       const updatedExams = [...existingExams, ...newExams];
       
       await setDoc(userDocRef, { 
         exams: updatedExams 
       }, { merge: true });
       
-      // Schedule notifications for the new exams
       const updatedUserDoc = await getDoc(userDocRef);
       if (updatedUserDoc.exists()) {
         await scheduleExamNotifications(updatedUserDoc.data());
@@ -208,7 +228,6 @@ export default function AddExamScreen({ navigation }) {
       
       Alert.alert("Success", "Exam(s) saved successfully with notifications!");
       
-      // Reset form
       setEntries([{
         name: coursesForSemester[0] || "",
         start: "9:00 AM",
@@ -217,13 +236,11 @@ export default function AddExamScreen({ navigation }) {
       setNumPapers(1);
       
     } catch (error) {
-      console.log("Save error:", error);
-      console.log("Error details:", error.message);
+      console.error("Save error:", error);
       Alert.alert("Error", "Could not save exam(s)");
     }
   };
 
-  // Render dropdown items - EXACTLY like AddLectureScreen
   const renderPaperItem = ({ item }) => (
     <TouchableOpacity
       style={[
@@ -306,7 +323,6 @@ export default function AddExamScreen({ navigation }) {
       >
         <TouchableWithoutFeedback onPress={dismissKeyboard}>
           <ScrollView style={styles.wrap} showsVerticalScrollIndicator={false}>
-            {/* Header */}
             <View style={styles.header}>
               <TouchableOpacity 
                 style={styles.backBtn} 
@@ -320,7 +336,6 @@ export default function AddExamScreen({ navigation }) {
             </View>
 
             <View style={styles.content}>
-              {/* Semester Info */}
               {currentSemester && (
                 <View style={[styles.semesterInfo, { 
                   backgroundColor: theme.mode === 'dark' ? '#3E2A1D' : '#FFF7ED',
@@ -347,7 +362,6 @@ export default function AddExamScreen({ navigation }) {
                 </View>
               )}
 
-              {/* Notification Info */}
               <View style={[styles.notificationInfo, { 
                 backgroundColor: theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(37, 99, 235, 0.1)',
                 borderLeftColor: theme.colors.primary 
@@ -358,11 +372,9 @@ export default function AddExamScreen({ navigation }) {
                 </Text>
               </View>
 
-              {/* Add Exam Section */}
               <View style={styles.addExamSection}>
                 <Text style={styles.sectionTitle}>Schedule New Exam</Text>
 
-                {/* Select Date Section */}
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel}>Select Date</Text>
                   <TouchableOpacity 
@@ -386,7 +398,6 @@ export default function AddExamScreen({ navigation }) {
                   )}
                 </View>
 
-                {/* How many papers Section */}
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel}>How many papers</Text>
                   <TouchableOpacity 
@@ -400,7 +411,6 @@ export default function AddExamScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
 
-                {/* Paper Forms */}
                 {entries.map((paper, i) => (
                   <View key={i} style={styles.paperCard}>
                     <View style={styles.paperHeader}>
@@ -415,7 +425,6 @@ export default function AddExamScreen({ navigation }) {
                       <SvgIcon name="exam" size={20} color={theme.colors.secondary} />
                     </View>
 
-                    {/* Course Selection Dropdown - EXACTLY like AddLectureScreen */}
                     <Text style={styles.inputLabel}>Course Unit *</Text>
                     <TouchableOpacity
                       style={[
@@ -440,7 +449,6 @@ export default function AddExamScreen({ navigation }) {
                       <SvgIcon name="chevron-down" size={14} color={theme.colors.textSecondary} />
                     </TouchableOpacity>
 
-                    {/* Time Inputs Row */}
                     <View style={styles.timeRow}>
                       <View style={styles.timeInputContainer}>
                         <Text style={styles.inputLabel}>Start Time *</Text>
@@ -475,7 +483,6 @@ export default function AddExamScreen({ navigation }) {
                   </View>
                 ))}
 
-                {/* Save Button */}
                 <TouchableOpacity 
                   style={[
                     styles.saveBtn,
@@ -494,7 +501,6 @@ export default function AddExamScreen({ navigation }) {
                   </Text>
                 </TouchableOpacity>
 
-                {/* Help Text */}
                 {coursesForSemester.length === 0 && (
                   <View style={[styles.helpCard, { 
                     backgroundColor: theme.mode === 'dark' ? '#3E2A1D' : '#FFF7ED',
@@ -519,7 +525,6 @@ export default function AddExamScreen({ navigation }) {
                 )}
               </View>
 
-              {/* View Timetable Button */}
               <TouchableOpacity 
                 style={[styles.viewTimetableBtn, { backgroundColor: theme.colors.secondary }]}
                 onPress={() => navigation.navigate("ExamTimetable")}
@@ -528,11 +533,9 @@ export default function AddExamScreen({ navigation }) {
                 <Text style={styles.viewTimetableText}>VIEW EXAM TIMETABLE</Text>
               </TouchableOpacity>
 
-              {/* Bottom spacing for navigation bar */}
               <View style={styles.bottomSpacing} />
             </View>
 
-            {/* Paper Picker Modal */}
             <Modal
               visible={showPaperPicker}
               transparent={true}
@@ -557,7 +560,6 @@ export default function AddExamScreen({ navigation }) {
               </View>
             </Modal>
 
-            {/* Course Selection Modal - EXACTLY like AddLectureScreen */}
             <Modal
               visible={showCourseDropdown !== null}
               transparent={true}
@@ -585,7 +587,6 @@ export default function AddExamScreen({ navigation }) {
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
 
-      {/* Navigation Bar */}
       <NavigationBar />
     </View>
   );
@@ -612,8 +613,6 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     marginTop: 20,
   },
-
-  // Header Styles
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -649,13 +648,9 @@ const getStyles = (theme) => StyleSheet.create({
   placeholder: {
     width: 44,
   },
-
-  // Content Styles
   content: {
     padding: 24,
   },
-
-  // Add Exam Section Styles
   addExamSection: {
     marginBottom: 20,
   },
@@ -665,8 +660,6 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.textPrimary,
     marginBottom: 16,
   },
-
-  // Semester Info
   semesterInfo: {
     padding: 16,
     borderRadius: 16,
@@ -694,8 +687,6 @@ const getStyles = (theme) => StyleSheet.create({
   courseCount: {
     fontSize: 14,
   },
-
-  // Notification Info
   notificationInfo: {
     padding: 12,
     borderRadius: 12,
@@ -710,8 +701,6 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: "500",
     flex: 1,
   },
-
-  // Section Styles
   section: {
     marginBottom: 24,
   },
@@ -721,8 +710,6 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.textPrimary,
     marginBottom: 12,
   },
-
-  // Date Picker Styles
   datePickerButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -746,8 +733,6 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: "600",
     flex: 1,
   },
-
-  // Paper Picker Button
   pickerButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -771,8 +756,6 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: "600",
     flex: 1,
   },
-
-  // Course Selection Styles - EXACTLY like AddLectureScreen
   courseDropdownButton: {
     backgroundColor: theme.colors.backgroundTertiary,
     borderWidth: 2,
@@ -800,8 +783,6 @@ const getStyles = (theme) => StyleSheet.create({
   courseDropdownButtonTextEmpty: {
     color: theme.colors.textPlaceholder,
   },
-
-  // Paper Card Styles
   paperCard: {
     backgroundColor: theme.colors.card,
     borderRadius: 20,
@@ -842,8 +823,6 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
-
-  // Input Styles
   inputLabel: {
     fontSize: 14,
     fontWeight: "600",
@@ -851,8 +830,6 @@ const getStyles = (theme) => StyleSheet.create({
     marginBottom: 8,
     marginTop: 12,
   },
-
-  // Time Input Styles
   timeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -883,8 +860,6 @@ const getStyles = (theme) => StyleSheet.create({
     textAlign: "center",
     marginTop: 4,
   },
-
-  // Save Button Styles
   saveBtn: {
     paddingVertical: 16,
     borderRadius: 16,
@@ -908,8 +883,6 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-
-  // View Timetable Button
   viewTimetableBtn: {
     paddingVertical: 16,
     borderRadius: 16,
@@ -930,8 +903,6 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-
-  // Help Card
   helpCard: {
     padding: 16,
     borderRadius: 16,
@@ -962,8 +933,6 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-
-  // Modal Styles - EXACTLY like AddLectureScreen
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -1017,8 +986,6 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.primary,
     fontWeight: "600",
   },
-
-  // Bottom spacing for navigation bar
   bottomSpacing: {
     height: 80,
   },
