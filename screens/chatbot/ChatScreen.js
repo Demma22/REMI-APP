@@ -20,6 +20,7 @@ import { auth, db } from "../../firebase";
 import { doc, getDoc, collection, addDoc, query, orderBy, getDocs, deleteDoc, serverTimestamp } from "firebase/firestore";
 import SvgIcon from "../../components/SvgIcon";
 import { useTheme } from '../../contexts/ThemeContext'; // Add this import
+import * as Clipboard from 'expo-clipboard'; // Add this import
 
 const { height: screenHeight } = Dimensions.get("window");
 
@@ -298,6 +299,31 @@ export default function ChatScreen({ navigation }) {
     return contextData;
   };
 
+  // Add copy text function
+  const handleCopyText = async (text) => {
+    try {
+      await Clipboard.setStringAsync(text);
+      Alert.alert("Copied", "Text copied to clipboard");
+    } catch (error) {
+      Alert.alert("Error", "Failed to copy text");
+    }
+  };
+
+  // Add long press handler for messages
+  const handleMessageLongPress = (text) => {
+    Alert.alert(
+      "Copy Text",
+      "Do you want to copy this text?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Copy", 
+          onPress: () => handleCopyText(text) 
+        },
+      ]
+    );
+  };
+
 const send = async () => {
   const text = input.trim();
   if (!text) return;
@@ -420,26 +446,32 @@ const send = async () => {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.messagesContainer}
             renderItem={({ item }) => (
-              <View
-                style={[
-                  styles.bubble,
-                  item.sender === "user" ? styles.userBubble : styles.remiBubble,
-                ]}
+              <TouchableOpacity
+                onLongPress={() => handleMessageLongPress(item.text)}
+                activeOpacity={0.9}
+                delayLongPress={500}
               >
-                {item.sender === "remi" && (
-                  <View style={[styles.remiAvatar, { backgroundColor: theme.colors.primaryLight }]}>
-                    <SvgIcon name="robot" size={16} color={theme.colors.primary} />
-                  </View>
-                )}
-                <Text style={item.sender === "user" ? styles.userText : styles.remiText}>
-                  {item.text}
-                </Text>
-                {item.sender === "user" && (
-                  <View style={[styles.userAvatar, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                    <SvgIcon name="user" size={16} color="white" />
-                  </View>
-                )}
-              </View>
+                <View
+                  style={[
+                    styles.bubble,
+                    item.sender === "user" ? styles.userBubble : styles.remiBubble,
+                  ]}
+                >
+                  {item.sender === "remi" && (
+                    <View style={[styles.remiAvatar, { backgroundColor: theme.colors.primaryLight }]}>
+                      <SvgIcon name="robot" size={16} color={theme.colors.primary} />
+                    </View>
+                  )}
+                  <Text style={item.sender === "user" ? styles.userText : styles.remiText}>
+                    {item.text}
+                  </Text>
+                  {item.sender === "user" && (
+                    <View style={[styles.userAvatar, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                      <SvgIcon name="user" size={16} color="white" />
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
             )}
             onContentSizeChange={() => scrollToEnd(false)}
             onLayout={() => scrollToEnd(false)}
