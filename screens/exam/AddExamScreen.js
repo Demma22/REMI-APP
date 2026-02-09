@@ -1,4 +1,3 @@
-// screens/AddExamScreen.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -15,6 +14,7 @@ import {
   Platform,
   Keyboard,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from "react-native";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { auth, db } from "../../firebase";
@@ -34,6 +34,7 @@ export default function AddExamScreen({ navigation }) {
   const [coursesForSemester, setCoursesForSemester] = useState([]);
   const [currentSemester, setCurrentSemester] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   
   const [showPaperPicker, setShowPaperPicker] = useState(false);
   const [showCourseDropdown, setShowCourseDropdown] = useState(null);
@@ -187,6 +188,8 @@ export default function AddExamScreen({ navigation }) {
         }
       }
 
+      setSaving(true);
+
       const formattedDate = formatDate(selectedDate);
       
       const newExams = entries.map(paper => ({
@@ -235,7 +238,10 @@ export default function AddExamScreen({ navigation }) {
       setNumPapers(1);
       
     } catch (error) {
-      Alert.alert("Error", "Could not save exam(s)");
+
+      Alert.alert("Error", "Could not save exam(s). Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -321,6 +327,7 @@ export default function AddExamScreen({ navigation }) {
           style={styles.backBtn} 
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
+          disabled={saving}
         >
           <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
         </TouchableOpacity>
@@ -377,9 +384,10 @@ export default function AddExamScreen({ navigation }) {
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel}>Select Date</Text>
                   <TouchableOpacity 
-                    style={styles.datePickerButton}
-                    onPress={() => setShowDatePicker(true)}
+                    style={[styles.datePickerButton, saving && styles.disabledButton]}
+                    onPress={() => !saving && setShowDatePicker(true)}
                     activeOpacity={0.7}
+                    disabled={saving}
                   >
                     <SvgIcon name="calendar" size={16} color={theme.colors.primary} />
                     <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
@@ -400,9 +408,10 @@ export default function AddExamScreen({ navigation }) {
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel}>How many papers</Text>
                   <TouchableOpacity 
-                    style={styles.pickerButton}
-                    onPress={() => setShowPaperPicker(true)}
+                    style={[styles.pickerButton, saving && styles.disabledButton]}
+                    onPress={() => !saving && setShowPaperPicker(true)}
                     activeOpacity={0.7}
+                    disabled={saving}
                   >
                     <SvgIcon name="file" size={16} color={theme.colors.primary} />
                     <Text style={styles.pickerButtonText}>{numPapers} paper{numPapers !== 1 ? 's' : ''}</Text>
@@ -429,14 +438,15 @@ export default function AddExamScreen({ navigation }) {
                       style={[
                         styles.courseDropdownButton,
                         !paper.name && styles.courseDropdownButtonEmpty,
-                        showCourseDropdown === i && styles.courseDropdownButtonActive
+                        showCourseDropdown === i && styles.courseDropdownButtonActive,
+                        saving && styles.disabledButton
                       ]}
                       onPress={() => {
-                        if (coursesForSemester.length > 0) {
+                        if (coursesForSemester.length > 0 && !saving) {
                           setShowCourseDropdown(i);
                         }
                       }}
-                      disabled={coursesForSemester.length === 0}
+                      disabled={coursesForSemester.length === 0 || saving}
                     >
                       <SvgIcon name="book" size={16} color={theme.colors.textSecondary} />
                       <Text style={[
@@ -451,7 +461,7 @@ export default function AddExamScreen({ navigation }) {
                     <View style={styles.timeRow}>
                       <View style={styles.timeInputContainer}>
                         <Text style={styles.inputLabel}>Start Time *</Text>
-                        <View style={styles.timeInputWrapper}>
+                        <View style={[styles.timeInputWrapper, saving && styles.disabledInput]}>
                           <SvgIcon name="clock" size={16} color={theme.colors.textSecondary} />
                           <TextInput 
                             style={styles.timeInput} 
@@ -459,6 +469,7 @@ export default function AddExamScreen({ navigation }) {
                             onChangeText={(v) => updateEntry(i, "start", v)}
                             placeholder="9:00 AM"
                             placeholderTextColor={theme.colors.textPlaceholder}
+                            editable={!saving}
                           />
                         </View>
                         <Text style={[styles.timeHint, { color: theme.colors.textTertiary }]}>Format: 9:00 AM</Text>
@@ -466,7 +477,7 @@ export default function AddExamScreen({ navigation }) {
                       
                       <View style={styles.timeInputContainer}>
                         <Text style={styles.inputLabel}>End Time *</Text>
-                        <View style={styles.timeInputWrapper}>
+                        <View style={[styles.timeInputWrapper, saving && styles.disabledInput]}>
                           <SvgIcon name="clock" size={16} color={theme.colors.textSecondary} />
                           <TextInput 
                             style={styles.timeInput} 
@@ -474,6 +485,7 @@ export default function AddExamScreen({ navigation }) {
                             onChangeText={(v) => updateEntry(i, "end", v)}
                             placeholder="11:00 AM"
                             placeholderTextColor={theme.colors.textPlaceholder}
+                            editable={!saving}
                           />
                         </View>
                         <Text style={[styles.timeHint, { color: theme.colors.textTertiary }]}>Format: 11:00 AM</Text>
@@ -486,15 +498,21 @@ export default function AddExamScreen({ navigation }) {
                   style={[
                     styles.saveBtn,
                     { backgroundColor: coursesForSemester.length === 0 ? theme.colors.textTertiary : theme.colors.primary },
-                    coursesForSemester.length === 0 && styles.saveBtnDisabled
+                    coursesForSemester.length === 0 && styles.saveBtnDisabled,
+                    saving && styles.saveBtnProcessing
                   ]} 
                   onPress={saveExams} 
                   activeOpacity={0.8}
-                  disabled={coursesForSemester.length === 0}
+                  disabled={coursesForSemester.length === 0 || saving}
                 >
-                  <SvgIcon name="save" size={18} color="white" />
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <SvgIcon name="save" size={18} color="white" />
+                  )}
                   <Text style={styles.saveBtnText}>
-                    {coursesForSemester.length === 0 
+                    {saving ? "Saving..." : 
+                     coursesForSemester.length === 0 
                       ? "ADD COURSES FIRST" 
                       : `SAVE ${entries.length} PAPER${entries.length > 1 ? 'S' : ''}`}
                   </Text>
@@ -515,6 +533,7 @@ export default function AddExamScreen({ navigation }) {
                       <TouchableOpacity 
                         style={[styles.helpButton, { backgroundColor: theme.colors.secondary }]}
                         onPress={() => navigation.navigate("EditUnits")}
+                        disabled={saving}
                       >
                         <SvgIcon name="plus" size={14} color="white" />
                         <Text style={styles.helpButtonText}>Add Course Units</Text>
@@ -528,6 +547,7 @@ export default function AddExamScreen({ navigation }) {
               <TouchableOpacity 
                 style={[styles.viewTimetableBtn, { backgroundColor: theme.colors.secondary, marginTop: 5 }]}
                 onPress={() => navigation.navigate("ExamTimetable")}
+                disabled={saving}
               >
                 <SvgIcon name="list" size={18} color="white" />
                 <Text style={styles.viewTimetableText}>VIEW EXAM TIMETABLE</Text>
@@ -654,7 +674,7 @@ const getStyles = (theme) => StyleSheet.create({
   },
   content: {
     padding: 24,
-    marginTop: 140, // Added margin for static header
+    marginTop: 140,
   },
   addExamSection: {
     marginBottom: 20,
@@ -781,7 +801,7 @@ const getStyles = (theme) => StyleSheet.create({
   },
   courseDropdownButtonText: {
     fontSize: 16,
-    color: theme.mode === 'dark' ? '#FFFFFF' : theme.colors.textPrimary, // White text in dark mode
+    color: theme.mode === 'dark' ? '#FFFFFF' : theme.colors.textPrimary,
     fontWeight: "500",
     flex: 1,
   },
@@ -870,7 +890,7 @@ const getStyles = (theme) => StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     marginTop: 10,
-    marginBottom: 5, // Reduced from 20 to 5
+    marginBottom: 5,
     shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
@@ -882,6 +902,10 @@ const getStyles = (theme) => StyleSheet.create({
   },
   saveBtnDisabled: {
     shadowColor: theme.colors.textTertiary,
+  },
+  saveBtnProcessing: {
+    backgroundColor: theme.colors.primary,
+    opacity: 0.9,
   },
   saveBtnText: {
     color: "#FFFFFF",
@@ -989,6 +1013,12 @@ const getStyles = (theme) => StyleSheet.create({
   dropdownItemTextSelected: {
     color: theme.colors.primary,
     fontWeight: "600",
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  disabledInput: {
+    opacity: 0.6,
   },
   bottomSpacing: {
     height: 80,

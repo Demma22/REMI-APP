@@ -14,6 +14,7 @@ import {
   Platform,
   Keyboard,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from "react-native";
 import { auth, db } from "../../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -39,6 +40,8 @@ export default function AddLectureScreen({ navigation }) {
   const [coursesForSemester, setCoursesForSemester] = useState([]);
   const [currentSemester, setCurrentSemester] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [preparingNotifications, setPreparingNotifications] = useState(false);
 
   // Dropdown states
   const [showDayDropdown, setShowDayDropdown] = useState(false);
@@ -113,6 +116,7 @@ export default function AddLectureScreen({ navigation }) {
         }
       }
 
+      setSaving(true);
       await saveToFirestore();
       
       const userDocRef = doc(db, "users", auth.currentUser.uid);
@@ -120,14 +124,15 @@ export default function AddLectureScreen({ navigation }) {
       
       if (userDoc.exists()) {
         try {
+          setPreparingNotifications(true);
           await scheduleLectureNotifications(userDoc.data());
           
           Alert.alert(
             "Success", 
-            `Lecture(s) added!\n\n` +
-            `You'll get notifications every week before each lecture`
+            `Lecture(s) added successfully!\n\nYou will receive weekly notifications 30 minutes and 5 minutes before each lecture.`
           );
           
+          navigation.goBack();
         } catch (notificationError) {
           Alert.alert(
             "Lecture Saved",
@@ -136,13 +141,16 @@ export default function AddLectureScreen({ navigation }) {
             "Tip: Make sure your device allows repeating notifications in system settings.",
             [{ text: "OK", onPress: () => navigation.goBack() }]
           );
-          return;
+        } finally {
+          setPreparingNotifications(false);
+          setSaving(false);
         }
       }
       
-      navigation.goBack();
     } catch (error) {
       Alert.alert("Error", "Could not save lecture(s)");
+      setSaving(false);
+      setPreparingNotifications(false);
     }
   };
 
@@ -268,6 +276,23 @@ export default function AddLectureScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      {preparingNotifications ? (
+        <View style={styles.processingOverlay}>
+          <View style={[styles.processingCard, { backgroundColor: theme.colors.card }]}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.processingTitle, { color: theme.colors.textPrimary }]}>
+              Preparing Notifications
+            </Text>
+            <Text style={[styles.processingText, { color: theme.colors.textSecondary }]}>
+              Scheduling your weekly lecture reminders...
+            </Text>
+            <Text style={[styles.processingHint, { color: theme.colors.textTertiary }]}>
+              This may take a moment
+            </Text>
+          </View>
+        </View>
+      ) : null}
+      
       <KeyboardAvoidingView 
         style={styles.wrap}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -280,6 +305,7 @@ export default function AddLectureScreen({ navigation }) {
                 style={styles.backBtn} 
                 onPress={() => navigation.goBack()}
                 activeOpacity={0.7}
+                disabled={saving || preparingNotifications}
               >
                 <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
               </TouchableOpacity>
@@ -329,9 +355,10 @@ export default function AddLectureScreen({ navigation }) {
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>Select Day</Text>
                 <TouchableOpacity
-                  style={styles.dropdownButton}
-                  onPress={() => setShowDayDropdown(true)}
+                  style={[styles.dropdownButton, (saving || preparingNotifications) && styles.dropdownDisabled]}
+                  onPress={() => !saving && !preparingNotifications && setShowDayDropdown(true)}
                   activeOpacity={0.7}
+                  disabled={saving || preparingNotifications}
                 >
                   <SvgIcon name="calendar" size={16} color={theme.colors.primary} />
                   <Text style={styles.dropdownButtonText}>{day}</Text>
@@ -343,9 +370,10 @@ export default function AddLectureScreen({ navigation }) {
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>How many lectures for {day}?</Text>
                 <TouchableOpacity
-                  style={styles.dropdownButton}
-                  onPress={() => setShowLecturesDropdown(true)}
+                  style={[styles.dropdownButton, (saving || preparingNotifications) && styles.dropdownDisabled]}
+                  onPress={() => !saving && !preparingNotifications && setShowLecturesDropdown(true)}
                   activeOpacity={0.7}
+                  disabled={saving || preparingNotifications}
                 >
                   <SvgIcon name="book" size={16} color={theme.colors.primary} />
                   <Text style={styles.dropdownButtonText}>
@@ -378,14 +406,15 @@ export default function AddLectureScreen({ navigation }) {
                     style={[
                       styles.courseDropdownButton,
                       !lec.name && styles.courseDropdownButtonEmpty,
-                      showCourseDropdown === i && styles.courseDropdownButtonActive
+                      showCourseDropdown === i && styles.courseDropdownButtonActive,
+                      (saving || preparingNotifications) && styles.dropdownDisabled
                     ]}
                     onPress={() => {
-                      if (coursesForSemester.length > 0) {
+                      if (coursesForSemester.length > 0 && !saving && !preparingNotifications) {
                         setShowCourseDropdown(i);
                       }
                     }}
-                    disabled={coursesForSemester.length === 0}
+                    disabled={coursesForSemester.length === 0 || saving || preparingNotifications}
                   >
                     <SvgIcon name="book" size={16} color={theme.colors.textSecondary} />
                     <Text style={[
@@ -401,7 +430,7 @@ export default function AddLectureScreen({ navigation }) {
                   <View style={styles.timeRow}>
                     <View style={styles.timeInputContainer}>
                       <Text style={styles.inputLabel}>Start Time *</Text>
-                      <View style={styles.timeInputWrapper}>
+                      <View style={[styles.timeInputWrapper, (saving || preparingNotifications) && styles.inputDisabled]}>
                         <SvgIcon name="clock" size={16} color={theme.colors.textSecondary} />
                         <TextInput 
                           style={styles.timeInput} 
@@ -409,6 +438,7 @@ export default function AddLectureScreen({ navigation }) {
                           onChangeText={(v) => updateEntry(i, "start", v)}
                           placeholder="9:00 AM"
                           placeholderTextColor={theme.colors.textPlaceholder}
+                          editable={!saving && !preparingNotifications}
                         />
                       </View>
                       <Text style={[styles.timeHint, { color: theme.colors.textTertiary }]}>Format: 9:00 AM</Text>
@@ -416,7 +446,7 @@ export default function AddLectureScreen({ navigation }) {
                     
                     <View style={styles.timeInputContainer}>
                       <Text style={styles.inputLabel}>End Time *</Text>
-                      <View style={styles.timeInputWrapper}>
+                      <View style={[styles.timeInputWrapper, (saving || preparingNotifications) && styles.inputDisabled]}>
                         <SvgIcon name="clock" size={16} color={theme.colors.textSecondary} />
                         <TextInput 
                           style={styles.timeInput} 
@@ -424,6 +454,7 @@ export default function AddLectureScreen({ navigation }) {
                           onChangeText={(v) => updateEntry(i, "end", v)}
                           placeholder="10:00 AM"
                           placeholderTextColor={theme.colors.textPlaceholder}
+                          editable={!saving && !preparingNotifications}
                         />
                       </View>
                       <Text style={[styles.timeHint, { color: theme.colors.textTertiary }]}>Format: 10:00 AM</Text>
@@ -432,7 +463,7 @@ export default function AddLectureScreen({ navigation }) {
 
                   {/* Lecturer Input */}
                   <Text style={styles.inputLabel}>Lecturer</Text>
-                  <View style={styles.inputWrapper}>
+                  <View style={[styles.inputWrapper, (saving || preparingNotifications) && styles.inputDisabled]}>
                     <SvgIcon name="user" size={16} color={theme.colors.textSecondary} />
                     <TextInput 
                       style={styles.input} 
@@ -440,12 +471,13 @@ export default function AddLectureScreen({ navigation }) {
                       onChangeText={(v) => updateEntry(i, "lecturer", v)}
                       placeholder="Enter lecturer name"
                       placeholderTextColor={theme.colors.textPlaceholder}
+                      editable={!saving && !preparingNotifications}
                     />
                   </View>
 
                   {/* Room Input */}
                   <Text style={styles.inputLabel}>Room</Text>
-                  <View style={styles.inputWrapper}>
+                  <View style={[styles.inputWrapper, (saving || preparingNotifications) && styles.inputDisabled]}>
                     <SvgIcon name="location" size={16} color={theme.colors.textSecondary} />
                     <TextInput 
                       style={styles.input} 
@@ -453,6 +485,7 @@ export default function AddLectureScreen({ navigation }) {
                       onChangeText={(v) => updateEntry(i, "room", v)}
                       placeholder="Enter room number"
                       placeholderTextColor={theme.colors.textPlaceholder}
+                      editable={!saving && !preparingNotifications}
                     />
                   </View>
                 </View>
@@ -462,15 +495,22 @@ export default function AddLectureScreen({ navigation }) {
               <TouchableOpacity 
                 style={[
                   styles.saveBtn,
-                  coursesForSemester.length === 0 && styles.saveBtnDisabled
+                  coursesForSemester.length === 0 && styles.saveBtnDisabled,
+                  (saving || preparingNotifications) && styles.saveBtnProcessing
                 ]} 
                 onPress={save} 
                 activeOpacity={0.8}
-                disabled={coursesForSemester.length === 0}
+                disabled={coursesForSemester.length === 0 || saving || preparingNotifications}
               >
-                <SvgIcon name="save" size={18} color="white" />
+                {saving ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <SvgIcon name="save" size={18} color="white" />
+                )}
                 <Text style={styles.saveBtnText}>
-                  {coursesForSemester.length === 0 
+                  {saving ? "Saving..." : 
+                   preparingNotifications ? "Processing..." :
+                   coursesForSemester.length === 0 
                     ? "ADD COURSES FIRST" 
                     : `SAVE ${entries.length} LECTURE${entries.length > 1 ? 'S' : ''}`}
                 </Text>
@@ -492,6 +532,7 @@ export default function AddLectureScreen({ navigation }) {
                     <TouchableOpacity 
                       style={[styles.helpButton, { backgroundColor: theme.colors.secondary }]}
                       onPress={() => navigation.navigate("EditUnits")}
+                      disabled={saving || preparingNotifications}
                     >
                       <SvgIcon name="plus" size={14} color="white" />
                       <Text style={styles.helpButtonText}>Add Course Units</Text>
@@ -605,6 +646,51 @@ const getStyles = (theme) => StyleSheet.create({
   },
   center: { 
     fontSize: 16,
+  },
+
+  // Processing Overlay
+  processingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  processingCard: {
+    backgroundColor: theme.colors.card,
+    borderRadius: 20,
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '80%',
+    maxWidth: 300,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  processingTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: 20,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  processingText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 22,
+  },
+  processingHint: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 
   // Header Styles
@@ -722,6 +808,9 @@ const getStyles = (theme) => StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     gap: 8,
+  },
+  dropdownDisabled: {
+    opacity: 0.6,
   },
   dropdownButtonText: {
     fontSize: 16,
@@ -882,6 +971,9 @@ const getStyles = (theme) => StyleSheet.create({
     paddingVertical: 14,
     gap: 8,
   },
+  inputDisabled: {
+    opacity: 0.6,
+  },
   input: {
     flex: 1,
     fontSize: 16,
@@ -941,6 +1033,9 @@ const getStyles = (theme) => StyleSheet.create({
   saveBtnDisabled: {
     backgroundColor: theme.colors.textSecondary,
     shadowColor: theme.colors.textSecondary,
+  },
+  saveBtnProcessing: {
+    backgroundColor: theme.colors.primary,
   },
   saveBtnText: {
     color: "#FFFFFF",
