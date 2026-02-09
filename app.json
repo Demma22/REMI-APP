@@ -63,9 +63,6 @@
         {
           "icon": "./assets/notification-icon.png",
           "color": "#535FFD",
-          "sounds": [
-            "./assets/notification-sound.wav"
-          ],
           "defaultChannel": {
             "name": "default",
             "importance": "max",
