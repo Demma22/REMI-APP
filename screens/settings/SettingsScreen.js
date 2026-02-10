@@ -116,59 +116,22 @@ export default function SettingsScreen({ navigation }) {
     navigation.navigate("NotificationsSettings");
   };
 
+  const handleContactUs = () => {
+    navigation.navigate("ContactUs");
+  };
+
   const handleDeleteAllData = () => {
     Alert.alert(
-      "Delete All Data",
-      "This will delete ALL your data including profile, timetable, exams, and GPA. You'll be taken back to onboarding. This action cannot be undone!",
+      "Delete Account & Data",
+      "To delete your account and all associated data, please contact our support team.",
       [
         { text: "Cancel", style: "cancel" },
         { 
-          text: "Delete Everything", 
-          style: "destructive",
-          onPress: deleteAllDataAndReset
+          text: "Contact Support", 
+          onPress: handleContactUs
         }
       ]
     );
-  };
-
-  const deleteAllDataAndReset = async () => {
-    try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      
-      // Reset all user data except email and creation date
-      await updateDoc(userDocRef, {
-        nickname: deleteField(),
-        course: deleteField(),
-        total_semesters: deleteField(),
-        current_semester: deleteField(),
-        units: deleteField(),
-        timetable: deleteField(),
-        exams: deleteField(),
-        gpa_data: deleteField(),
-        chat_history: deleteField(),
-        onboarding_completed: false,
-        onboarding_completed_at: deleteField(),
-      });
-      
-      Alert.alert(
-        "Data Deleted", 
-        "All your data has been deleted. You'll now go through onboarding again.",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              // Navigate to onboarding
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'OnboardingSplash' }],
-              });
-            }
-          }
-        ]
-      );
-    } catch (error) {
-      Alert.alert("Error", "Failed to delete data");
-    }
   };
 
   const handleMyProfile = () => {
@@ -356,6 +319,23 @@ export default function SettingsScreen({ navigation }) {
                 ios_backgroundColor={theme.colors.borderDark}
               />
             </View>
+
+            {/* Added Contact Us button */}
+            <TouchableOpacity 
+              style={styles.menuButton}
+              onPress={handleContactUs}
+            >
+              <View style={[styles.menuIconContainer, { backgroundColor: 'rgba(83, 95, 253, 0.1)' }]}>
+                <SvgIcon name="phone" size={20} color="#535FFD" />
+              </View>
+              <View style={styles.menuTextContainer}>
+                <Text style={styles.menuTitle}>Contact Us</Text>
+                <Text style={styles.menuSubtitle}>
+                  Get help, report issues, or send feedback
+                </Text>
+              </View>
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
           </View>
 
           {/* Data Management Section */}
@@ -370,8 +350,8 @@ export default function SettingsScreen({ navigation }) {
                 <SvgIcon name="trash" size={20} color={theme.colors.danger} />
               </View>
               <View style={styles.menuTextContainer}>
-                <Text style={styles.menuTitle}>Delete All Data</Text>
-                <Text style={styles.menuSubtitle}>Reset everything and start over</Text>
+                <Text style={styles.menuTitle}>Delete Account & Data</Text>
+                <Text style={styles.menuSubtitle}>Contact support to delete your account</Text>
               </View>
               <SvgIcon name="chevron-right" size={20} color={theme.colors.danger} />
             </TouchableOpacity>
