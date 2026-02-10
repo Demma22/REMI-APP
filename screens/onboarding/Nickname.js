@@ -14,6 +14,7 @@ import {
 
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase";
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { height } = Dimensions.get("window");
 
@@ -21,6 +22,8 @@ export default function Nickname({ navigation }) {
   const [nick, setNick] = useState("");
   const [isValid, setIsValid] = useState(false);
   const [isTouched, setIsTouched] = useState(false);
+  
+  const { theme } = useTheme();
 
   const validateNickname = (text) => {
     setNick(text);
@@ -36,8 +39,22 @@ export default function Nickname({ navigation }) {
     setIsValid(valid);
   };
 
-    const handleCancel = () => {
-    navigation.goBack('SplashIntro');
+  const handleCancel = () => {
+    Alert.alert(
+      "Cancel Setup",
+      "Are you sure you want to cancel? You'll need to sign up again.",
+      [
+        {
+          text: "No, Continue",
+          style: "cancel"
+        },
+        {
+          text: "Yes, Cancel",
+          style: "destructive",
+          onPress: () => navigation.navigate("Signup")
+        }
+      ]
+    );
   };
 
   // Save nickname to Firestore and navigate to Course screen
@@ -56,13 +73,13 @@ export default function Nickname({ navigation }) {
           nickname: trimmedNick,
           createdAt: new Date(),
         },
-        // Only update Nickname field, don't overwrite other data
         { merge: true }
       );
 
-      navigation.replace("Course", { nick: trimmedNick });
+      navigation.navigate("Course", { nick: trimmedNick }); // Use navigate instead of replace
 
     } catch (error) {
+      console.log(error);
       Alert.alert("Error", "Could not save nickname.");
     }
   };
@@ -81,12 +98,29 @@ export default function Nickname({ navigation }) {
   };
 
   const getValidationColor = () => {
-    if (!isTouched || nick.trim().length === 0) return "#64748B";
+    if (!isTouched || nick.trim().length === 0) return theme.colors.textSecondary;
     return isValid ? "#10B981" : "#EF4444";
   };
 
+  const styles = getStyles(theme);
+
   return (
     <View style={styles.container}>
+
+      {/* Header with Cancel Button */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity 
+            style={styles.cancelBtn} 
+            onPress={handleCancel}
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>NICKNAME</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+      </View>
+
       <KeyboardAvoidingView 
         style={styles.keyboardAvoid}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -100,12 +134,6 @@ export default function Nickname({ navigation }) {
 
           {/* Header Section */}
           <View style={styles.titleSection}>
-              <TouchableOpacity 
-                style={styles.backBtn} 
-                onPress={handleCancel}
-             >
-                <Text style={styles.backText}>‹</Text>
-                </TouchableOpacity>
             <Text style={styles.title}>What should I call you?</Text>
             <Text style={styles.subtitle}>
               Choose a nickname that I can use to personalize your experience
@@ -172,10 +200,51 @@ export default function Nickname({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
+  },
+  // Header styling - Like other pages
+  header: {
+    backgroundColor: theme.colors.backgroundSecondary,
+    paddingTop: 60,
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  cancelBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#FEE2E2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  cancelText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#DC2626",
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+    textAlign: "center",
+  },
+  headerSpacer: {
+    width: 80, // Balance with cancel button
   },
   keyboardAvoid: {
     flex: 1,
@@ -183,7 +252,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 40,
     paddingBottom: 120,
   },
   titleSection: {
@@ -192,14 +261,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 12,
-    marginTop: 200,
+    marginTop: 120, // Adjusted for header
     textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     textAlign: "center",
     lineHeight: 22,
     paddingHorizontal: 20,
@@ -213,7 +282,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 12,
   },
   input: {
@@ -270,15 +339,5 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "700",
-  },
-    backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#FAFAFA",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
   },
 });

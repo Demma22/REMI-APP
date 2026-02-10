@@ -14,6 +14,8 @@ import {
 
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase";
+import SvgIcon from "../../components/SvgIcon";
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { height } = Dimensions.get("window");
 
@@ -22,6 +24,8 @@ export default function Course({ navigation, route }) {
   const [course, setCourse] = useState("");
   const [isValid, setIsValid] = useState(false);
   const [isTouched, setIsTouched] = useState(false);
+  
+  const { theme } = useTheme();
 
   const validateCourse = (text) => {
     setCourse(text);
@@ -58,6 +62,7 @@ export default function Course({ navigation, route }) {
       navigation.replace("Semesters", { nick, course: trimmedCourse });
 
     } catch (error) {
+      console.error("Firestore Error:", error);
       Alert.alert("Error", "Failed to save your course. Please try again.");
     }
   };
@@ -74,22 +79,27 @@ export default function Course({ navigation, route }) {
   };
 
   const getValidationColor = () => {
-    if (!isTouched || course.trim().length === 0) return "#64748B";
+    if (!isTouched || course.trim().length === 0) return theme.colors.textSecondary;
     return isValid ? "#10B981" : "#EF4444";
   };
 
+  const styles = getStyles(theme);
+
   return (
     <View style={styles.container}>
-      {/* Simple Header with Back Button */}
+
+      {/* Header with Back Button - USE navigate NOT goBack */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backBtn} 
-          onPress={() => navigation.navigate("Nickname")}
-        >
-          <Text style={styles.backText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Course</Text>
-        <View style={styles.headerSpacer} />
+        <View style={styles.headerTop}>
+          <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={() => navigation.navigate("Nickname")} // Navigate to Nickname
+          >
+            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>COURSE</Text>
+          <View style={styles.headerSpacer} />
+        </View>
       </View>
 
       <KeyboardAvoidingView 
@@ -102,6 +112,7 @@ export default function Course({ navigation, route }) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+
           {/* Header Section */}
           <View style={styles.titleSection}>
             <Text style={styles.title}>What course are you pursuing?</Text>
@@ -167,39 +178,45 @@ export default function Course({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: theme.colors.background,
   },
+  // Header styling - Like ProfileScreen but adapted
   header: {
-    backgroundColor: "#FFFFFF",
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: 16,
+    backgroundColor: theme.colors.backgroundSecondary,
+    paddingTop: 60,
     paddingHorizontal: 24,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  headerTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
+    backgroundColor: theme.colors.background,
     alignItems: "center",
-  },
-  backText: {
-    fontSize: 24,
-    color: "#383940",
-    fontWeight: "300",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#383940",
+    fontSize: 20,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+    textAlign: "center",
   },
   headerSpacer: {
     width: 40,
@@ -219,14 +236,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 12,
     marginTop: 100,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: "#64748B",
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     paddingHorizontal: 20,
@@ -240,7 +257,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#383940",
+    color: theme.colors.textPrimary,
     marginBottom: 12,
   },
   input: {
