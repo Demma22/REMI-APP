@@ -26,12 +26,18 @@ import BellIcon from '../assets/icons/bell.svg';
 import PdfIcon from '../assets/icons/pdf.svg';
 import CheckcircleIcon from '../assets/icons/check-circle.svg';
 import ArrowBackIcon from '../assets/icons/arrow-back.svg';
+import PhoneIcon from '../assets/icons/phone.svg';
+import WhatsappIcon from '../assets/icons/whatsapp.svg';
+import MailIcon from '../assets/icons/mail.svg';
 
 const iconComponents = {
   'home': HomeIcon,
   'eye': EyeIcon,
+  'mail': MailIcon,
   'book': BookIcon,
   'bell': BellIcon,
+  'whatsapp': WhatsappIcon,
+  'phone': PhoneIcon,
   'arrow-back': ArrowBackIcon,
   'moon': MoonIcon,
   'check-circle': CheckcircleIcon,
