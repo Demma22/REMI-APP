@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  Image,
 } from "react-native";
 
 export default function TermsConditionsScreen({ navigation }) {
@@ -32,17 +31,7 @@ export default function TermsConditionsScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.content}>
-          {/* App Logo */}
-          <View style={styles.appHeader}>
-            <View style={styles.logoContainer}>
-              <Image 
-                source={require('../assets/icon.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-            </View>
-          </View>
-
+          
           {/* Last Updated */}
           <View style={styles.updateContainer}>
             <Text style={styles.updateText}>Last Updated: {new Date().toLocaleDateString()}</Text>
@@ -131,18 +120,16 @@ export default function TermsConditionsScreen({ navigation }) {
 
             {/* Agreement Confirmation */}
             <View style={styles.agreementContainer}>
-
               <Text style={styles.agreementText}>
                 By using REMI, you acknowledge that you have read, understood, and agree to these Terms & Conditions.
               </Text>
             </View>
 
-            {/* Back Button */}
+            {/* I Understand Button */}
             <TouchableOpacity 
               style={styles.acceptButton}
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.acceptButtonEmoji}>✓</Text>
               <Text style={styles.acceptButtonText}>I Understand</Text>
             </TouchableOpacity>
           </View>
@@ -197,44 +184,9 @@ const styles = StyleSheet.create({
   content: {
     padding: 24,
   },
-  appHeader: {
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
-  },
-  logo: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-  },
-  appName: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: "#383940",
-    marginBottom: 4,
-  },
-  appTagline: {
-    fontSize: 16,
-    color: "#64748B",
-  },
   updateContainer: {
     alignItems: "center",
-    marginBottom: 32,
+    marginBottom: 24,
     padding: 12,
     backgroundColor: "#F8FAFC",
     borderRadius: 12,
@@ -275,37 +227,23 @@ const styles = StyleSheet.create({
     color: "#4B5563",
   },
   agreementContainer: {
-    flexDirection: "row",
-    alignItems: "flex-start",
     backgroundColor: "#F8FAFC",
     borderRadius: 16,
     padding: 16,
     marginTop: 32,
     marginBottom: 24,
-    gap: 12,
-  },
-  agreementEmoji: {
-    fontSize: 24,
-    marginTop: -2,
   },
   agreementText: {
     fontSize: 14,
     lineHeight: 20,
     color: "#383940",
-    flex: 1,
+    textAlign: "center",
   },
   acceptButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
     padding: 16,
     borderRadius: 12,
-    gap: 12,
     backgroundColor: "#535FFD",
-  },
-  acceptButtonEmoji: {
-    fontSize: 20,
-    color: "white",
+    alignItems: "center",
   },
   acceptButtonText: {
     color: "white",
