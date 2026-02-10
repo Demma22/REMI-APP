@@ -35,10 +35,12 @@ import GPACalculationScreen from "./screens/gpa/GPACalculationScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import TermsConditionsScreen from "./screens/TermsConditionsScreen";
 import PrivacyPolicyScreen from "./screens/PrivacyPolicyScreen";
+import DataDeleteScreen from "./screens/DataDeleteScreen";
 import AddExamScreen from "./screens/exam/AddExamScreen";
 import ExamTimetableScreen from "./screens/exam/ExamTimetableScreen";
 import SettingsScreen from "./screens/settings/SettingsScreen";
 import EditNickname from "./screens/settings/EditNickname";
+import ContactUsScreen from "./screens/settings/ContactUsScreen";
 import EditCurrentSemester from "./screens/settings/EditCurrentSemester";
 import EditUnits from "./screens/settings/EditUnits";
 import EditCourse from "./screens/settings/EditCourse";
@@ -155,6 +157,7 @@ function AppContent() {
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+            <Stack.Screen name="DataDelete" component={DataDeleteScreen} />
             <Stack.Screen name="Timetable" component={TimetableScreen} />
             <Stack.Screen name="AddLecture" component={AddLectureScreen} />
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
@@ -167,6 +170,7 @@ function AppContent() {
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="NotificationsSettings" component={NotificationsSettingsScreen} />
             <Stack.Screen name="EditNickname" component={EditNickname} />
+            <Stack.Screen name="ContactUs" component={ContactUsScreen} />
             <Stack.Screen name="EditCurrentSemester" component={EditCurrentSemester} />
             <Stack.Screen name="EditUnits" component={EditUnits} />
             <Stack.Screen name="EditCourse" component={EditCourse} />
@@ -184,6 +188,7 @@ function AppContent() {
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+            <Stack.Screen name="DataDelete" component={DataDeleteScreen} />
             <Stack.Screen name="Timetable" component={TimetableScreen} />
             <Stack.Screen name="AddLecture" component={AddLectureScreen} />
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
@@ -196,6 +201,7 @@ function AppContent() {
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="NotificationsSettings" component={NotificationsSettingsScreen} />
             <Stack.Screen name="EditNickname" component={EditNickname} />
+            <Stack.Screen name="ContactUs" component={ContactUsScreen} />
             <Stack.Screen name="EditCurrentSemester" component={EditCurrentSemester} />
             <Stack.Screen name="EditUnits" component={EditUnits} />
             <Stack.Screen name="EditCourse" component={EditCourse} />
@@ -211,6 +217,7 @@ function AppContent() {
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+            <Stack.Screen name="DataDelete" component={DataDeleteScreen} />
             <Stack.Screen name="Timetable" component={TimetableScreen} />
             <Stack.Screen name="AddLecture" component={AddLectureScreen} />
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
@@ -223,6 +230,7 @@ function AppContent() {
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="NotificationsSettings" component={NotificationsSettingsScreen} />
             <Stack.Screen name="EditNickname" component={EditNickname} />
+            <Stack.Screen name="ContactUs" component={ContactUsScreen} />
             <Stack.Screen name="EditCurrentSemester" component={EditCurrentSemester} />
             <Stack.Screen name="EditUnits" component={EditUnits} />
             <Stack.Screen name="EditCourse" component={EditCourse} />
