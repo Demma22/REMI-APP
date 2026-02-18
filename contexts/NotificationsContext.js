@@ -350,35 +350,7 @@ export const NotificationsProvider = ({ children }) => {
     }
   };
 
-  const cancelLectureNotifications = async (lectureIds) => {
-    try {
-      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-      
-      for (const notification of scheduled) {
-        if (notification.content.data?.type === 'lecture') {
-          const lectureId = notification.content.data?.lectureId;
-          
-          // Check if this notification belongs to any of the lectures being removed
-          const shouldCancel = lectureIds.some(idToRemove => {
-            // For iOS: lectureId is the original ID
-            if (lectureId === idToRemove) return true;
-            
-            // For Android: lectureId is in format `${originalId}_${dayKey}_${hour}_${minute}_w${week}`
-            if (lectureId && lectureId.startsWith(`${idToRemove}_`)) return true;
-            
-            return false;
-          });
-          
-          if (shouldCancel) {
-            await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-          }
-        }
-      }
-    } catch (error) {
-      // Silent fail - notifications will be re-scheduled next time
-    }
-  };
-
+  // ADDED: scheduleExamNotifications function
   const scheduleExamNotifications = async (userData) => {
     try {
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
@@ -510,6 +482,56 @@ export const NotificationsProvider = ({ children }) => {
     }
   };
 
+  const cancelLectureNotifications = async (lectureIds) => {
+    try {
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      
+      for (const notification of scheduled) {
+        if (notification.content.data?.type === 'lecture') {
+          const lectureId = notification.content.data?.lectureId;
+          
+          // Check if this notification belongs to any of the lectures being removed
+          const shouldCancel = lectureIds.some(idToRemove => {
+            // For iOS: lectureId is the original ID
+            if (lectureId === idToRemove) return true;
+            
+            // For Android: lectureId is in format `${originalId}_${dayKey}_${hour}_${minute}_w${week}`
+            if (lectureId && lectureId.startsWith(`${idToRemove}_`)) return true;
+            
+            return false;
+          });
+          
+          if (shouldCancel) {
+            await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+          }
+        }
+      }
+    } catch (error) {
+      // Silent fail - notifications will be re-scheduled next time
+    }
+  };
+
+  // NEW FUNCTION: Cancel notifications for a single lecture by ID
+  const cancelLectureNotificationsById = async (lectureId) => {
+    try {
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      
+      for (const notification of scheduled) {
+        if (notification.content.data?.type === 'lecture') {
+          const notificationLectureId = notification.content.data?.lectureId;
+          
+          // Check if this notification belongs to the lecture being cancelled
+          if (notificationLectureId === lectureId || 
+              (notificationLectureId && notificationLectureId.startsWith(`${lectureId}_`))) {
+            await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+          }
+        }
+      }
+    } catch (error) {
+      // Silent fail
+    }
+  };
+
   const cancelAllNotifications = async () => {
     await Notifications.cancelAllScheduledNotificationsAsync();
   };
@@ -524,8 +546,9 @@ export const NotificationsProvider = ({ children }) => {
         expoPushToken,
         schedulePushNotification,
         scheduleLectureNotifications,
-        scheduleExamNotifications,
+        scheduleExamNotifications, // Now this exists!
         cancelLectureNotifications,
+        cancelLectureNotificationsById,
         cancelAllNotifications,
         getScheduledNotifications,
       }}
