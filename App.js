@@ -4,11 +4,12 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { View, Image } from "react-native";
-import { deactivateKeepAwake } from "expo-keep-awake"; // ADDED THIS IMPORT
+import { View, Image, useColorScheme } from "react-native";
+import { deactivateKeepAwake } from "expo-keep-awake";
+import { StatusBar } from "expo-status-bar"; // ADD THIS IMPORT
 
 // Import ThemeProvider and NotificationsProvider
-import { ThemeProvider } from './contexts/ThemeContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext'; // Make sure useTheme is exported
 import { NotificationsProvider } from './contexts/NotificationsContext';
 
 // AUTH SCREENS
@@ -52,6 +53,14 @@ function AppContent() {
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  
+  // Get theme from context
+  const { theme } = useTheme();
+  const systemColorScheme = useColorScheme();
+  
+  // Determine if dark mode is active
+  const isDarkMode = theme.mode === 'dark' || 
+    (theme.mode === 'system' && systemColorScheme === 'dark');
 
   // ADDED: Keep-awake management useEffect
   useEffect(() => {
@@ -128,6 +137,7 @@ function AppContent() {
   if (checkingAuth) {
     return (
       <View style={{ flex: 1, backgroundColor: '#535ffd' }}>
+        <StatusBar style="light" backgroundColor="#535ffd" />
         <Image
           source={require('./assets/splash-icon.png')}
           style={{ flex: 1, width: '100%', height: '100%' }}
@@ -139,6 +149,13 @@ function AppContent() {
 
   return (
     <NavigationContainer>
+      {/* Global StatusBar - This controls the status bar icons color */}
+      <StatusBar 
+        style={isDarkMode ? "light" : "dark"}
+        backgroundColor="transparent"
+        translucent={true}
+      />
+      
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!user ? (
           // AUTH FLOW - User not logged in
