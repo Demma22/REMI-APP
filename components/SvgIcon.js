@@ -8,6 +8,7 @@ import ChartLineIcon from '../assets/icons/chart_line.svg';
 import ClockIcon from '../assets/icons/clock.svg';
 import CogIcon from '../assets/icons/cog.svg';
 import EditIcon from '../assets/icons/edit.svg';
+import PencilIcon from '../assets/icons/pencil.svg';  
 import FileIcon from '../assets/icons/file.svg';
 import GraduationCapIcon from '../assets/icons/graduation_cap.svg';
 import LocationIcon from '../assets/icons/location.svg';
@@ -39,6 +40,7 @@ const iconComponents = {
   'whatsapp': WhatsappIcon,
   'phone': PhoneIcon,
   'arrow-back': ArrowBackIcon,
+  'pencil': PencilIcon,
   'moon': MoonIcon,
   'check-circle': CheckcircleIcon,
   'pdf': PdfIcon,
