@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// screens/timetable/EditTimetableScreen.js
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -8,6 +9,9 @@ import {
   ScrollView,
   Alert,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator, // Add this import
 } from "react-native";
 import { auth, db } from "../../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -16,20 +20,29 @@ import SvgIcon from "../../components/SvgIcon";
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNotifications } from '../../hooks/useNotifications';
 
-export default function EditTimetableScreen({ navigation }) {
+export default function EditTimetableScreen({ navigation, route }) {
   if (!auth.currentUser) return <Text style={styles.center}>Not logged in</Text>;
 
+  // Define scrollViewRef here
+  const scrollViewRef = useRef(null);
   const [timetable, setTimetable] = useState({});
   const [currentSemester, setCurrentSemester] = useState(null);
-  const [day, setDay] = useState("monday");
+  const [day, setDay] = useState(route?.params?.initialDay || "monday");
   const [lectures, setLectures] = useState([]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState(route?.params?.initialLectureIndex || 0);
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [showLecturePicker, setShowLecturePicker] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false); // Add saving state
+  const [originalLecture, setOriginalLecture] = useState(null); // Store original lecture for comparison
+  
+  // Add notifications hook
+  const { scheduleLectureNotifications, cancelLectureNotifications } = useNotifications();
+  
+  // Check if accessed via Timetable screen (direct edit)
+  const isDirectEdit = route?.params?.initialDay && route?.params?.initialLectureIndex !== undefined;
   
   const { theme } = useTheme();
-  const { cancelLectureNotifications } = useNotifications();
 
   useEffect(() => {
     load();
@@ -54,7 +67,11 @@ export default function EditTimetableScreen({ navigation }) {
         
         const dayList = timetableData[day] || [];
         setLectures(dayList);
-        setSelectedIndex(0);
+        
+        // Store the original lecture for comparison when editing
+        if (route?.params?.initialLectureIndex !== undefined && dayList[route.params.initialLectureIndex]) {
+          setOriginalLecture({...dayList[route.params.initialLectureIndex]});
+        }
       }
     } catch (e) {
       Alert.alert("Error", "Could not load timetable data");
@@ -66,7 +83,6 @@ export default function EditTimetableScreen({ navigation }) {
   useEffect(() => {
     const list = timetable[day] || [];
     setLectures(list);
-    setSelectedIndex(0);
   }, [day, timetable]);
 
   const updateLecture = (idx, key, val) => {
@@ -76,7 +92,12 @@ export default function EditTimetableScreen({ navigation }) {
   };
 
   const saveTimetable = async () => {
+    if (saving) return; // Prevent double submission
+    
     try {
+      setSaving(true); // Set saving to true
+      
+      const updatedLecture = lectures[selectedIndex];
       const updatedTimetable = { 
         ...timetable, 
         [day]: lectures 
@@ -87,47 +108,33 @@ export default function EditTimetableScreen({ navigation }) {
         timetable: updatedTimetable 
       }, { merge: true });
 
+      // Update notifications if lecture details changed
+      if (originalLecture) {
+        const hasChanges = 
+          originalLecture.start !== updatedLecture.start ||
+          originalLecture.end !== updatedLecture.end ||
+          originalLecture.day !== day; // Day might have changed
+        
+        if (hasChanges && updatedLecture.id) {
+          // Cancel old notifications
+          await cancelLectureNotifications([updatedLecture.id]);
+          
+          // Get updated user data to reschedule notifications
+          const updatedUserDoc = await getDoc(userDocRef);
+          if (updatedUserDoc.exists()) {
+            const userData = updatedUserDoc.data();
+            // Reschedule all lecture notifications
+            await scheduleLectureNotifications(userData);
+          }
+        }
+      }
+
       Alert.alert("Saved", "Timetable updated successfully");
       navigation.goBack();
     } catch (e) {
       Alert.alert("Error", "Could not update timetable");
-    }
-  };
-
-  const removeLecture = async (idx) => {
-    try {
-      const lectureToRemove = lectures[idx];
-      
-      // Cancel notifications for this lecture
-      if (lectureToRemove && lectureToRemove.id) {
-        await cancelLectureNotifications([lectureToRemove.id]);
-      }
-      
-      const copy = [...lectures];
-      copy.splice(idx, 1);
-      
-      const updatedTimetable = { 
-        ...timetable, 
-        [day]: copy 
-      };
-
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      await setDoc(userDocRef, { 
-        timetable: updatedTimetable 
-      }, { merge: true });
-
-      setTimetable(updatedTimetable);
-      setLectures(copy);
-      
-      if (copy.length === 0) {
-        setSelectedIndex(0);
-      } else if (selectedIndex >= copy.length) {
-        setSelectedIndex(copy.length - 1);
-      }
-
-      Alert.alert("Removed", "Lecture removed successfully");
-    } catch (e) {
-      Alert.alert("Error", "Could not remove lecture");
+    } finally {
+      setSaving(false); // Reset saving state
     }
   };
 
@@ -146,7 +153,7 @@ export default function EditTimetableScreen({ navigation }) {
             >
               <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>EDIT TIMETABLE</Text>
+            <Text style={styles.headerTitle}>EDIT LECTURE</Text>
             <View style={styles.headerSpacer} />
           </View>
         </View>
@@ -160,23 +167,34 @@ export default function EditTimetableScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
-
-        {/* Modern Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity 
-              style={styles.backBtn} 
-              onPress={() => navigation.goBack()}
-            >
-              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>EDIT TIMETABLE</Text>
-            <View style={styles.headerSpacer} />
-          </View>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+    >
+      {/* Modern Header */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={() => navigation.goBack()}
+          >
+            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>
+            {isDirectEdit ? "EDIT LECTURE" : "EDIT TIMETABLE"}
+          </Text>
+          <View style={styles.headerSpacer} />
         </View>
+      </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollViewContent}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.content}>
           {/* Semester Info */}
           {currentSemester && (
@@ -185,17 +203,51 @@ export default function EditTimetableScreen({ navigation }) {
             </View>
           )}
 
-          {/* Day Selection */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Select Day</Text>
-            <TouchableOpacity 
-              style={styles.dropdown}
-              onPress={() => setShowDayPicker(true)}
-            >
-              <Text style={styles.dropdownText}>{capitalize(day)}</Text>
-              <SvgIcon name="chevron-down" size={16} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
+          {/* Only show selection fields when NOT in direct edit mode */}
+          {!isDirectEdit && (
+            <>
+              {/* Day Selection */}
+              <View style={styles.section}>
+                <Text style={styles.sectionLabel}>Select Day</Text>
+                <TouchableOpacity 
+                  style={styles.dropdown}
+                  onPress={() => setShowDayPicker(true)}
+                >
+                  <Text style={styles.dropdownText}>{capitalize(day)}</Text>
+                  <SvgIcon name="chevron-down" size={16} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Lecture Selection */}
+              {lectures.length > 0 && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionLabel}>Select Lecture</Text>
+                  <TouchableOpacity 
+                    style={styles.dropdown}
+                    onPress={() => setShowLecturePicker(true)}
+                  >
+                    <Text style={styles.dropdownText} numberOfLines={1}>
+                      {lectures[selectedIndex]?.name} — {lectures[selectedIndex]?.start} - {lectures[selectedIndex]?.end}
+                    </Text>
+                    <SvgIcon name="chevron-down" size={16} color={theme.colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
+          )}
+
+          {/* Show selected lecture info in direct edit mode */}
+          {isDirectEdit && lectures[selectedIndex] && (
+            <View style={[styles.selectedLectureInfo, { backgroundColor: theme.colors.primaryLight }]}>
+              <View style={styles.selectedLectureHeader}>
+                <SvgIcon name="book" size={20} color={theme.colors.primary} />
+                <Text style={[styles.selectedLectureDay, { color: theme.colors.primary }]}>
+                  {capitalize(day)} • Lecture #{selectedIndex + 1}
+                </Text>
+              </View>
+              <Text style={styles.selectedLectureName}>{lectures[selectedIndex]?.name}</Text>
+            </View>
+          )}
 
           {lectures.length === 0 ? (
             <View style={styles.emptyState}>
@@ -207,20 +259,6 @@ export default function EditTimetableScreen({ navigation }) {
             </View>
           ) : (
             <>
-              {/* Lecture Selection */}
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Select Lecture</Text>
-                <TouchableOpacity 
-                  style={styles.dropdown}
-                  onPress={() => setShowLecturePicker(true)}
-                >
-                  <Text style={styles.dropdownText} numberOfLines={1}>
-                    {lectures[selectedIndex]?.name} — {lectures[selectedIndex]?.start} - {lectures[selectedIndex]?.end}
-                  </Text>
-                  <SvgIcon name="chevron-down" size={16} color={theme.colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-
               {/* Edit Form */}
               <View style={styles.editCard}>
                 <View style={styles.cardHeader}>
@@ -234,12 +272,15 @@ export default function EditTimetableScreen({ navigation }) {
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Course Name</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, styles.readOnlyInput]}
                       value={lectures[selectedIndex]?.name || ""}
-                      onChangeText={(v) => updateLecture(selectedIndex, "name", v)}
                       placeholder="Enter course name"
                       placeholderTextColor={theme.colors.textTertiary}
+                      editable={false} // Always read-only
                     />
+                    <Text style={[styles.readOnlyHint, { color: theme.colors.textSecondary }]}>
+                      Course name cannot be changed
+                    </Text>
                   </View>
 
                   <View style={styles.row}>
@@ -290,32 +331,23 @@ export default function EditTimetableScreen({ navigation }) {
 
                 <View style={styles.actionButtons}>
                   <TouchableOpacity 
-                    style={[styles.editButton, { backgroundColor: theme.colors.primary }]}
+                    style={[
+                      styles.saveButton, 
+                      { 
+                        backgroundColor: saving ? theme.colors.primary + '80' : theme.colors.primary,
+                      }
+                    ]}
                     onPress={saveTimetable}
+                    disabled={saving}
                   >
-                    <SvgIcon name="content-save" size={20} color="#FFFFFF" />
-                    <Text style={styles.editButtonText}>SAVE CHANGES</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.removeButton, { backgroundColor: theme.colors.danger }]}
-                    onPress={() =>
-                      Alert.alert(
-                        "Remove Lecture",
-                        "Are you sure you want to remove this lecture?",
-                        [
-                          { text: "Cancel", style: "cancel" },
-                          { 
-                            text: "Remove", 
-                            style: "destructive", 
-                            onPress: () => removeLecture(selectedIndex) 
-                          },
-                        ]
-                      )
-                    }
-                  >
-                    <SvgIcon name="delete" size={20} color="#FFFFFF" />
-                    <Text style={styles.removeButtonText}>REMOVE LECTURE</Text>
+                    {saving ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <SvgIcon name="content-save" size={20} color="#FFFFFF" />
+                    )}
+                    <Text style={styles.saveButtonText}>
+                      {saving ? "Saving..." : "SAVE CHANGES"}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -323,97 +355,101 @@ export default function EditTimetableScreen({ navigation }) {
           )}
         </View>
 
-        {/* Bottom spacing for navigation */}
-        <View style={styles.bottomSpacing} />
+        {/* Extra bottom padding for keyboard */}
+        <View style={styles.keyboardSpacing} />
       </ScrollView>
 
-      {/* Day Picker Modal */}
-      <Modal
-        visible={showDayPicker}
-        transparent={true}
-        animationType="slide"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>Select Day</Text>
-            <ScrollView style={styles.modalList}>
-              {days.map((d, index) => (
-                <TouchableOpacity
-                  key={d}
-                  style={[
-                    styles.modalItem,
-                    day === d && [styles.modalItemSelected, { backgroundColor: theme.colors.primary + '15' }]
-                  ]}
-                  onPress={() => {
-                    setDay(d);
-                    setShowDayPicker(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.modalItemText,
-                    { color: theme.colors.textPrimary },
-                    day === d && [styles.modalItemTextSelected, { color: theme.colors.primary }]
-                  ]}>
-                    {capitalize(d)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity
-              style={[styles.modalClose, { backgroundColor: theme.colors.backgroundSecondary }]}
-              onPress={() => setShowDayPicker(false)}
-            >
-              <Text style={[styles.modalCloseText, { color: theme.colors.textPrimary }]}>Close</Text>
-            </TouchableOpacity>
+      {/* Day Picker Modal - Only show when NOT in direct edit mode */}
+      {!isDirectEdit && (
+        <Modal
+          visible={showDayPicker}
+          transparent={true}
+          animationType="slide"
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+              <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>Select Day</Text>
+              <ScrollView style={styles.modalList}>
+                {days.map((d, index) => (
+                  <TouchableOpacity
+                    key={d}
+                    style={[
+                      styles.modalItem,
+                      day === d && [styles.modalItemSelected, { backgroundColor: theme.colors.primary + '15' }]
+                    ]}
+                    onPress={() => {
+                      setDay(d);
+                      setShowDayPicker(false);
+                    }}
+                  >
+                    <Text style={[
+                      styles.modalItemText,
+                      { color: theme.colors.textPrimary },
+                      day === d && [styles.modalItemTextSelected, { color: theme.colors.primary }]
+                    ]}>
+                      {capitalize(d)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <TouchableOpacity
+                style={[styles.modalClose, { backgroundColor: theme.colors.backgroundSecondary }]}
+                onPress={() => setShowDayPicker(false)}
+              >
+                <Text style={[styles.modalCloseText, { color: theme.colors.textPrimary }]}>Close</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
 
-      {/* Lecture Picker Modal */}
-      <Modal
-        visible={showLecturePicker}
-        transparent={true}
-        animationType="slide"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>Select Lecture</Text>
-            <ScrollView style={styles.modalList}>
-              {lectures.map((lecture, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.modalItem,
-                    selectedIndex === index && [styles.modalItemSelected, { backgroundColor: theme.colors.primary + '15' }]
-                  ]}
-                  onPress={() => {
-                    setSelectedIndex(index);
-                    setShowLecturePicker(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.modalItemText,
-                    { color: theme.colors.textPrimary },
-                    selectedIndex === index && [styles.modalItemTextSelected, { color: theme.colors.primary }]
-                  ]}>
-                    {lecture.name} — {lecture.start} - {lecture.end}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity
-              style={[styles.modalClose, { backgroundColor: theme.colors.backgroundSecondary }]}
-              onPress={() => setShowLecturePicker(false)}
-            >
-              <Text style={[styles.modalCloseText, { color: theme.colors.textPrimary }]}>Close</Text>
-            </TouchableOpacity>
+      {/* Lecture Picker Modal - Only show when NOT in direct edit mode */}
+      {!isDirectEdit && (
+        <Modal
+          visible={showLecturePicker}
+          transparent={true}
+          animationType="slide"
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+              <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>Select Lecture</Text>
+              <ScrollView style={styles.modalList}>
+                {lectures.map((lecture, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.modalItem,
+                      selectedIndex === index && [styles.modalItemSelected, { backgroundColor: theme.colors.primary + '15' }]
+                    ]}
+                    onPress={() => {
+                      setSelectedIndex(index);
+                      setShowLecturePicker(false);
+                    }}
+                  >
+                    <Text style={[
+                      styles.modalItemText,
+                      { color: theme.colors.textPrimary },
+                      selectedIndex === index && [styles.modalItemTextSelected, { color: theme.colors.primary }]
+                    ]}>
+                      {lecture.name} — {lecture.start} - {lecture.end}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <TouchableOpacity
+                style={[styles.modalClose, { backgroundColor: theme.colors.backgroundSecondary }]}
+                onPress={() => setShowLecturePicker(false)}
+              >
+                <Text style={[styles.modalCloseText, { color: theme.colors.textPrimary }]}>Close</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
 
       {/* Navigation Bar */}
       <NavigationBar />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -426,6 +462,9 @@ const getStyles = (theme) => StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
   },
   header: {
     backgroundColor: theme.colors.backgroundSecondary,
@@ -508,6 +547,28 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: "600",
     flex: 1,
     marginRight: 8,
+  },
+  selectedLectureInfo: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    flexDirection: "column",
+    gap: 8,
+  },
+  selectedLectureHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  selectedLectureDay: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  selectedLectureName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+    marginLeft: 28,
   },
   emptyState: {
     backgroundColor: theme.colors.card,
@@ -594,6 +655,14 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     color: theme.colors.textPrimary,
   },
+  readOnlyInput: {
+    backgroundColor: theme.mode === 'dark' ? '#2A2A2A' : '#F5F5F5',
+    color: theme.colors.textSecondary,
+  },
+  readOnlyHint: {
+    fontSize: 12,
+    marginLeft: 4,
+  },
   row: {
     flexDirection: "row",
   },
@@ -601,7 +670,7 @@ const getStyles = (theme) => StyleSheet.create({
     marginTop: 24,
     gap: 12,
   },
-  editButton: {
+  saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -614,25 +683,7 @@ const getStyles = (theme) => StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
-  editButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  removeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    padding: 18,
-    borderRadius: 16,
-    shadowColor: theme.colors.danger,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  removeButtonText: {
+  saveButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
@@ -680,8 +731,8 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  bottomSpacing: {
-    height: 100,
+  keyboardSpacing: {
+    height: 50,
   },
   center: { 
     textAlign: "center", 

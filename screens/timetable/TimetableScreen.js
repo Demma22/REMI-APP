@@ -6,15 +6,18 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Alert,
 } from "react-native";
 import { auth, db } from "../../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import NavigationBar from "../../components/NavigationBar";
 import SvgIcon from "../../components/SvgIcon";
 import { useTheme } from '../../contexts/ThemeContext';
+import { useNotifications } from '../../hooks/useNotifications';
 
 export default function TimetableScreen({ navigation }) {
   const { theme } = useTheme();
+  const { cancelLectureNotifications } = useNotifications();
   
   if (!auth.currentUser) return <Text style={styles.center}>Not logged in</Text>;
 
@@ -46,6 +49,61 @@ export default function TimetableScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteLecture = async (dayKey, lectureIndex, lecture) => {
+    Alert.alert(
+      "Delete Lecture",
+      `Are you sure you want to delete "${lecture.name}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Cancel notifications for this lecture
+              if (lecture.id) {
+                await cancelLectureNotifications([lecture.id]);
+              }
+
+              // Get current lectures for this day
+              const dayLectures = [...(timetable[dayKey] || [])];
+              
+              // Remove the lecture
+              dayLectures.splice(lectureIndex, 1);
+              
+              // Update timetable
+              const updatedTimetable = {
+                ...timetable,
+                [dayKey]: dayLectures
+              };
+
+              // Save to Firebase
+              const userDocRef = doc(db, "users", auth.currentUser.uid);
+              await setDoc(userDocRef, { 
+                timetable: updatedTimetable 
+              }, { merge: true });
+
+              // Update local state
+              setTimetable(updatedTimetable);
+
+              Alert.alert("Success", "Lecture deleted successfully");
+            } catch (error) {
+              Alert.alert("Error", "Failed to delete lecture. Please try again.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleEditLecture = (dayKey, lectureIndex, lecture) => {
+    navigation.navigate("EditTimetable", {
+      initialDay: dayKey,
+      initialLectureIndex: lectureIndex,
+      lecture: lecture
+    });
   };
 
   const daysOrder = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
@@ -180,6 +238,23 @@ export default function TimetableScreen({ navigation }) {
                             )}
                           </View>
                         </View>
+                        
+                        {/* Action Buttons */}
+                        <View style={styles.lectureActions}>
+                          <TouchableOpacity
+                            style={[styles.actionButton, styles.editButton]}
+                            onPress={() => handleEditLecture(dayKey, i, lecture)}
+                          >
+                            <SvgIcon name="pencil" size={18} color={theme.colors.primary} />
+                          </TouchableOpacity>
+                          
+                          <TouchableOpacity
+                            style={[styles.actionButton, styles.deleteButton]}
+                            onPress={() => handleDeleteLecture(dayKey, i, lecture)}
+                          >
+                            <SvgIcon name="trash" size={18} color={theme.colors.danger} />
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     ))}
                   </View>
@@ -201,14 +276,6 @@ export default function TimetableScreen({ navigation }) {
           >
             <SvgIcon name="plus" size={18} color="white" />
             <Text style={styles.addFloatingText}>Add Lecture</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.editFloatingBtn, { backgroundColor: theme.colors.secondary }]}
-            onPress={() => navigation.navigate("EditTimetable")}
-          >
-            <SvgIcon name="edit" size={14} color="white" />
-            <Text style={styles.editFloatingText}>Edit Timetable</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -393,9 +460,11 @@ const getStyles = (theme) => StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: theme.colors.border,
+    alignItems: "center",
   },
   lectureColorBar: {
     width: 4,
+    height: "100%",
   },
   lectureContent: {
     flex: 1,
@@ -426,9 +495,30 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 14,
   },
+  lectureActions: {
+    flexDirection: "row",
+    paddingRight: 12,
+    gap: 8,
+  },
+  actionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  editButton: {
+    // inherits from actionButton
+  },
+  deleteButton: {
+    // inherits from actionButton
+  },
   floatingActions: {
     position: "absolute",
-    bottom: 100, // Increased from 80 to 100
+    bottom: 100,
     right: 24,
     gap: 12,
     zIndex: 1000,
@@ -451,25 +541,7 @@ const getStyles = (theme) => StyleSheet.create({
     fontWeight: "600",
     fontSize: 14,
   },
-  editFloatingBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    shadowColor: theme.colors.secondary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-    gap: 8,
-  },
-  editFloatingText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 14,
-  },
   bottomSpacing: {
-    height: 170, // Increased from 120 to 170 to accommodate higher floating buttons
+    height: 170,
   },
 });
