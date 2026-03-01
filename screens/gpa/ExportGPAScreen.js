@@ -8,8 +8,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Platform,
-  PermissionsAndroid
+  Platform
 } from "react-native";
 
 // Add separate import for WebView
@@ -18,7 +17,7 @@ import WebView from 'react-native-webview';
 // Expo packages for PDF generation
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { EncodingType, documentDirectory, readAsStringAsync, writeAsStringAsync } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system';
 
 import { auth, db } from "../../firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -49,42 +48,6 @@ export default function ExportGPAScreen({ navigation }) {
     const focus = navigation.addListener("focus", loadGPA);
     return focus;
   }, []);
-
-  const requestStoragePermission = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const apiLevel = Platform.Version;
-        if (apiLevel >= 33) {
-          const granted = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
-            {
-              title: "Storage Permission Required",
-              message: "App needs access to your storage to download PDF files",
-              buttonNeutral: "Ask Me Later",
-              buttonNegative: "Cancel",
-              buttonPositive: "OK"
-            }
-          );
-          return granted === PermissionsAndroid.RESULTS.GRANTED;
-        } else {
-          const granted = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-            {
-              title: "Storage Permission Required",
-              message: "App needs access to your storage to download PDF files",
-              buttonNeutral: "Ask Me Later",
-              buttonNegative: "Cancel",
-              buttonPositive: "OK"
-            }
-          );
-          return granted === PermissionsAndroid.RESULTS.GRANTED;
-        }
-      } catch (err) {
-        return false;
-      }
-    }
-    return true;
-  };
 
   const loadGPA = async () => {
     try {
@@ -163,7 +126,7 @@ export default function ExportGPAScreen({ navigation }) {
     
     if (numericGPA >= 4.5) return "First Class Honors";
     if (numericGPA >= 4.0) return "Second Class Upper";
-    if (numericGPA >= 3.0) return "Second Class Lower";
+    if (numericGPA >= 3.5) return "Second Class Lower";
     if (numericGPA >= 2.0) return "Pass";
     return "Fail";
   };
@@ -349,8 +312,8 @@ export default function ExportGPAScreen({ navigation }) {
               <div class="semester-header">SEMESTER ${semesterNum} - GPA: ${semesterData.gpa.toFixed(2)}</div>
               <div class="semester-summary">
                 Grade: ${getGradeLetterFromGPA(semesterData.gpa)} | 
-                Credit Units: ${semesterData.totalCreditUnits.toFixed(1)} | 
-                Quality Points: ${semesterData.totalQualityPoints.toFixed(2)}
+                Credit Units: ${semesterData.totalCreditUnits?.toFixed(1) || '0.0'} | 
+                Quality Points: ${semesterData.totalQualityPoints?.toFixed(2) || '0.00'}
               </div>
               
               ${semesterData.courses && semesterData.courses.length > 0 ? `
@@ -369,11 +332,11 @@ export default function ExportGPAScreen({ navigation }) {
                     ${semesterData.courses.map(course => `
                       <tr>
                         <td>${course.name}</td>
-                        <td>${course.marks.toFixed(1)}</td>
-                        <td>${course.grade}</td>
-                        <td>${course.creditUnits.toFixed(1)}</td>
-                        <td>${course.gradePoints.toFixed(1)}</td>
-                        <td>${(course.creditUnits * course.gradePoints).toFixed(2)}</td>
+                        <td>${course.marks?.toFixed(1) || '0.0'}</td>
+                        <td>${course.grade || 'N/A'}</td>
+                        <td>${course.creditUnits?.toFixed(1) || '0.0'}</td>
+                        <td>${course.gradePoints?.toFixed(1) || '0.0'}</td>
+                        <td>${(course.creditUnits * course.gradePoints).toFixed(2) || '0.00'}</td>
                       </tr>
                     `).join('')}
                   </tbody>
@@ -408,7 +371,8 @@ export default function ExportGPAScreen({ navigation }) {
       setPdfUri(uri);
       setHtmlContent(html);
       
-      showDownloadOptions(uri);
+      // Show options after generation
+      showExportOptions(uri);
       
     } catch (error) {
       Alert.alert(
@@ -420,7 +384,7 @@ export default function ExportGPAScreen({ navigation }) {
     }
   };
 
-  const showDownloadOptions = (uri) => {
+  const showExportOptions = (uri) => {
     Alert.alert(
       "Report Generated Successfully",
       "Choose what you'd like to do with the report:",
@@ -430,7 +394,7 @@ export default function ExportGPAScreen({ navigation }) {
           onPress: () => setShowWebView(true)
         },
         { 
-          text: "Share/Download Report", 
+          text: "Share Report", 
           onPress: () => sharePDF(uri)
         },
         { 
@@ -445,59 +409,13 @@ export default function ExportGPAScreen({ navigation }) {
     );
   };
 
-  const downloadPDFToDevice = async (uri) => {
-    try {
-      if (Platform.OS === 'android') {
-        const hasPermission = await requestStoragePermission();
-        if (!hasPermission) {
-          Alert.alert(
-            "Permission Required",
-            "Storage permission is required to download files.",
-            [{ text: "OK" }]
-          );
-          return;
-        }
-      }
-
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const fileName = `GPA_Report_${timestamp}.pdf`;
-      
-      const documentsDir = documentDirectory;
-      const destinationUri = `${documentsDir}${fileName}`;
-      
-      const fileContent = await readAsStringAsync(uri, {
-        encoding: EncodingType.Base64,
-      });
-      
-      await writeAsStringAsync(destinationUri, fileContent, {
-        encoding: EncodingType.Base64,
-      });
-      
-      Alert.alert(
-        "Download Complete",
-        `Report saved successfully!\n\nFile: ${fileName}`,
-        [
-          { 
-            text: "Share File", 
-            onPress: () => sharePDF(destinationUri)
-          },
-          { text: "OK", style: "default" }
-        ]
-      );
-      
-    } catch (error) {
-      Alert.alert(
-        "Download Failed",
-        "Could not save the file. Please use the Share option to save it to your preferred location.",
-        [{ text: "OK" }]
-      );
-    }
-  };
-
   const sharePDF = async (uri) => {
     try {
       if (!(await Sharing.isAvailableAsync())) {
-        Alert.alert("Sharing not available", "Sharing is not available on this device.");
+        Alert.alert(
+          "Sharing not available", 
+          "Sharing is not available on this device. You can view or print the report instead."
+        );
         return;
       }
       
@@ -508,7 +426,10 @@ export default function ExportGPAScreen({ navigation }) {
       });
       
     } catch (error) {
-      Alert.alert("Sharing Error", "Could not share the file. Please try again.");
+      Alert.alert(
+        "Sharing Error", 
+        "Could not share the file. Please try viewing or printing instead."
+      );
     }
   };
 
@@ -1023,38 +944,6 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: theme.colors.textPrimary,
-  },
-  infoCard: {
-    backgroundColor: theme.colors.card,
-    marginHorizontal: 24,
-    marginBottom: 24,
-    padding: 20,
-    borderRadius: 20,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: 16,
-  },
-  infoList: {
-    gap: 12,
-  },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  infoText: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    flex: 1,
-    lineHeight: 20,
   },
   emptyState: {
     backgroundColor: theme.colors.card,
