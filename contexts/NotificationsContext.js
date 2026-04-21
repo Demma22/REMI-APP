@@ -4,7 +4,8 @@ import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
 import { Platform } from 'react-native';
 import { auth, db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where, updateDoc, increment } from 'firebase/firestore';
+import { getHolidayNotification } from '../utils/funNotifications';
 
 export const NotificationsContext = createContext({});
 
@@ -160,7 +161,178 @@ export const NotificationsProvider = ({ children }) => {
     }
   };
 
+  // Function to get active admin notifications from Firestore
+  const getActiveAdminNotifications = async () => {
+    try {
+      const q = query(
+        collection(db, 'fun_notifications'),
+        where('active', '==', true)
+      );
+      const querySnapshot = await getDocs(q);
+      const notifications = [];
+      
+      querySnapshot.forEach((doc) => {
+        notifications.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      
+      return notifications;
+    } catch (error) {
+      console.error('Error fetching admin notifications:', error);
+      return [];
+    }
+  };
+
+  // Function to get a random notification to send
+  const getRandomNotificationToSend = async () => {
+    try {
+      // Step 1: Check if it's a holiday (hardcoded only)
+      const holiday = getHolidayNotification();
+      if (holiday && holiday.notification) {
+        return {
+          source: 'holiday',
+          title: holiday.notification.title,
+          body: holiday.notification.body,
+          category: holiday.notification.category
+        };
+      }
+      
+      // Step 2: Get active notifications from Firestore (admin panel)
+      const adminNotifications = await getActiveAdminNotifications();
+      
+      // Step 3: If there are admin notifications, pick a random one
+      if (adminNotifications.length > 0) {
+        const randomIndex = Math.floor(Math.random() * adminNotifications.length);
+        const selected = adminNotifications[randomIndex];
+        return {
+          source: 'admin',
+          title: selected.title,
+          body: selected.body,
+          category: selected.category,
+          id: selected.id
+        };
+      }
+      
+      // Step 4: If no admin notifications, DON'T SEND ANYTHING
+      console.log('No active admin notifications found. Nothing to send.');
+      return null;
+      
+    } catch (error) {
+      console.error('Error getting random notification:', error);
+      return null;
+    }
+  };
+
+  // Helper function to send a random fun notification immediately
+  const sendRandomFunNotification = async (userData = null) => {
+    try {
+      const notification = await getRandomNotificationToSend();
+      
+      if (notification) {
+        await schedulePushNotification(
+          notification.title,
+          notification.body,
+          { 
+            type: 'fun', 
+            category: notification.category,
+            source: notification.source,
+            notificationId: notification.id
+          },
+          {
+            type: 'date',
+            date: new Date(Date.now() + 1000),
+          }
+        );
+        
+        console.log(`✨ Sent ${notification.source} notification: ${notification.title}`);
+        
+        if (notification.source === 'admin' && notification.id) {
+          const notificationRef = doc(db, 'fun_notifications', notification.id);
+          await updateDoc(notificationRef, {
+            timesSent: increment(1),
+            lastSentAt: new Date()
+          });
+        }
+      } else {
+        console.log('No notifications to send. Add some in the admin panel!');
+      }
+      
+    } catch (error) {
+      console.error('Error sending fun notification:', error);
+    }
+  };
+
+  // Schedule recurring fun notifications - FIXED VERSION
+  const scheduleFunNotifications = async (userData) => {
+    try {
+      // Cancel existing fun notifications to avoid duplicates
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      const funNotifications = scheduled.filter(n => n.content.data?.type === 'fun');
+      
+      for (const notification of funNotifications) {
+        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+      }
+      
+      // Get active admin notifications from Firestore
+      const adminNotifications = await getActiveAdminNotifications();
+      
+      if (adminNotifications.length === 0) {
+        console.log('No admin notifications found. Not scheduling any fun notifications.');
+        return;
+      }
+      
+      console.log(`Found ${adminNotifications.length} admin notifications. Scheduling random sends...`);
+      
+      // Schedule actual notifications with random intervals
+      const intervals = [3, 2, 4, 3, 2]; // Days between notifications
+      let cumulativeDays = 0;
+      
+      for (let i = 0; i < intervals.length; i++) {
+        cumulativeDays += intervals[i];
+        const notificationDate = new Date();
+        notificationDate.setDate(notificationDate.getDate() + cumulativeDays);
+        notificationDate.setHours(12, 0, 0, 0); // Noon
+        
+        // Pick a random notification from admin list for this scheduled time
+        const randomIndex = Math.floor(Math.random() * adminNotifications.length);
+        const selectedNotification = adminNotifications[randomIndex];
+        
+        // Schedule the actual notification content directly
+        await schedulePushNotification(
+          selectedNotification.title,
+          selectedNotification.body,
+          { 
+            type: 'fun', 
+            category: selectedNotification.category || 'fun',
+            source: 'scheduled',
+            notificationId: selectedNotification.id
+          },
+          {
+            type: 'date',
+            date: notificationDate,
+          }
+        );
+        
+        console.log(`📅 Scheduled "${selectedNotification.title}" for ${notificationDate.toLocaleDateString()}`);
+      }
+      
+      // Also send one random notification immediately
+      await sendRandomFunNotification(userData);
+      
+      console.log("✅ Fun notifications scheduled successfully");
+      
+    } catch (error) {
+      console.error('Error scheduling fun notifications:', error);
+    }
+  };
+
+  // Keep your existing scheduleLectureNotifications and scheduleExamNotifications functions here
+  // (they remain unchanged)
+
   const scheduleLectureNotifications = async (userData) => {
+    // ... your existing lecture notification code
     try {
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
       const lectureNotifications = scheduled.filter(n => n.content.data?.type === 'lecture');
@@ -205,7 +377,6 @@ export const NotificationsProvider = ({ children }) => {
           const expoWeekday = weekdayMap[dayKey.toLowerCase()];
           if (!expoWeekday) continue;
           
-          // Calculate 30 minutes before
           let minute30 = minutes - 30;
           let hour30 = hours;
           if (minute30 < 0) {
@@ -214,7 +385,6 @@ export const NotificationsProvider = ({ children }) => {
           }
           if (hour30 < 0) hour30 += 24;
           
-          // Calculate 5 minutes before
           let minute5 = minutes - 5;
           let hour5 = hours;
           if (minute5 < 0) {
@@ -283,7 +453,6 @@ export const NotificationsProvider = ({ children }) => {
               daysUntilTarget += 7;
             }
             
-            // Schedule for 20 weeks (5 months)
             for (let week = 0; week < 20; week++) {
               const notificationDate = new Date(now);
               notificationDate.setDate(now.getDate() + daysUntilTarget + (week * 7));
@@ -350,7 +519,6 @@ export const NotificationsProvider = ({ children }) => {
     }
   };
 
-  // ADDED: scheduleExamNotifications function
   const scheduleExamNotifications = async (userData) => {
     try {
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
@@ -490,14 +658,9 @@ export const NotificationsProvider = ({ children }) => {
         if (notification.content.data?.type === 'lecture') {
           const lectureId = notification.content.data?.lectureId;
           
-          // Check if this notification belongs to any of the lectures being removed
           const shouldCancel = lectureIds.some(idToRemove => {
-            // For iOS: lectureId is the original ID
             if (lectureId === idToRemove) return true;
-            
-            // For Android: lectureId is in format `${originalId}_${dayKey}_${hour}_${minute}_w${week}`
             if (lectureId && lectureId.startsWith(`${idToRemove}_`)) return true;
-            
             return false;
           });
           
@@ -507,11 +670,10 @@ export const NotificationsProvider = ({ children }) => {
         }
       }
     } catch (error) {
-      // Silent fail - notifications will be re-scheduled next time
+      // Silent fail
     }
   };
 
-  // NEW FUNCTION: Cancel notifications for a single lecture by ID
   const cancelLectureNotificationsById = async (lectureId) => {
     try {
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
@@ -520,7 +682,6 @@ export const NotificationsProvider = ({ children }) => {
         if (notification.content.data?.type === 'lecture') {
           const notificationLectureId = notification.content.data?.lectureId;
           
-          // Check if this notification belongs to the lecture being cancelled
           if (notificationLectureId === lectureId || 
               (notificationLectureId && notificationLectureId.startsWith(`${lectureId}_`))) {
             await Notifications.cancelScheduledNotificationAsync(notification.identifier);
@@ -546,7 +707,9 @@ export const NotificationsProvider = ({ children }) => {
         expoPushToken,
         schedulePushNotification,
         scheduleLectureNotifications,
-        scheduleExamNotifications, // Now this exists!
+        scheduleExamNotifications,
+        scheduleFunNotifications,
+        sendRandomFunNotification,
         cancelLectureNotifications,
         cancelLectureNotificationsById,
         cancelAllNotifications,
@@ -586,3 +749,11 @@ async function registerForPushNotificationsAsync() {
   
   return token;
 }
+
+export const useNotifications = () => {
+  const context = useContext(NotificationsContext);
+  if (context === undefined) {
+    throw new Error('useNotifications must be used within a NotificationsProvider');
+  }
+  return context;
+};
