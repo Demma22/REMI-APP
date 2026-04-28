@@ -122,7 +122,7 @@ function SummaryCard({ type, data, theme, navigation }) {
           {todayLectures.length === 0 ? (
             <View style={styles.emptyState}>
               <SvgIcon name="coffee" size={28} color={colors.textColor} opacity={0.8} />
-              <Text style={styles.summaryEmpty}>No lectures today</Text>
+              <Text style={styles.summaryEmpty}>Nothing Scheduled for today</Text>
               <Text style={styles.emptySubtitle}>Enjoy your free time!</Text>
             </View>
           ) : (
@@ -216,6 +216,7 @@ export default function HomeScreen({ navigation }) {
   const [userNickname, setUserNickname] = useState("");
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const flatListRef = useRef(null);
@@ -228,16 +229,43 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     loadUserData();
     loadHomeData();
+    checkOnboardingStatus();
   }, []);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       loadUserData();
       loadHomeData();
+      checkOnboardingStatus();
     });
 
     return unsubscribe;
   }, [navigation]);
+
+  const checkOnboardingStatus = async () => {
+    try {
+      const userDocRef = doc(db, "users", auth.currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        // Check if user has completed the new onboarding
+        const hasNewOnboarding = userData.heardFrom && 
+                                  userData.purpose && 
+                                  userData.purpose.length > 0 && 
+                                  userData.studyStage &&
+                                  userData.nickname;
+        
+        setNeedsOnboarding(!hasNewOnboarding);
+      }
+    } catch (error) {
+      console.error("Error checking onboarding status:", error);
+    }
+  };
+
+  const handleCompleteOnboarding = () => {
+    navigation.navigate("Onboarding");
+  };
 
   const loadHomeData = async () => {
     try {
@@ -484,6 +512,31 @@ export default function HomeScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Onboarding Banner - Only show if user hasn't completed onboarding */}
+        {needsOnboarding && (
+          <View style={[styles.onboardingBanner, { backgroundColor: theme.colors.primaryLight }]}>
+            <View style={styles.onboardingBannerContent}>
+              <View style={[styles.onboardingBannerIcon]}>
+                <SvgIcon name="complete" size={60} color={theme.colors.primary} />
+              </View>
+              <View style={styles.onboardingBannerText}>
+                <Text style={[styles.onboardingBannerTitle, { color: theme.colors.textPrimary }]}>
+                  Complete Your Profile
+                </Text>
+                <Text style={[styles.onboardingBannerSubtitle, { color: theme.colors.textSecondary }]}>
+                  Tell us a bit about yourself
+                </Text>
+              </View>
+              <TouchableOpacity 
+                style={[styles.onboardingBannerButton, { backgroundColor: theme.colors.primary }]}
+                onPress={handleCompleteOnboarding}
+              >
+                <Text style={styles.onboardingBannerButtonText}>Click Here</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Horizontal Scroll Cards */}
         <View style={styles.section}>
           <FlatList

@@ -23,19 +23,24 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useNotifications } from '../../hooks/useNotifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getStyles } from "./AddExamScreen.styles";
+import TimePicker from "../timetable/components/TimePicker";
 
 export default function AddExamScreen({ navigation }) {
   const [examName, setExamName] = useState("");
   const [examDate, setExamDate] = useState(new Date());
-  const [examTime, setExamTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  
+  // Time picker state
+  const [hour, setHour] = useState(9);
+  const [minute, setMinute] = useState("00");
+  const [period, setPeriod] = useState("AM");
+  
   const [room, setRoom] = useState("");
   const [reminder, setReminder] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [preparingNotifications, setPreparingNotifications] = useState(false);
-  const [currentSemester, setCurrentSemester] = useState(1);
   const [showMenuModal, setShowMenuModal] = useState(false);
   
   const { theme } = useTheme();
@@ -51,7 +56,7 @@ export default function AddExamScreen({ navigation }) {
       const userDocRef = doc(db, "users", auth.currentUser.uid);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
-        setCurrentSemester(userDoc.data().current_semester || 1);
+        // No need to set semester anymore
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -68,30 +73,24 @@ export default function AddExamScreen({ navigation }) {
     });
   };
 
-  const formatTimeForDisplay = (date) => {
-    let hours = date.getHours();
-    const minutes = date.getMinutes();
-    const period = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12;
-    return `${hours}:${minutes.toString().padStart(2, '0')} ${period}`;
+  const formatTimeForDisplay = (hourVal, minuteVal, periodVal) => {
+    return `${hourVal}:${minuteVal} ${periodVal}`;
   };
 
-  const formatTimeForStorage = (date) => {
-    let hours = date.getHours();
-    const minutes = date.getMinutes();
-    const period = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12;
-    return `${hours}:${minutes.toString().padStart(2, '0')} ${period}`;
+  const formatTimeForStorage = (hourVal, minuteVal, periodVal) => {
+    let displayHour = hourVal;
+    if (periodVal === "PM" && hourVal !== 12) displayHour = hourVal + 12;
+    if (periodVal === "AM" && hourVal === 12) displayHour = 0;
+    return `${displayHour}:${minuteVal} ${periodVal}`;
   };
 
   const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(false);
-    if (selectedDate) setExamDate(selectedDate);
-  };
-
-  const handleTimeChange = (event, selectedTime) => {
-    setShowTimePicker(false);
-    if (selectedTime) setExamTime(selectedTime);
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (selectedDate) {
+      setExamDate(selectedDate);
+    }
   };
 
   const handleScanTimetable = () => {
@@ -119,7 +118,7 @@ export default function AddExamScreen({ navigation }) {
         examsList = userDoc.data().exams;
       }
 
-      const examTimeStr = formatTimeForStorage(examTime);
+      const examTimeStr = formatTimeForStorage(hour, minute, period);
       const examDateObj = examDate;
 
       const newExam = {
@@ -127,7 +126,6 @@ export default function AddExamScreen({ navigation }) {
         date: examDateObj,
         start: examTimeStr,
         room: room.trim(),
-        semester: currentSemester,
         reminder: reminder,
         id: Date.now() + Math.random(),
         createdAt: new Date().toISOString(),
@@ -199,9 +197,14 @@ export default function AddExamScreen({ navigation }) {
       <KeyboardAvoidingView 
         style={styles.wrap}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
         <TouchableWithoutFeedback onPress={dismissKeyboard}>
-          <ScrollView style={styles.wrap} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.wrap} 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={styles.header}>
               <TouchableOpacity 
                 style={styles.backBtn} 
@@ -222,11 +225,6 @@ export default function AddExamScreen({ navigation }) {
             </View>
 
             <View style={styles.content}>
-              <View style={styles.semesterInfo}>
-                <SvgIcon name="calendar" size={16} color={theme.colors.warning} />
-                <Text style={styles.semesterText}>Semester {currentSemester}</Text>
-              </View>
-
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Exam/Test Name *</Text>
                 <TextInput
@@ -234,7 +232,7 @@ export default function AddExamScreen({ navigation }) {
                   value={examName}
                   onChangeText={setExamName}
                   placeholder="e.g., Final Exam, Midterm Test"
-                  placeholderTextColor={theme.colors.textPlaceholder}
+                  placeholderTextColor={theme.colors.textTertiary}
                 />
               </View>
 
@@ -250,6 +248,17 @@ export default function AddExamScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
 
+              {/* Date Picker - Android */}
+              {showDatePicker && Platform.OS === 'android' && (
+                <DateTimePicker
+                  value={examDate}
+                  mode="date"
+                  display="default"
+                  onChange={handleDateChange}
+                  minimumDate={new Date()}
+                />
+              )}
+
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Exam Time *</Text>
                 <TouchableOpacity
@@ -257,7 +266,9 @@ export default function AddExamScreen({ navigation }) {
                   onPress={() => setShowTimePicker(true)}
                 >
                   <SvgIcon name="clock" size={20} color={theme.colors.primary} />
-                  <Text style={styles.timePickerText}>{formatTimeForDisplay(examTime)}</Text>
+                  <Text style={styles.timePickerText}>
+                    {formatTimeForDisplay(hour, minute, period)}
+                  </Text>
                   <SvgIcon name="chevron-down" size={16} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
@@ -269,7 +280,7 @@ export default function AddExamScreen({ navigation }) {
                   value={room}
                   onChangeText={setRoom}
                   placeholder="e.g., Room 304, Online"
-                  placeholderTextColor={theme.colors.textPlaceholder}
+                  placeholderTextColor={theme.colors.textTertiary}
                 />
               </View>
 
@@ -300,37 +311,69 @@ export default function AddExamScreen({ navigation }) {
                 {saving ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <SvgIcon name="save" size={18} color="white" />
+                  <>
+                    <SvgIcon name="save" size={18} color="white" />
+                    <Text style={styles.saveBtnText}>
+                      {saving ? "Saving..." : preparingNotifications ? "Processing..." : "ADD EXAM"}
+                    </Text>
+                  </>
                 )}
-                <Text style={styles.saveBtnText}>
-                  {saving ? "Saving..." : 
-                   preparingNotifications ? "Processing..." : "ADD EXAM"}
-                </Text>
               </TouchableOpacity>
 
               <View style={styles.bottomSpacing} />
             </View>
 
-            {/* Date Picker */}
-            {showDatePicker && (
-              <DateTimePicker
-                value={examDate}
-                mode="date"
-                display="default"
-                onChange={handleDateChange}
-                minimumDate={new Date()}
-              />
+            {/* Date Picker - iOS Modal */}
+            {showDatePicker && Platform.OS === 'ios' && (
+              <Modal
+                transparent={true}
+                animationType="slide"
+                visible={showDatePicker}
+                onRequestClose={() => setShowDatePicker(false)}
+              >
+                <View style={styles.modalOverlay}>
+                  <View style={[styles.pickerModalContent, { backgroundColor: theme.colors.card }]}>
+                    <View style={styles.pickerModalHeader}>
+                      <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                        <Text style={[styles.pickerModalCancel, { color: theme.colors.danger }]}>Cancel</Text>
+                      </TouchableOpacity>
+                      <Text style={[styles.pickerModalTitle, { color: theme.colors.textPrimary }]}>Select Date</Text>
+                      <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                        <Text style={[styles.pickerModalDone, { color: theme.colors.primary }]}>Done</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <DateTimePicker
+                      value={examDate}
+                      mode="date"
+                      display="spinner"
+                      onChange={handleDateChange}
+                      minimumDate={new Date()}
+                      style={styles.datePickerIOS}
+                    />
+                  </View>
+                </View>
+              </Modal>
             )}
 
-            {/* Time Picker */}
-            {showTimePicker && (
-              <DateTimePicker
-                value={examTime}
-                mode="time"
-                display="default"
-                onChange={handleTimeChange}
+            {/* Time Picker Modal */}
+            <Modal
+              visible={showTimePicker}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowTimePicker(false)}
+            >
+              <TimePicker
+                hour={hour}
+                minute={minute}
+                period={period}
+                onHourChange={setHour}
+                onMinuteChange={setMinute}
+                onPeriodChange={setPeriod}
+                onClose={() => setShowTimePicker(false)}
+                theme={theme}
+                styles={styles}
               />
-            )}
+            </Modal>
 
             {/* Menu Modal */}
             <Modal

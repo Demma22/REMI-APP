@@ -1,5 +1,7 @@
-// styles/AddExamScreen.styles.js
-import { StyleSheet } from "react-native";
+// screens/exam/AddExamScreen.styles.js
+import { StyleSheet, Dimensions, Platform } from "react-native";
+
+const { width, height } = Dimensions.get("window");
 
 export const getStyles = (theme) => StyleSheet.create({
   container: {
@@ -20,6 +22,8 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     color: theme.colors.textSecondary,
   },
+  
+  // Processing Overlay
   processingOverlay: {
     position: 'absolute',
     top: 0,
@@ -50,6 +54,8 @@ export const getStyles = (theme) => StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
+  
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -60,6 +66,11 @@ export const getStyles = (theme) => StyleSheet.create({
     backgroundColor: theme.colors.backgroundSecondary,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
   backBtn: {
     width: 44,
@@ -86,31 +97,19 @@ export const getStyles = (theme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
+  
+  // Content
   content: {
     padding: 24,
   },
-  semesterInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: theme.colors.warningLight,
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 24,
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.warning,
-  },
-  semesterText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.warning,
-  },
+  
+  // Input Groups
   inputGroup: {
     marginBottom: 20,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: theme.colors.textPrimary,
     marginBottom: 8,
   },
@@ -153,6 +152,8 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     color: theme.colors.textPrimary,
   },
+  
+  // Switch
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -169,6 +170,8 @@ export const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.textTertiary,
     marginBottom: 24,
   },
+  
+  // Save Button
   saveBtn: {
     backgroundColor: theme.colors.secondary,
     paddingVertical: 16,
@@ -180,25 +183,73 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   saveBtnProcessing: {
     backgroundColor: theme.colors.primary,
+    opacity: 0.7,
   },
   saveBtnText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
   },
+  
   bottomSpacing: {
     height: 40,
   },
+  
+  // Modal Overlay
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  
+  // Picker Modal (for iOS date picker)
+  pickerModalContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: theme.colors.card,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 16,
+  },
+  pickerModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  pickerModalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  pickerModalCancel: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  pickerModalDone: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  datePickerIOS: {
+    height: 200,
+    width: width - 32,
+  },
+  
+  // Menu Modal
   menuModal: {
     borderRadius: 16,
     padding: 8,
     width: 220,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
   },
   menuItem: {
     flexDirection: 'row',
@@ -214,5 +265,72 @@ export const getStyles = (theme) => StyleSheet.create({
   menuDivider: {
     height: 1,
     marginVertical: 4,
+  },
+  
+  // TimePicker styles (for the custom TimePicker component)
+  timePickerContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  timePickerContent: {
+    width: "90%",
+    borderRadius: 24,
+    padding: 20,
+  },
+  timePickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  timePickerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  timePickerColumns: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    height: 200,
+  },
+  timePickerColumn: {
+    flex: 1,
+    alignItems: "center",
+  },
+  timePickerColumnLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  pickerList: {
+    alignItems: "center",
+  },
+  pickerItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginVertical: 2,
+  },
+  pickerItemSelected: {
+    backgroundColor: theme.colors.primaryLight,
+  },
+  pickerItemText: {
+    fontSize: 20,
+    color: theme.colors.textPrimary,
+  },
+  pickerItemTextSelected: {
+    color: theme.colors.primary,
+    fontWeight: "700",
+  },
+  timePickerConfirmBtn: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  timePickerConfirmText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

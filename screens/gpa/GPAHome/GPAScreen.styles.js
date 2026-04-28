@@ -261,4 +261,48 @@ export const getStyles = (theme) => StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
   },
+    // Add to GPAScreen.styles.js inside the getStyles function
+
+  curriculumBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: theme.colors.card,
+    marginHorizontal: 24,
+    marginTop: 16,
+    marginBottom: 8,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  curriculumBarContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  curriculumBarText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: theme.colors.textPrimary,
+  },
+  scanButton: {
+    padding: 20,
+    borderRadius: 16,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 10,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+    marginBottom: 12,
+  },
+  scanButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
 });

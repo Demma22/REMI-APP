@@ -10,7 +10,7 @@ import { LineChart } from "react-native-chart-kit";
 import { auth, db } from "../../../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import NavigationBar from "../../../components/NavigationBar";
-import SvgIcon from "../../../components/SvgIcon"; // Add this import for SVG icons
+import SvgIcon from "../../../components/SvgIcon";
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getStyles } from './GPAScreen.styles';
 
@@ -24,6 +24,7 @@ export default function GPAScreen({ navigation }) {
   const [gpas, setGpas] = useState({});
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedCurriculum, setSelectedCurriculum] = useState("uganda");
   
   const { theme } = useTheme();
 
@@ -37,7 +38,6 @@ export default function GPAScreen({ navigation }) {
     try {
       setLoading(true);
       
-      // Load user document from Firestore - same as GPACalculationScreen
       const userDocRef = doc(db, "users", auth.currentUser.uid);
       const userDoc = await getDoc(userDocRef);
       
@@ -45,10 +45,15 @@ export default function GPAScreen({ navigation }) {
         const data = userDoc.data();
         setUserData(data);
         
-        // Get GPA data from gpa_data object - same structure as GPACalculationScreen
+        // Load selected curriculum
+        if (data.selected_curriculum) {
+          setSelectedCurriculum(data.selected_curriculum);
+        }
+        
+        // Get GPA data from gpa_data object
         const gpaData = data.gpa_data || {};
         
-        // Convert to the format expected by the chart: { semester1: "3.5", semester2: "3.8", ... }
+        // Convert to the format expected by the chart
         const formattedGpas = {};
         Object.keys(gpaData).forEach(semesterKey => {
           if (gpaData[semesterKey] && gpaData[semesterKey].gpa) {
@@ -59,6 +64,7 @@ export default function GPAScreen({ navigation }) {
         setGpas(formattedGpas);
       }
     } catch (error) {
+      console.error("Error loading data:", error);
     } finally {
       setLoading(false);
     }
@@ -78,7 +84,6 @@ export default function GPAScreen({ navigation }) {
     const labels = [];
     const data = [];
 
-    // Get all available semesters from units data
     const availableSemesters = Object.keys(userData.units).sort((a, b) => parseInt(a) - parseInt(b));
     
     availableSemesters.forEach(semesterNumber => {
@@ -126,7 +131,6 @@ export default function GPAScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity 
@@ -145,6 +149,20 @@ export default function GPAScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Curriculum Info Bar */}
+        <TouchableOpacity 
+          style={styles.curriculumBar}
+          onPress={() => navigation.navigate("CurriculumSelector")}
+        >
+          <View style={styles.curriculumBarContent}>
+            <SvgIcon name="flag" size={16} color={theme.colors.primary} />
+            <Text style={styles.curriculumBarText}>
+              Grading System: {selectedCurriculum.toUpperCase()}
+            </Text>
+          </View>
+          <SvgIcon name="chevron-right" size={16} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
+
         {/* Overall GPA Card */}
         {overallGPA && (
           <View style={[styles.overallCard, { backgroundColor: theme.colors.primary }]}>
@@ -213,7 +231,7 @@ export default function GPAScreen({ navigation }) {
                 <TouchableOpacity 
                   key={semesterKey}
                   style={styles.semesterCard}
-                  onPress={() => navigation.navigate("GPACalculation", { semesterKey })}
+                  onPress={() => navigation.navigate("ScanResults", { semesterKey })}
                 >
                   <View style={styles.semesterHeader}>
                     <View style={styles.semesterInfo}>
@@ -253,14 +271,14 @@ export default function GPAScreen({ navigation }) {
 
         {/* Action Buttons Container */}
         <View style={styles.actionsContainer}>
-          {/* Calculate New Button
+          {/* Scan Results Button - NEW */}
           <TouchableOpacity 
-            style={[styles.calculateButton, { backgroundColor: theme.colors.primary }]}
-            onPress={() => navigation.navigate("GPACalculation", { semesterKey: null })}
+            style={[styles.scanButton, { backgroundColor: theme.colors.primary }]}
+            onPress={() => navigation.navigate("ScanResults")}
           >
-            <SvgIcon name="calculator" size={20} color="white" />
-            <Text style={styles.calculateButtonText}>Calculate New GPA</Text>
-          </TouchableOpacity>  */}
+            <SvgIcon name="scan" size={20} color="white" />
+            <Text style={styles.scanButtonText}>Scan Results</Text>
+          </TouchableOpacity>
 
           {/* Export Button - only show if there's GPA data */}
           {hasGPAData && (
