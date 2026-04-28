@@ -18,6 +18,7 @@ import RobotIcon from '../assets/icons/robot.svg';
 import SmileIcon from '../assets/icons/smile.svg';
 import UserIcon from '../assets/icons/user.svg';
 import HomeIcon from '../assets/icons/home.svg';
+import AboutIcon from '../assets/icons/info.svg';
 import SendIcon from '../assets/icons/send.svg';
 import TrashIcon from '../assets/icons/trash.svg';
 import EyeIcon from '../assets/icons/eye.svg';
@@ -30,12 +31,29 @@ import ArrowBackIcon from '../assets/icons/arrow-back.svg';
 import PhoneIcon from '../assets/icons/phone.svg';
 import WhatsappIcon from '../assets/icons/whatsapp.svg';
 import MailIcon from '../assets/icons/mail.svg';
+import InstagramIcon from '../assets/icons/instagram.svg';
+import XIcon from '../assets/icons/x.svg';
+import ThreadsIcon from '../assets/icons/threads.svg';
+import TiktokIcon from '../assets/icons/tiktok.svg';
+import AihomeIcon from '../assets/icons/ai_home.svg';
+import gpaIcon from '../assets/icons/gpa.svg';
+import timetableIcon from '../assets/icons/timetable.svg';
+import scanIcon from '../assets/icons/scan.svg';
 
 const iconComponents = {
   'home': HomeIcon,
   'eye': EyeIcon,
+  'instagram':InstagramIcon,
+  'x': XIcon,
+  'threads': ThreadsIcon,
+  'scan': scanIcon,
+  'ai-home': AihomeIcon,
+  'gpa': gpaIcon,
+  'timetable': timetableIcon,
+  'tiktok': TiktokIcon,
   'mail': MailIcon,
   'book': BookIcon,
+  'info': AboutIcon,
   'bell': BellIcon,
   'whatsapp': WhatsappIcon,
   'phone': PhoneIcon,

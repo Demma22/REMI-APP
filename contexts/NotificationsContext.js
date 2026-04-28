@@ -1,3 +1,4 @@
+// contexts/NotificationsContext.js
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
@@ -157,182 +158,147 @@ export const NotificationsProvider = ({ children }) => {
       
       return notificationId;
     } catch (error) {
+      console.error('Error scheduling push notification:', error);
       throw error;
     }
   };
 
-  // Function to get active admin notifications from Firestore
-  const getActiveAdminNotifications = async () => {
+  // ========== ACTIVITY NOTIFICATIONS (REPEATING WEEKLY) ==========
+  const scheduleActivityNotifications = async (activityData) => {
     try {
-      const q = query(
-        collection(db, 'fun_notifications'),
-        where('active', '==', true)
-      );
-      const querySnapshot = await getDocs(q);
-      const notifications = [];
+      const { name, day, startTime, reminderMinutes = 30 } = activityData;
       
-      querySnapshot.forEach((doc) => {
-        notifications.push({
-          id: doc.id,
-          ...doc.data()
-        });
-      });
-      
-      return notifications;
-    } catch (error) {
-      console.error('Error fetching admin notifications:', error);
-      return [];
-    }
-  };
-
-  // Function to get a random notification to send
-  const getRandomNotificationToSend = async () => {
-    try {
-      // Step 1: Check if it's a holiday (hardcoded only)
-      const holiday = getHolidayNotification();
-      if (holiday && holiday.notification) {
-        return {
-          source: 'holiday',
-          title: holiday.notification.title,
-          body: holiday.notification.body,
-          category: holiday.notification.category
-        };
+      if (!name || !day || !startTime) {
+        console.log('Missing required activity data for notification');
+        return 0;
       }
-      
-      // Step 2: Get active notifications from Firestore (admin panel)
-      const adminNotifications = await getActiveAdminNotifications();
-      
-      // Step 3: If there are admin notifications, pick a random one
-      if (adminNotifications.length > 0) {
-        const randomIndex = Math.floor(Math.random() * adminNotifications.length);
-        const selected = adminNotifications[randomIndex];
-        return {
-          source: 'admin',
-          title: selected.title,
-          body: selected.body,
-          category: selected.category,
-          id: selected.id
-        };
-      }
-      
-      // Step 4: If no admin notifications, DON'T SEND ANYTHING
-      console.log('No active admin notifications found. Nothing to send.');
-      return null;
-      
-    } catch (error) {
-      console.error('Error getting random notification:', error);
-      return null;
-    }
-  };
 
-  // Helper function to send a random fun notification immediately
-  const sendRandomFunNotification = async (userData = null) => {
-    try {
-      const notification = await getRandomNotificationToSend();
+      const weekdayMap = {
+        'sunday': 1,
+        'monday': 2,
+        'tuesday': 3,
+        'wednesday': 4,
+        'thursday': 5,
+        'friday': 6,
+        'saturday': 7,
+      };
+
+      const expoWeekday = weekdayMap[day.toLowerCase()];
+      if (!expoWeekday) {
+        console.log('Invalid day for activity notification:', day);
+        return 0;
+      }
+
+      // Parse start time
+      const timeStr = startTime;
+      const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
       
-      if (notification) {
-        await schedulePushNotification(
-          notification.title,
-          notification.body,
-          { 
-            type: 'fun', 
-            category: notification.category,
-            source: notification.source,
-            notificationId: notification.id
-          },
-          {
-            type: 'date',
-            date: new Date(Date.now() + 1000),
-          }
-        );
+      let hours, minutes;
+      if (match) {
+        hours = parseInt(match[1]);
+        minutes = parseInt(match[2]);
+        const period = match[3].toUpperCase();
         
-        console.log(`✨ Sent ${notification.source} notification: ${notification.title}`);
-        
-        if (notification.source === 'admin' && notification.id) {
-          const notificationRef = doc(db, 'fun_notifications', notification.id);
-          await updateDoc(notificationRef, {
-            timesSent: increment(1),
-            lastSentAt: new Date()
-          });
-        }
+        if (period === "PM" && hours !== 12) hours += 12;
+        if (period === "AM" && hours === 12) hours = 0;
       } else {
-        console.log('No notifications to send. Add some in the admin panel!');
+        console.log(`Could not parse time for ${name}: ${startTime}`);
+        return 0;
       }
-      
+
+      // Calculate reminder time
+      let reminderHour = hours;
+      let reminderMinute = minutes - reminderMinutes;
+      if (reminderMinute < 0) {
+        reminderMinute += 60;
+        reminderHour -= 1;
+      }
+      if (reminderHour < 0) {
+        reminderHour += 24;
+      }
+
+      const trigger = {
+        type: 'calendar',
+        repeats: true,
+        weekday: expoWeekday,
+        hour: reminderHour,
+        minute: reminderMinute,
+        second: 0,
+      };
+
+      if (Platform.OS === 'android') {
+        trigger.channelId = 'default';
+      }
+
+      await schedulePushNotification(
+        `${name} Reminder`,
+        `${name} starts in ${reminderMinutes} minutes!`,
+        {
+          type: 'activity',
+          activityName: name,
+          day: day,
+          time: startTime,
+        },
+        trigger
+      );
+
+      console.log(`✅ Scheduled weekly activity notification for ${name} on ${day} at ${startTime}`);
+      return 1;
     } catch (error) {
-      console.error('Error sending fun notification:', error);
+      console.error('Error scheduling activity notification:', error);
+      return 0;
     }
   };
 
-  // Schedule recurring fun notifications - FIXED VERSION
-  const scheduleFunNotifications = async (userData) => {
+  const rescheduleAllActivityNotifications = async (activities) => {
     try {
-      // Cancel existing fun notifications to avoid duplicates
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-      const funNotifications = scheduled.filter(n => n.content.data?.type === 'fun');
+      const activityNotifications = scheduled.filter(n => n.content.data?.type === 'activity');
       
-      for (const notification of funNotifications) {
+      for (const notification of activityNotifications) {
         await Notifications.cancelScheduledNotificationAsync(notification.identifier);
       }
-      
-      // Get active admin notifications from Firestore
-      const adminNotifications = await getActiveAdminNotifications();
-      
-      if (adminNotifications.length === 0) {
-        console.log('No admin notifications found. Not scheduling any fun notifications.');
-        return;
+
+      let scheduledCount = 0;
+      for (const activity of activities) {
+        const count = await scheduleActivityNotifications(activity);
+        scheduledCount += count;
       }
-      
-      console.log(`Found ${adminNotifications.length} admin notifications. Scheduling random sends...`);
-      
-      // Schedule actual notifications with random intervals
-      const intervals = [3, 2, 4, 3, 2]; // Days between notifications
-      let cumulativeDays = 0;
-      
-      for (let i = 0; i < intervals.length; i++) {
-        cumulativeDays += intervals[i];
-        const notificationDate = new Date();
-        notificationDate.setDate(notificationDate.getDate() + cumulativeDays);
-        notificationDate.setHours(12, 0, 0, 0); // Noon
-        
-        // Pick a random notification from admin list for this scheduled time
-        const randomIndex = Math.floor(Math.random() * adminNotifications.length);
-        const selectedNotification = adminNotifications[randomIndex];
-        
-        // Schedule the actual notification content directly
-        await schedulePushNotification(
-          selectedNotification.title,
-          selectedNotification.body,
-          { 
-            type: 'fun', 
-            category: selectedNotification.category || 'fun',
-            source: 'scheduled',
-            notificationId: selectedNotification.id
-          },
-          {
-            type: 'date',
-            date: notificationDate,
-          }
-        );
-        
-        console.log(`📅 Scheduled "${selectedNotification.title}" for ${notificationDate.toLocaleDateString()}`);
-      }
-      
-      // Also send one random notification immediately
-      await sendRandomFunNotification(userData);
-      
-      console.log("✅ Fun notifications scheduled successfully");
-      
+
+      console.log(`✅ Rescheduled ${scheduledCount} activity notifications`);
+      return scheduledCount;
     } catch (error) {
-      console.error('Error scheduling fun notifications:', error);
+      console.error('Error rescheduling activity notifications:', error);
+      return 0;
     }
   };
 
-  // Keep your existing scheduleLectureNotifications and scheduleExamNotifications functions here
-  // (they remain unchanged)
+  const scheduleScannedLecturesNotifications = async (lectures) => {
+    try {
+      let scheduledCount = 0;
+      
+      for (const lecture of lectures) {
+        const lectureData = {
+          name: lecture.name,
+          day: lecture.day,
+          startTime: lecture.start,
+          reminderMinutes: 30
+        };
+        
+        const count = await scheduleActivityNotifications(lectureData);
+        scheduledCount += count;
+      }
+      
+      console.log(`✅ Scheduled ${scheduledCount} weekly notifications for scanned lectures`);
+      return scheduledCount;
+    } catch (error) {
+      console.error('Error scheduling scanned lectures notifications:', error);
+      return 0;
+    }
+  };
 
+  // ========== LECTURE NOTIFICATIONS (REPEATING WEEKLY) ==========
   const scheduleLectureNotifications = async (userData) => {
-    // ... your existing lecture notification code
     try {
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
       const lectureNotifications = scheduled.filter(n => n.content.data?.type === 'lecture');
@@ -354,7 +320,6 @@ export const NotificationsProvider = ({ children }) => {
       };
       
       let totalScheduled = 0;
-      const now = new Date();
       
       for (const dayKey in timetable) {
         const lectures = timetable[dayKey] || [];
@@ -362,21 +327,27 @@ export const NotificationsProvider = ({ children }) => {
         for (const lecture of lectures) {
           if (!lecture.start || !lecture.day) continue;
           
-          const [time, modifier] = lecture.start.split(' ');
-          let [hours, minutes] = time.split(':').map(Number);
+          // Parse time
+          const timeStr = lecture.start;
+          const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
           
-          if (modifier) {
-            if (modifier.toUpperCase() === 'PM' && hours < 12) {
-              hours += 12;
-            }
-            if (modifier.toUpperCase() === 'AM' && hours === 12) {
-              hours = 0;
-            }
+          let hours, minutes;
+          if (match) {
+            hours = parseInt(match[1]);
+            minutes = parseInt(match[2]);
+            const period = match[3].toUpperCase();
+            
+            if (period === "PM" && hours !== 12) hours += 12;
+            if (period === "AM" && hours === 12) hours = 0;
+          } else {
+            console.log(`Could not parse time for ${lecture.name}: ${lecture.start}`);
+            continue;
           }
           
           const expoWeekday = weekdayMap[dayKey.toLowerCase()];
           if (!expoWeekday) continue;
           
+          // Calculate 30 minutes before
           let minute30 = minutes - 30;
           let hour30 = hours;
           if (minute30 < 0) {
@@ -385,6 +356,7 @@ export const NotificationsProvider = ({ children }) => {
           }
           if (hour30 < 0) hour30 += 24;
           
+          // Calculate 5 minutes before
           let minute5 = minutes - 5;
           let hour5 = hours;
           if (minute5 < 0) {
@@ -393,132 +365,74 @@ export const NotificationsProvider = ({ children }) => {
           }
           if (hour5 < 0) hour5 += 24;
           
-          if (Platform.OS === 'ios') {
-            const trigger30min = {
-              type: 'calendar',
-              repeats: true,
-              weekday: expoWeekday,
-              hour: hour30,
-              minute: minute30,
-              second: 0,
-            };
+          // Create triggers with 'calendar' type for weekly repeating
+          const trigger30min = {
+            type: 'calendar',
+            repeats: true,
+            weekday: expoWeekday,
+            hour: hour30,
+            minute: minute30,
+            second: 0,
+          };
+          
+          const trigger5min = {
+            type: 'calendar',
+            repeats: true,
+            weekday: expoWeekday,
+            hour: hour5,
+            minute: minute5,
+            second: 0,
+          };
+          
+          if (Platform.OS === 'android') {
+            trigger30min.channelId = 'default';
+            trigger5min.channelId = 'default';
+          }
+          
+          try {
+            await schedulePushNotification(
+              `Lecture Reminder`,
+              `${lecture.name} starts in 30 minutes${lecture.room ? ` in ${lecture.room}` : ''}`,
+              { 
+                type: 'lecture',
+                lectureId: lecture.id || Date.now().toString(),
+                day: dayKey,
+                time: lecture.start,
+                course: lecture.name
+              },
+              trigger30min
+            );
+            totalScheduled++;
             
-            const trigger5min = {
-              type: 'calendar',
-              repeats: true,
-              weekday: expoWeekday,
-              hour: hour5,
-              minute: minute5,
-              second: 0,
-            };
+            await schedulePushNotification(
+              `Time for class!`,
+              `${lecture.name} starts in 5 minutes${lecture.room ? ` in ${lecture.room}` : ''}`,
+              { 
+                type: 'lecture',
+                lectureId: lecture.id || Date.now().toString(),
+                day: dayKey,
+                time: lecture.start,
+                course: lecture.name
+              },
+              trigger5min
+            );
+            totalScheduled++;
             
-            try {
-              await schedulePushNotification(
-                `Lecture Reminder`,
-                `${lecture.name} starts in 30 minutes${lecture.room ? ` in ${lecture.room}` : ''}`,
-                { 
-                  type: 'lecture',
-                  lectureId: lecture.id || Date.now().toString(),
-                  day: dayKey,
-                  time: lecture.start,
-                  course: lecture.name
-                },
-                trigger30min
-              );
-              totalScheduled++;
-              
-              await schedulePushNotification(
-                `Time for class!`,
-                `${lecture.name} starts in 5 minutes${lecture.room ? ` in ${lecture.room}` : ''}`,
-                { 
-                  type: 'lecture',
-                  lectureId: lecture.id || Date.now().toString(),
-                  day: dayKey,
-                  time: lecture.start,
-                  course: lecture.name
-                },
-                trigger5min
-              );
-              totalScheduled++;
-              
-            } catch (error) {
-              // Continue with other lectures
-            }
-          } else {
-            const today = now.getDay();
-            const targetDay = expoWeekday - 1;
-            
-            let daysUntilTarget = targetDay - today;
-            if (daysUntilTarget < 0) {
-              daysUntilTarget += 7;
-            }
-            
-            for (let week = 0; week < 20; week++) {
-              const notificationDate = new Date(now);
-              notificationDate.setDate(now.getDate() + daysUntilTarget + (week * 7));
-              
-              const date30min = new Date(notificationDate);
-              date30min.setHours(hour30, minute30, 0, 0);
-              
-              const date5min = new Date(notificationDate);
-              date5min.setHours(hour5, minute5, 0, 0);
-              
-              if (date30min > now) {
-                try {
-                  await schedulePushNotification(
-                    `Lecture Reminder`,
-                    `${lecture.name} starts in 30 minutes${lecture.room ? ` in ${lecture.room}` : ''}`,
-                    { 
-                      type: 'lecture',
-                      lectureId: `${lecture.id}_${dayKey}_${hour30}_${minute30}_w${week}`,
-                      day: dayKey,
-                      time: lecture.start,
-                      course: lecture.name
-                    },
-                    {
-                      type: 'date',
-                      date: date30min,
-                    }
-                  );
-                  totalScheduled++;
-                } catch (error) {
-                  // Continue
-                }
-              }
-              
-              if (date5min > now) {
-                try {
-                  await schedulePushNotification(
-                    `Time for class!`,
-                    `${lecture.name} starts in 5 minutes${lecture.room ? ` in ${lecture.room}` : ''}`,
-                    { 
-                      type: 'lecture',
-                      lectureId: `${lecture.id}_${dayKey}_${hour5}_${minute5}_w${week}`,
-                      day: dayKey,
-                      time: lecture.start,
-                      course: lecture.name
-                    },
-                    {
-                      type: 'date',
-                      date: date5min,
-                    }
-                  );
-                  totalScheduled++;
-                } catch (error) {
-                  // Continue
-                }
-              }
-            }
+          } catch (error) {
+            console.error(`Error scheduling notification for ${lecture.name}:`, error);
           }
         }
       }
       
+      console.log(`✅ Scheduled ${totalScheduled} weekly repeating lecture notifications`);
       return totalScheduled;
     } catch (error) {
+      console.error('Error scheduling lecture notifications:', error);
       throw error;
     }
   };
 
+  // ========== EXAM NOTIFICATIONS ==========
   const scheduleExamNotifications = async (userData) => {
     try {
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
@@ -552,14 +466,19 @@ export const NotificationsProvider = ({ children }) => {
           continue;
         }
         
-        const [timeStr, period] = exam.start.split(' ');
-        let [hours, minutes] = timeStr.split(':').map(Number);
+        const timeStr = exam.start;
+        const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
         
-        if (period && period.toUpperCase() === 'PM' && hours < 12) {
-          hours += 12;
-        }
-        if (period && period.toUpperCase() === 'AM' && hours === 12) {
-          hours = 0;
+        let hours, minutes;
+        if (match) {
+          hours = parseInt(match[1]);
+          minutes = parseInt(match[2]);
+          const period = match[3].toUpperCase();
+          
+          if (period === "PM" && hours !== 12) hours += 12;
+          if (period === "AM" && hours === 12) hours = 0;
+        } else {
+          continue;
         }
         
         const examDateTime = new Date(
@@ -644,12 +563,181 @@ export const NotificationsProvider = ({ children }) => {
         }
       }
       
+      console.log(`✅ Scheduled ${totalScheduled} exam notifications`);
       return totalScheduled;
     } catch (error) {
+      console.error('Error scheduling exam notifications:', error);
       throw error;
     }
   };
 
+  // ========== FUN NOTIFICATIONS ==========
+  const getActiveAdminNotifications = async () => {
+    try {
+      const q = query(
+        collection(db, 'fun_notifications'),
+        where('active', '==', true)
+      );
+      const querySnapshot = await getDocs(q);
+      const notifications = [];
+      
+      querySnapshot.forEach((doc) => {
+        notifications.push({
+          id: doc.id,
+          title: doc.data().title,
+          body: doc.data().body,
+          category: doc.data().category || 'fun',
+          timesSent: doc.data().timesSent || 0,
+          lastSentAt: doc.data().lastSentAt,
+        });
+      });
+      
+      console.log(`📋 Found ${notifications.length} active admin notifications`);
+      return notifications;
+    } catch (error) {
+      console.error('Error fetching admin notifications:', error);
+      return [];
+    }
+  };
+
+  const getRandomNotificationToSend = async () => {
+    try {
+      const holiday = getHolidayNotification();
+      if (holiday && holiday.notification) {
+        console.log('🎉 Holiday notification detected:', holiday.notification.title);
+        return {
+          source: 'holiday',
+          title: holiday.notification.title,
+          body: holiday.notification.body,
+          category: holiday.notification.category
+        };
+      }
+      
+      const adminNotifications = await getActiveAdminNotifications();
+      
+      if (adminNotifications.length > 0) {
+        const randomIndex = Math.floor(Math.random() * adminNotifications.length);
+        const selected = adminNotifications[randomIndex];
+        console.log(`📨 Selected random admin notification: ${selected.title}`);
+        return {
+          source: 'admin',
+          title: selected.title,
+          body: selected.body,
+          category: selected.category,
+          id: selected.id
+        };
+      }
+      
+      console.log('⚠️ No active admin notifications found. Nothing to send.');
+      return null;
+      
+    } catch (error) {
+      console.error('Error getting random notification:', error);
+      return null;
+    }
+  };
+
+  const sendRandomFunNotification = async (userData = null) => {
+    try {
+      const notification = await getRandomNotificationToSend();
+      
+      if (notification) {
+        await schedulePushNotification(
+          notification.title,
+          notification.body,
+          { 
+            type: 'fun', 
+            category: notification.category,
+            source: notification.source,
+            notificationId: notification.id
+          },
+          {
+            type: 'date',
+            date: new Date(Date.now() + 1000),
+          }
+        );
+        
+        console.log(`✨ Sent ${notification.source} notification: ${notification.title}`);
+        
+        if (notification.source === 'admin' && notification.id) {
+          const notificationRef = doc(db, 'fun_notifications', notification.id);
+          await updateDoc(notificationRef, {
+            timesSent: increment(1),
+            lastSentAt: new Date()
+          });
+        }
+      } else {
+        console.log('No notifications to send. Add some in the admin panel!');
+      }
+      
+    } catch (error) {
+      console.error('Error sending fun notification:', error);
+    }
+  };
+
+  const scheduleFunNotifications = async (userData) => {
+    try {
+      console.log('📅 Starting fun notifications scheduling...');
+      
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      const funNotifications = scheduled.filter(n => n.content.data?.type === 'fun');
+      
+      console.log(`🗑️ Cancelling ${funNotifications.length} existing fun notifications`);
+      for (const notification of funNotifications) {
+        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+      }
+      
+      const adminNotifications = await getActiveAdminNotifications();
+      
+      if (adminNotifications.length === 0) {
+        console.log('❌ No active admin notifications found. Nothing to schedule.');
+        return;
+      }
+      
+      console.log(`✅ Found ${adminNotifications.length} active admin notifications`);
+      console.log(`📅 Scheduling random fun notifications (2-4 days apart)...`);
+      
+      const intervals = [3, 2, 4, 3, 2];
+      let cumulativeDays = 0;
+      let scheduledCount = 0;
+      
+      for (let i = 0; i < intervals.length; i++) {
+        cumulativeDays += intervals[i];
+        const notificationDate = new Date();
+        notificationDate.setDate(notificationDate.getDate() + cumulativeDays);
+        notificationDate.setHours(12, 0, 0, 0);
+        
+        const randomIndex = Math.floor(Math.random() * adminNotifications.length);
+        const selectedNotification = adminNotifications[randomIndex];
+        
+        await schedulePushNotification(
+          selectedNotification.title,
+          selectedNotification.body,
+          { 
+            type: 'fun', 
+            category: selectedNotification.category || 'fun',
+            source: 'scheduled',
+            notificationId: selectedNotification.id
+          },
+          {
+            type: 'date',
+            date: notificationDate,
+          }
+        );
+        
+        scheduledCount++;
+        console.log(`📅 Scheduled #${scheduledCount}: "${selectedNotification.title}" on ${notificationDate.toLocaleDateString()}`);
+      }
+      
+      await sendRandomFunNotification(userData);
+      console.log(`✅ Fun notifications scheduled successfully! Total: ${scheduledCount + 1}`);
+      
+    } catch (error) {
+      console.error('❌ Error scheduling fun notifications:', error);
+    }
+  };
+
+  // ========== CANCEL FUNCTIONS ==========
   const cancelLectureNotifications = async (lectureIds) => {
     try {
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
@@ -708,6 +796,9 @@ export const NotificationsProvider = ({ children }) => {
         schedulePushNotification,
         scheduleLectureNotifications,
         scheduleExamNotifications,
+        scheduleActivityNotifications,
+        rescheduleAllActivityNotifications,
+        scheduleScannedLecturesNotifications,
         scheduleFunNotifications,
         sendRandomFunNotification,
         cancelLectureNotifications,

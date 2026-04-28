@@ -6,10 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-  StyleSheet,
-  KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   LayoutAnimation,
   UIManager,
   Keyboard,
@@ -19,8 +16,9 @@ import {
 import { auth, db } from "../../firebase";
 import { doc, getDoc, collection, addDoc, query, orderBy, getDocs, deleteDoc, serverTimestamp } from "firebase/firestore";
 import SvgIcon from "../../components/SvgIcon";
-import { useTheme } from '../../contexts/ThemeContext'; // Add this import
-import * as Clipboard from 'expo-clipboard'; // Add this import
+import { useTheme } from '../../contexts/ThemeContext';
+import * as Clipboard from 'expo-clipboard';
+import { getStyles } from './ChatScreen.styles';
 
 const { height: screenHeight } = Dimensions.get("window");
 
@@ -33,7 +31,11 @@ if (
 
 export default function ChatScreen({ navigation }) {
   if (!auth.currentUser) {
-    return <Text>Not logged in</Text>;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Not logged in</Text>
+      </View>
+    );
   }
 
   const [messages, setMessages] = useState([]);
@@ -47,7 +49,116 @@ export default function ChatScreen({ navigation }) {
   const [thinkingDots, setThinkingDots] = useState("");
   const dotsIntervalRef = useRef(null);
   
-  const { theme } = useTheme(); // Get theme from context
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+
+  // Card Components defined inside the main component so they have access to styles and theme
+  const LectureCard = ({ lecture, index }) => {
+    return (
+      <View style={[styles.lectureCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <View style={styles.lectureHeader}>
+          <View style={[styles.lectureNumber, { backgroundColor: theme.colors.primaryLight }]}>
+            <Text style={[styles.lectureNumberText, { color: theme.colors.primary }]}>{index + 1}</Text>
+          </View>
+          <Text style={[styles.lectureName, { color: theme.colors.textPrimary }]} numberOfLines={2}>{lecture.name}</Text>
+        </View>
+        
+        <View style={styles.lectureDetails}>
+          <View style={styles.detailRow}>
+            <SvgIcon name="calendar" size={14} color={theme.colors.textSecondary} />
+            <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>{lecture.day || "Not specified"}</Text>
+          </View>
+          
+          <View style={styles.detailRow}>
+            <SvgIcon name="clock" size={14} color={theme.colors.textSecondary} />
+            <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
+              {lecture.start} {lecture.end ? `- ${lecture.end}` : ""}
+            </Text>
+          </View>
+          
+          {lecture.lecturer && lecture.lecturer !== "" && (
+            <View style={styles.detailRow}>
+              <SvgIcon name="user" size={14} color={theme.colors.textSecondary} />
+              <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>👨‍🏫 {lecture.lecturer}</Text>
+            </View>
+          )}
+          
+          {lecture.room && lecture.room !== "" && (
+            <View style={styles.detailRow}>
+              <SvgIcon name="location" size={14} color={theme.colors.textSecondary} />
+              <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>📍 Room {lecture.room}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  const ExamCard = ({ exam, index }) => {
+    let examDate;
+    try {
+      examDate = exam.date?.toDate ? exam.date.toDate() : new Date(exam.date);
+    } catch (e) {
+      examDate = new Date();
+    }
+    const formattedDate = examDate.toLocaleDateString();
+    
+    return (
+      <View style={[styles.examCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <View style={styles.examHeader}>
+          <View style={[styles.examNumber, { backgroundColor: theme.colors.dangerLight }]}>
+            <Text style={[styles.examNumberText, { color: theme.colors.danger }]}>{index + 1}</Text>
+          </View>
+          <Text style={[styles.examName, { color: theme.colors.textPrimary }]} numberOfLines={2}>{exam.name}</Text>
+        </View>
+        
+        <View style={styles.examDetails}>
+          <View style={styles.detailRow}>
+            <SvgIcon name="calendar" size={14} color={theme.colors.textSecondary} />
+            <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>{formattedDate}</Text>
+          </View>
+          
+          {exam.start && (
+            <View style={styles.detailRow}>
+              <SvgIcon name="clock" size={14} color={theme.colors.textSecondary} />
+              <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>⏰ {exam.start}</Text>
+            </View>
+          )}
+          
+          {exam.room && (
+            <View style={styles.detailRow}>
+              <SvgIcon name="location" size={14} color={theme.colors.textSecondary} />
+              <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>📍 Room {exam.room}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  const GPACard = ({ gpaData }) => {
+    return (
+      <View style={[styles.gpaCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <View style={styles.gpaHeader}>
+          <SvgIcon name="chart-line" size={20} color={theme.colors.primary} />
+          <Text style={[styles.gpaTitle, { color: theme.colors.textPrimary }]}>Your GPA</Text>
+        </View>
+        
+        <View style={styles.gpaValueContainer}>
+          <Text style={[styles.gpaValue, { color: theme.colors.primary }]}>{gpaData.gpa || "N/A"}</Text>
+          {gpaData.totalCredits > 0 && (
+            <Text style={[styles.gpaCredits, { color: theme.colors.textSecondary }]}>
+              Total Credits: {gpaData.totalCredits}
+            </Text>
+          )}
+        </View>
+        
+        {gpaData.summary && (
+          <Text style={[styles.gpaSummary, { color: theme.colors.textSecondary }]}>{gpaData.summary}</Text>
+        )}
+      </View>
+    );
+  };
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
@@ -117,7 +228,7 @@ export default function ChatScreen({ navigation }) {
         setUserData(userDoc.data());
       }
     } catch (error) {
-      // Continue without user data
+      console.error("Error loading user data:", error);
     }
   };
 
@@ -135,7 +246,7 @@ export default function ChatScreen({ navigation }) {
 
       setMessages(chatMessages);
     } catch (error) {
-      // Continue without chat history
+      console.error("Error loading chat history:", error);
     }
   };
 
@@ -149,7 +260,7 @@ export default function ChatScreen({ navigation }) {
         timestamp: serverTimestamp()
       });
     } catch (error) {
-      // Continue without saving
+      console.error("Error saving message:", error);
     }
   };
 
@@ -175,8 +286,18 @@ export default function ChatScreen({ navigation }) {
     }, 150);
   };
 
-  const addMessage = async (text, sender, id = null) => {
-    const msg = { id: id || Date.now().toString(), text, sender };
+  const addMessage = async (text, sender, structuredData = null) => {
+    const msg = { 
+      id: Date.now().toString(), 
+      text: text || "", 
+      sender,
+    };
+    
+    if (structuredData) {
+      msg.structuredData = structuredData;
+      msg.isStructured = true;
+    }
+    
     setMessages((prev) => [...prev, msg]);
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
@@ -184,8 +305,10 @@ export default function ChatScreen({ navigation }) {
       scrollToEnd();
     }, 200);
     
-    if (sender === "user") {
+    if (sender === "user" && text) {
       await saveChatMessage(text, true);
+    } else if (sender === "remi" && text) {
+      await saveChatMessage(text, false);
     }
   };
 
@@ -196,7 +319,7 @@ export default function ChatScreen({ navigation }) {
     }
 
     const id = Date.now().toString();
-    setMessages((p) => [...p, { id, text: "", sender: "remi" }]);
+    setMessages((prev) => [...prev, { id, text: "", sender: "remi" }]);
     
     scrollToEnd();
 
@@ -229,155 +352,77 @@ export default function ChatScreen({ navigation }) {
     await saveChatMessage(fullText, false);
   };
 
-  const shouldFetchDataFromDB = (text) => {
-    const lowerText = text.toLowerCase().trim();
-    
-    const simpleGreetings = [
-      'hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening',
-      'how are you', 'what\'s up', 'sup', 'yo',
-      'thanks', 'thank you', 'thank', 'bye', 'goodbye', 'see you',
-      'who are you', 'what can you do', 'help',
-      'hi remi', 'hello remi', 'hey remi', 'good morning remi'
-    ];
+  const send = async () => {
+    const text = input.trim();
+    if (!text) return;
 
-    if (simpleGreetings.some(greeting => lowerText.includes(greeting))) {
-      return false;
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      Alert.alert("Error", "You need to be logged in");
+      return;
     }
 
-    const needsDataKeywords = [
-      'my', 'me', 'i have', 'my class', 'my lecture', 'my schedule',
-      'when is my', 'where is my', 'what is my', 'do i have',
-      'timetable', 'schedule', 'class today', 'lecture today',
-      'exam', 'exams', 'gpa', 'grade', 'grades', 'semester',
-      'room', 'lecturer', 'professor', 'course', 'unit',
-      'today', 'tomorrow', 'monday', 'tuesday', 'wednesday', 
-      'thursday', 'friday', 'saturday', 'sunday',
-      'next class', 'next lecture', 'this week',
-      'assignment', 'homework', 'project', 'deadline', 'test'
-    ];
+    await addMessage(text, "user");
+    setInput("");
+    setLoading(true);
 
-    return needsDataKeywords.some(keyword => lowerText.includes(keyword));
-  };
-
-  const getContextData = async (queryText) => {
-    if (!shouldFetchDataFromDB(queryText) || !userData) {
-      return {};
-    }
-    
-    const contextData = { basicInfo: {} };
-    
-    contextData.basicInfo = {
-      nickname: userData.nickname || "Student",
-      course: userData.course || "Not specified",
-      currentSemester: userData.current_semester || 1
-    };
-
-    const lowerText = queryText.toLowerCase();
-    
-    if (lowerText.includes('timetable') || 
-        lowerText.includes('schedule') ||
-        lowerText.includes('class') ||
-        lowerText.includes('lecture') ||
-        lowerText.includes('today') ||
-        lowerText.includes('tomorrow') ||
-        lowerText.match(/(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/)) {
-      contextData.timetable = userData.timetable || {};
-    }
-
-    if (lowerText.includes('gpa') || lowerText.includes('grade')) {
-      contextData.gpa_data = userData.gpa_data || {};
-    }
-
-    if (lowerText.includes('course') || lowerText.includes('unit')) {
-      contextData.units = userData.units || {};
-    }
-
-    if (lowerText.includes('exam') || lowerText.includes('test')) {
-      contextData.exams = userData.exams || {};
-    }
-
-    return contextData;
-  };
-
-  // Add copy text function
-  const handleCopyText = async (text) => {
     try {
-      await Clipboard.setStringAsync(text);
-      Alert.alert("Copied", "Text copied to clipboard");
-    } catch (error) {
-      Alert.alert("Error", "Failed to copy text");
-    }
-  };
+      const token = await currentUser.getIdToken();
 
-  // Add long press handler for messages
-  const handleMessageLongPress = (text) => {
-    Alert.alert(
-      "Copy Text",
-      "Do you want to copy this text?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Copy", 
-          onPress: () => handleCopyText(text) 
+      const res = await fetch("https://ai-backend-yl4w.onrender.com/ask", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`
         },
-      ]
-    );
+        body: JSON.stringify({ query: text }),
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status}`);
+      }
+      
+      const json = await res.json();
+      
+      // Handle different response types
+      if (json.type === "lecture_list" && json.data?.lectures?.length > 0) {
+        if (json.data.summary) {
+          await addMessage(json.data.summary, "remi");
+        }
+        await addMessage("", "remi", {
+          type: "lecture_list",
+          data: json.data
+        });
+      } 
+      else if (json.type === "exam_list" && json.data?.exams?.length > 0) {
+        if (json.data.summary) {
+          await addMessage(json.data.summary, "remi");
+        }
+        await addMessage("", "remi", {
+          type: "exam_list",
+          data: json.data
+        });
+      }
+      else if (json.type === "gpa_card" && json.data?.gpa) {
+        await addMessage("", "remi", {
+          type: "gpa_card",
+          data: json.data
+        });
+      }
+      else if (json.type === "text") {
+        await typeResponse(json.text || "I'm here to help!");
+      }
+      else {
+        await typeResponse("I'm here to help with your academic questions!");
+      }
+    } catch (error) {
+      console.error("Chat error:", error);
+      await typeResponse("I'm having connection issues. Please check your internet and try again.");
+    }
+
+    setLoading(false);
   };
-
-const send = async () => {
-  const text = input.trim();
-  if (!text) return;
-
-  const currentUser = auth.currentUser;
-  if (!currentUser) {
-    Alert.alert("Error", "You need to be logged in");
-    return;
-  }
-
-  await addMessage(text, "user");
-  setInput("");
-  setLoading(true);
-
-  try {
-    // Get Firebase authentication token
-    const token = await currentUser.getIdToken();
-    
-    const contextData = await getContextData(text);
-
-    const requestBody = {
-      query: text,
-      context: contextData
-    };
-
-    const res = await fetch("https://ai-backend-yl4w.onrender.com/ask", {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(requestBody),
-    });
-    
-    if (!res.ok) {
-      throw new Error(`Server error: ${res.status}`);
-    }
-    
-    const json = await res.json();
-    
-    if (json.answer) {
-      await typeResponse(json.answer);
-    } else if (json.error) {
-      await typeResponse(`I encountered an error: ${json.error}`);
-    } else {
-      await typeResponse("I'm here to help with your academic questions!");
-    }
-  } catch (error) {
-    await typeResponse("I'm having connection issues. Please check your internet and try again.");
-  }
-
-  setLoading(false);
-};
 
   const handleClearChat = () => {
     Alert.alert(
@@ -394,6 +439,31 @@ const send = async () => {
     );
   };
 
+  const handleCopyText = async (text) => {
+    if (!text) return;
+    try {
+      await Clipboard.setStringAsync(text);
+      Alert.alert("Copied", "Text copied to clipboard");
+    } catch (error) {
+      Alert.alert("Error", "Failed to copy text");
+    }
+  };
+
+  const handleMessageLongPress = (text) => {
+    if (!text) return;
+    Alert.alert(
+      "Copy Text",
+      "Do you want to copy this text?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Copy", 
+          onPress: () => handleCopyText(text) 
+        },
+      ]
+    );
+  };
+
   const handleInputFocus = () => {
     setTimeout(() => scrollToEnd(), 300);
   };
@@ -401,19 +471,74 @@ const send = async () => {
   const hasMessages = messages.length > 0;
   const contentHeight = screenHeight - (keyboardVisible ? keyboardHeight : 0) - 180;
 
-  const styles = getStyles(theme);
+  const renderMessageItem = ({ item }) => (
+    <TouchableOpacity
+      onLongPress={() => handleMessageLongPress(item.text)}
+      activeOpacity={0.9}
+      delayLongPress={500}
+    >
+      <View
+        style={[
+          styles.bubble,
+          item.sender === "user" ? styles.userBubble : styles.remiBubble,
+          item.isStructured && styles.structuredBubble
+        ]}
+      >
+        {item.sender === "remi" && !item.isStructured && (
+          <View style={[styles.remiAvatar, { backgroundColor: theme.colors.primaryLight }]}>
+            <SvgIcon name="robot" size={16} color={theme.colors.primary} />
+          </View>
+        )}
+        
+        {item.isStructured ? (
+          <View style={{ flex: 1 }}>
+            {item.text && item.text !== "" && (
+              <Text style={[styles.remiText, { marginBottom: 8 }]}>{item.text}</Text>
+            )}
+            {item.structuredData?.type === "lecture_list" && (
+              <View>
+                {item.structuredData.data?.lectures?.map((lecture, idx) => (
+                  <LectureCard key={idx} lecture={lecture} index={idx} />
+                ))}
+              </View>
+            )}
+            {item.structuredData?.type === "exam_list" && (
+              <View>
+                {item.structuredData.data?.exams?.map((exam, idx) => (
+                  <ExamCard key={idx} exam={exam} index={idx} />
+                ))}
+              </View>
+            )}
+            {item.structuredData?.type === "gpa_card" && (
+              <GPACard gpaData={item.structuredData.data} />
+            )}
+          </View>
+        ) : (
+          <Text style={item.sender === "user" ? styles.userText : styles.remiText}>
+            {item.text}
+          </Text>
+        )}
+        
+        {item.sender === "user" && (
+          <View style={[styles.userAvatar, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+            <SvgIcon name="user" size={16} color="white" />
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-            <TouchableOpacity 
-              style={styles.backBtn} 
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.backText}>‹</Text>
-            </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backText}>‹</Text>
+          </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <SvgIcon name="robot" size={24} color={theme.colors.primary} style={styles.headerIcon} />
             <Text style={styles.headerTitle}>REMI</Text>
@@ -445,34 +570,7 @@ const send = async () => {
             data={messages}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.messagesContainer}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                onLongPress={() => handleMessageLongPress(item.text)}
-                activeOpacity={0.9}
-                delayLongPress={500}
-              >
-                <View
-                  style={[
-                    styles.bubble,
-                    item.sender === "user" ? styles.userBubble : styles.remiBubble,
-                  ]}
-                >
-                  {item.sender === "remi" && (
-                    <View style={[styles.remiAvatar, { backgroundColor: theme.colors.primaryLight }]}>
-                      <SvgIcon name="robot" size={16} color={theme.colors.primary} />
-                    </View>
-                  )}
-                  <Text style={item.sender === "user" ? styles.userText : styles.remiText}>
-                    {item.text}
-                  </Text>
-                  {item.sender === "user" && (
-                    <View style={[styles.userAvatar, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                      <SvgIcon name="user" size={16} color="white" />
-                    </View>
-                  )}
-                </View>
-              </TouchableOpacity>
-            )}
+            renderItem={renderMessageItem}
             onContentSizeChange={() => scrollToEnd(false)}
             onLayout={() => scrollToEnd(false)}
             showsVerticalScrollIndicator={false}
@@ -480,14 +578,13 @@ const send = async () => {
         )}
       </View>
 
-      {/* Simple thinking dots indicator - positioned above input */}
+      {/* Thinking dots indicator */}
       {loading && (
         <View style={[
           styles.thinkingDotsContainer,
-          { bottom: keyboardHeight + 70 } // Position above input bar
+          { bottom: keyboardHeight + 70 }
         ]}>
           <View style={styles.thinkingDotsBubble}>
-            {/* <ActivityIndicator size="small" color={theme.colors.primary} style={styles.thinkingIndicator} /> */}
             <SvgIcon name="robot" size={16} color={theme.colors.primary} style={styles.thinkingRobot} />
             <Text style={[styles.thinkingDotsText, { color: theme.colors.primary }]}>{thinkingDots}</Text>
           </View>
@@ -532,247 +629,3 @@ const send = async () => {
     </View>
   );
 }
-
-const getStyles = (theme) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    backgroundColor: theme.colors.backgroundSecondary,
-    paddingTop: 60,
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  headerTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  backText: { 
-    fontSize: 24, 
-    color: theme.colors.primary, 
-    fontWeight: "300",
-    lineHeight: 24,
-  },
-  headerTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  headerIcon: {
-    marginRight: 4,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
-  },
-  clearButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  clearButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  content: {
-    padding: 16,
-  },
-  messagesContainer: {
-    paddingBottom: 20,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: theme.colors.card,
-    padding: 40,
-    borderRadius: 24,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
-  },
-  emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  emptyTitle: { 
-    fontSize: 20, 
-    fontWeight: "700", 
-    color: theme.colors.textPrimary,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  emptySubtitle: { 
-    color: theme.colors.textSecondary, 
-    textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-
-  // Simple thinking dots
-  thinkingDotsContainer: {
-    position: 'absolute',
-    left: 16,
-    zIndex: 10,
-  },
-  thinkingDotsBubble: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.card,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  thinkingIndicator: {
-    marginRight: 8,
-  },
-  thinkingRobot: {
-    marginRight: 8,
-  },
-  thinkingDotsText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    width: 30,
-  },
-
-  // Input Bar
-  inputBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    paddingBottom: 50,
-    borderTopWidth: 1,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  input: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 80,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: theme.colors.background,
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-    textAlignVertical: "center",
-    marginRight: 12,
-  },
-  sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  sendBtnDisabled: {
-    shadowColor: theme.colors.textTertiary,
-  },
-
-  // Message Bubbles
-  bubble: {
-    padding: 16,
-    borderRadius: 20,
-    marginVertical: 6,
-    maxWidth: "80%",
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  userBubble: {
-    backgroundColor: theme.colors.primary,
-    alignSelf: "flex-end",
-    borderBottomRightRadius: 6,
-  },
-  remiBubble: {
-    backgroundColor: theme.colors.card,
-    alignSelf: "flex-start",
-    borderBottomLeftRadius: 6,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  userText: { 
-    color: "#fff",
-    fontSize: 16,
-    lineHeight: 20,
-    flex: 1,
-  },
-  remiText: { 
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    lineHeight: 20,
-    flex: 1,
-  },
-  userAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 8,
-    marginTop: -2,
-  },
-  remiAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-    marginTop: -2,
-  },
-});

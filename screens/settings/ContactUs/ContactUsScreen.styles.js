@@ -1,0 +1,166 @@
+import { StyleSheet, Dimensions, Platform } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
+export const getStyles = (theme) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  header: {
+    backgroundColor: theme.colors.backgroundSecondary,
+    paddingTop: 60,
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  backText: { 
+    fontSize: 24, 
+    color: theme.colors.primary, 
+    fontWeight: "300",
+    lineHeight: 24,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+    textAlign: "center",
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  content: {
+    padding: 24,
+  },
+  heroSection: {
+    alignItems: 'center',
+    marginBottom: 32,
+    paddingHorizontal: 20,
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  contactMethods: {
+    gap: 16,
+    marginBottom: 32,
+  },
+  contactCard: {
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  contactHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  contactTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  contactDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: theme.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: 16,
+  },
+  contactText: {
+    fontSize: 16,
+    color: theme.colors.textPrimary,
+    fontWeight: "600",
+    flex: 1,
+  },
+  actionButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  actionButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  debugText: {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
+    marginTop: 8,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  tipsCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(37, 211, 102, 0.2)',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 20,
+  },
+  tipsContent: {
+    flex: 1,
+  },
+  tipsTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  tipsText: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  bottomSpacing: {
+    height: 80,
+  },
+});

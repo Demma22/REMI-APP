@@ -13,6 +13,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Firestore
 import { getFirestore } from "firebase/firestore";
 
+// Firebase Functions
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
+
 // Your Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyCnl3qlauxFr0T3yKFvibeLOaek9nB11Ko",
@@ -34,5 +37,14 @@ export const auth = initializeAuth(app, {
 
 // Initialize Firestore (Create database instance)
 export const db = getFirestore(app);
+
+// Initialize Firebase Functions
+export const functions = getFunctions(app);
+
+// Optional: Use emulator for local development
+// Uncomment this if you want to test functions locally
+// if (__DEV__) {
+//   connectFunctionsEmulator(functions, 'localhost', 5001);
+// }
 
 export default app;

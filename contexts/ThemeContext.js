@@ -8,7 +8,7 @@ export const lightTheme = {
   colors: {
     primary: '#535FFD',
     primaryLight: 'rgba(83, 95, 253, 0.1)',
-    secondary: '#FF8A23',
+    secondary: '#FDAC1B',
     secondaryLight: 'rgba(255, 138, 35, 0.1)',
     success: '#10B981',
     successLight: 'rgba(16, 185, 129, 0.1)',
