@@ -101,7 +101,8 @@
           "image": "./assets/splash.png"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {

@@ -312,7 +312,7 @@ export default function TimetableScreen({ navigation }) {
               {!hasAnyLecture ? (
                 <View style={styles.emptyCard}>
                   <View style={[styles.emptyIcon, { backgroundColor: theme.colors.primaryLight }]}>
-                    <SvgIcon name="calendar" size={32} color={theme.colors.primary} />
+                    <SvgIcon name="calender" size={110} color={theme.colors.secondary} />
                   </View>
                   <Text style={styles.emptyTitle}>No activities scheduled yet</Text>
                   <Text style={styles.emptySub}>
@@ -429,9 +429,6 @@ export default function TimetableScreen({ navigation }) {
                           <View style={styles.examHeader}>
                             <Text style={styles.examName}>{exam.name}</Text>
                             <View style={styles.examActions}>
-                              <TouchableOpacity onPress={() => handleEditExam(idx, exam)}>
-                                <SvgIcon name="pencil" size={18} color="#FFFFFF" />
-                              </TouchableOpacity>
                               <TouchableOpacity onPress={() => handleDeleteExam(idx, exam)}>
                                 <SvgIcon name="trash" size={18} color="#FDAC1B" />
                               </TouchableOpacity>

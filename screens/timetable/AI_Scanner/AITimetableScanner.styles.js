@@ -40,6 +40,16 @@ export const getStyles = (theme) => StyleSheet.create({
   headerSpacer: {
     width: 40,
   },
+  addBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
   content: {
     flex: 1,
     padding: 20,
@@ -89,12 +99,21 @@ export const getStyles = (theme) => StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+  errorCard: {
+    backgroundColor: theme.colors.dangerLight,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  errorText: {
+    fontSize: 14,
+    color: theme.colors.danger,
+    textAlign: 'center',
+  },
   cameraButton: {
     backgroundColor: theme.colors.primary,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
     paddingVertical: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -106,10 +125,8 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   galleryButton: {
     backgroundColor: theme.colors.secondary,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
     paddingVertical: 16,
     borderRadius: 12,
     marginBottom: 20,
@@ -125,34 +142,28 @@ export const getStyles = (theme) => StyleSheet.create({
     fontWeight: '600',
   },
   tipCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
     backgroundColor: theme.colors.primaryLight,
     padding: 16,
     borderRadius: 12,
     marginTop: 8,
   },
   tipText: {
-    flex: 1,
     fontSize: 12,
     color: theme.colors.textSecondary,
     lineHeight: 16,
+    textAlign: 'center',
   },
   aiSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
     backgroundColor: theme.colors.primaryLight,
     padding: 16,
     borderRadius: 12,
     marginBottom: 20,
   },
   aiSummaryText: {
-    flex: 1,
     fontSize: 14,
     color: theme.colors.textPrimary,
     lineHeight: 20,
+    textAlign: 'center',
   },
   lectureCard: {
     backgroundColor: theme.colors.card,
@@ -183,9 +194,9 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: theme.colors.textPrimary,
-    marginBottom: 6,
+    marginBottom: 8,
     marginTop: 12,
   },
   input: {
@@ -198,12 +209,31 @@ export const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.background,
   },
+  inputError: {
+    borderColor: theme.colors.danger,
+  },
   timeRow: {
     flexDirection: 'row',
     gap: 12,
   },
   timeField: {
     flex: 1,
+  },
+  timeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.background,
+  },
+  timeButtonText: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.colors.textPrimary,
   },
   dayPicker: {
     flexDirection: 'row',
@@ -212,7 +242,7 @@ export const getStyles = (theme) => StyleSheet.create({
     marginBottom: 8,
   },
   dayButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: theme.colors.backgroundTertiary,
@@ -241,25 +271,192 @@ export const getStyles = (theme) => StyleSheet.create({
   addButtonText: {
     color: theme.colors.primary,
     fontWeight: '600',
+    fontSize: 14,
   },
   saveButton: {
     backgroundColor: theme.colors.secondary,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
     paddingVertical: 16,
     borderRadius: 12,
-    marginBottom: 40,
     shadowColor: theme.colors.secondary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
+  saveButtonDisabled: {
+    opacity: 0.7,
+  },
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  rescanButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 12,
+  },
+  rescanButtonText: {
+    fontSize: 14,
+  },
+  footer: {
+    padding: 20,
+    paddingBottom: 40,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
+  },
+  bottomSpacing: {
+    height: 100,
+  },
+  
+  // Scanning Overlay Styles
+  scanImageBackground: {
+    width: '100%',
+    height: '100%',
+  },
+  scanImageStyle: {
+    resizeMode: 'contain',
+  },
+  scanDarkOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  scanLine: {
+    position: 'absolute',
+    left: 40,
+    right: 40,
+    height: 2,
+    opacity: 0.8,
+    shadowColor: '#fff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+    elevation: 5,
+    zIndex: 10,
+    borderRadius: 1,
+  },
+  centerScanner: {
+    position: 'absolute',
+    top: '35%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 15,
+  },
+  scannerCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  scanProgressSection: {
+    position: 'absolute',
+    bottom: 100,
+    left: 24,
+    right: 24,
+    zIndex: 20,
+  },
+  scanProgressBarContainer: {
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  scanProgressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  scanStatusContainer: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  scanStatusText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  scanWaitContainer: {
+    alignItems: 'center',
+  },
+  scanWaitText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+  },
+  
+  // TimePicker Modal Styles
+  timePickerContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  timePickerContent: {
+    width: "90%",
+    borderRadius: 24,
+    padding: 20,
+  },
+  timePickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  timePickerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  timePickerColumns: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    height: 200,
+  },
+  timePickerColumn: {
+    flex: 1,
+    alignItems: "center",
+  },
+  timePickerColumnLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  pickerList: {
+    alignItems: "center",
+  },
+  pickerItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginVertical: 2,
+  },
+  pickerItemSelected: {
+    backgroundColor: theme.colors.primaryLight,
+  },
+  pickerItemText: {
+    fontSize: 20,
+    color: theme.colors.textPrimary,
+  },
+  pickerItemTextSelected: {
+    color: theme.colors.primary,
+    fontWeight: "700",
+  },
+  timePickerConfirmBtn: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  timePickerConfirmText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

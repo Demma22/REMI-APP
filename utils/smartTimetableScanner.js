@@ -48,6 +48,7 @@ export const scanTimetableFromImage = async (imageUri, mode = 'lectures') => {
   return await sendToBackend(base64Image, mode);
 };
 
+// Original functions (kept for backward compatibility)
 export const pickAndScanTimetable = async (mode = 'lectures') => {
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (status !== 'granted') {
@@ -83,4 +84,48 @@ export const takePhotoAndScan = async (mode = 'lectures') => {
   }
   
   return await scanTimetableFromImage(result.assets[0].uri, mode);
+};
+
+// NEW: Functions that return both URI and scan result
+export const pickAndScanTimetableWithUri = async (mode = 'lectures') => {
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== 'granted') {
+    throw new Error('Gallery permission required');
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    allowsEditing: true,
+    quality: 0.9,
+  });
+
+  if (result.canceled) {
+    return { uri: null, scanResult: null };
+  }
+  
+  const uri = result.assets[0].uri;
+  const scanResult = await scanTimetableFromImage(uri, mode);
+  
+  return { uri, scanResult };
+};
+
+export const takePhotoAndScanWithUri = async (mode = 'lectures') => {
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== 'granted') {
+    throw new Error('Camera permission required');
+  }
+
+  const result = await ImagePicker.launchCameraAsync({
+    allowsEditing: true,
+    quality: 0.9,
+  });
+
+  if (result.canceled) {
+    return { uri: null, scanResult: null };
+  }
+  
+  const uri = result.assets[0].uri;
+  const scanResult = await scanTimetableFromImage(uri, mode);
+  
+  return { uri, scanResult };
 };

@@ -25,6 +25,7 @@ import EyeIcon from '../assets/icons/eye.svg';
 import MoonIcon from '../assets/icons/moon.svg';
 import SunIcon from '../assets/icons/sun.svg';
 import BellIcon from '../assets/icons/bell.svg';
+import completeIcon from '../assets/icons/complete.svg';
 import PdfIcon from '../assets/icons/pdf.svg';
 import CheckcircleIcon from '../assets/icons/check-circle.svg';
 import ArrowBackIcon from '../assets/icons/arrow-back.svg';
@@ -39,23 +40,43 @@ import AihomeIcon from '../assets/icons/ai_home.svg';
 import gpaIcon from '../assets/icons/gpa.svg';
 import timetableIcon from '../assets/icons/timetable.svg';
 import scanIcon from '../assets/icons/scan.svg';
+import appIcon from '../assets/icons/app.svg';
+import webIcon from '../assets/icons/web.svg';
+import focusIcon from '../assets/icons/focus.svg';
+import habitIcon from '../assets/icons/habit.svg';
+import friendsIcon from '../assets/icons/friends.svg';
+import timeIcon from '../assets/icons/time.svg';
+import otherIcon from '../assets/icons/other.svg';
+import mediaIcon from '../assets/icons/media.svg';
+import undergraduateIcon from '../assets/icons/undergraduate.svg';
+import graduateIcon from '../assets/icons/graduate.svg';
+import professionalIcon from '../assets/icons/professional.svg';
+import nonStudentIcon from '../assets/icons/nonstudent.svg';
+import productiveIcon from '../assets/icons/productive.svg';
+import highschoolIcon from '../assets/icons/highschool.svg';
+import lockIcon from '../assets/icons/lock.svg';
+import calenderIcon from '../assets/icons/calender.svg';
 
 const iconComponents = {
   'home': HomeIcon,
   'eye': EyeIcon,
   'instagram':InstagramIcon,
+  'lock': lockIcon,
+  'calender': calenderIcon,
   'x': XIcon,
   'threads': ThreadsIcon,
   'scan': scanIcon,
   'ai-home': AihomeIcon,
   'gpa': gpaIcon,
   'timetable': timetableIcon,
+  'complete': completeIcon,
   'tiktok': TiktokIcon,
   'mail': MailIcon,
   'book': BookIcon,
   'info': AboutIcon,
   'bell': BellIcon,
   'whatsapp': WhatsappIcon,
+  'media': mediaIcon,
   'phone': PhoneIcon,
   'arrow-back': ArrowBackIcon,
   'pencil': PencilIcon,
@@ -65,6 +86,20 @@ const iconComponents = {
   'sun': SunIcon,
   'send': SendIcon,
   'trash': TrashIcon,
+  'productive': productiveIcon,
+  'highschool': highschoolIcon,
+  'other': otherIcon,
+  'time': timeIcon,
+  'friends': friendsIcon,
+  'habit': habitIcon,
+  'focus': focusIcon,
+  'web': webIcon,
+  'app': appIcon,
+  'undergraduate': undergraduateIcon,
+  'graduate': graduateIcon,
+  'professional': professionalIcon,
+  'nonstudent': nonStudentIcon,
+  'highschool': highschoolIcon,
   'calculator': CalculatorIcon,
   'calendar': CalendarIcon,
   'chart-line': ChartLineIcon,
