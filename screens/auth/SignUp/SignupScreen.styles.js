@@ -1,0 +1,187 @@
+// screens/auth/SignUp/SignupScreen.styles.js
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
+export const getStyles = (theme) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 40,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 40,
+    paddingTop: 20,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#383940",
+    marginTop: 60,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#64748B",
+    textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: 20,
+  },
+  formCard: {
+    backgroundColor: "#535FFD",
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 32,
+    shadowColor: "#535FFD",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    gap: 10,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  input: {
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+    padding: 16,
+    borderRadius: 12,
+    fontSize: 16,
+    color: "#FFFFFF",
+  },
+  inputError: {
+    borderColor: "#F87171",
+  },
+  passwordContainer: {
+    position: 'relative',
+  },
+  passwordInput: {
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+    padding: 16,
+    borderRadius: 12,
+    fontSize: 16,
+    color: "#FFFFFF",
+    paddingRight: 50,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  errorHintContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 6,
+    marginLeft: 4,
+  },
+  errorHintText: {
+    fontSize: 12,
+    color: "#F87171",
+  },
+  successHintContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 6,
+    marginLeft: 4,
+  },
+  successHintText: {
+    fontSize: 12,
+    color: "#34D399",
+  },
+  signupButton: {
+    backgroundColor: "#FDAC1B",
+    padding: 18,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 24,
+    shadowColor: "#FDAC1B",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  signupButtonDisabled: {
+    backgroundColor: "rgba(253, 172, 27, 0.5)",
+    shadowColor: "transparent",
+  },
+  signupButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  termsText: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.7)",
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  termsLink: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    textDecorationLine: 'underline',
+  },
+  loginSection: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loginText: {
+    color: "#64748B",
+    fontSize: 16,
+  },
+  loginLink: {
+    color: "#535FFD",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+});

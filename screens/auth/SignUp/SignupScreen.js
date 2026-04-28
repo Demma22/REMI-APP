@@ -1,24 +1,24 @@
+// screens/auth/SignUp/SignupScreen.js
 import React, { useState } from "react";
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
   ScrollView,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Linking,
 } from "react-native";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, query, collection, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../../../firebase";
 import SvgIcon from "../../../components/SvgIcon";
 import { usernameToEmail, validateUsernameFormat } from "../../../utils/usernameHelper";
-
-const { height } = Dimensions.get("window");
+import { useTheme } from '../../../contexts/ThemeContext';
+import { getStyles } from "./SignupScreen.styles";
 
 export default function SignupScreen({ navigation }) {
   const [username, setUsername] = useState("");
@@ -28,6 +28,12 @@ export default function SignupScreen({ navigation }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmError, setConfirmError] = useState("");
+
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
 
   // Check if username exists in Firestore
   const checkUsernameExists = async (username) => {
@@ -41,22 +47,50 @@ export default function SignupScreen({ navigation }) {
     }
   };
 
+  const validateUsernameInput = (value) => {
+    const validation = validateUsernameFormat(value);
+    if (!validation.valid && value.length > 0) {
+      setUsernameError(validation.error);
+      return false;
+    } else {
+      setUsernameError("");
+      return true;
+    }
+  };
+
+  const validatePasswordInput = (value) => {
+    if (value.length > 0 && value.length < 6) {
+      setPasswordError("Password must be at least 6 characters");
+      return false;
+    } else {
+      setPasswordError("");
+      return true;
+    }
+  };
+
+  const validateConfirmPassword = (value) => {
+    if (value.length > 0 && password !== value) {
+      setConfirmError("Passwords do not match");
+      return false;
+    } else {
+      setConfirmError("");
+      return true;
+    }
+  };
+
   const validateForm = async () => {
-    // Validate username format
     const usernameValidation = validateUsernameFormat(username);
     if (!usernameValidation.valid) {
       setError(usernameValidation.error);
       return false;
     }
 
-    // Check if username already exists
     const usernameExists = await checkUsernameExists(username);
     if (usernameExists) {
       setError("Username already taken. Please choose another.");
       return false;
     }
 
-    // Validate password
     if (!password.trim()) {
       setError("Please create a password");
       return false;
@@ -90,7 +124,6 @@ export default function SignupScreen({ navigation }) {
     setIsLoading(true);
 
     try {
-      // Convert username to Firebase email format
       const firebaseEmail = usernameToEmail(username);
       const cleanUsername = username.trim().toLowerCase();
       
@@ -103,17 +136,9 @@ export default function SignupScreen({ navigation }) {
         created_at: new Date(),
         onboarding_completed: false,
         nickname: null,
-        course: null,
-        total_semesters: null,
-        current_semester: null,
-        units: {},
-        timetable: {},
-        exams: {},
-        gpa_data: {},
-        chat_history: []
       });
 
-      navigation.navigate("Nickname");
+      navigation.navigate("Onboarding");
       
     } catch (error) {
       if (error.code === 'auth/email-already-in-use') {
@@ -143,42 +168,52 @@ export default function SignupScreen({ navigation }) {
            password === confirmPassword;
   };
 
+  const handleUsernameChange = (text) => {
+    setUsername(text);
+    validateUsernameInput(text);
+    if (error) setError("");
+  };
+
+  const handlePasswordChange = (text) => {
+    setPassword(text);
+    validatePasswordInput(text);
+    if (confirmPassword && password !== text) {
+      setConfirmError("Passwords do not match");
+    } else if (confirmPassword && password === text) {
+      setConfirmError("");
+    }
+    if (error) setError("");
+  };
+
+  const handleConfirmChange = (text) => {
+    setConfirmPassword(text);
+    validateConfirmPassword(text);
+    if (error) setError("");
+  };
+
   const handleTermsPress = () => {
-    navigation.navigate("TermsConditions");
+    Linking.openURL('https://sndstudio-ug.com/terms');
   };
 
   const handlePrivacyPress = () => {
-    navigation.navigate("PrivacyPolicy");
+    Linking.openURL('https://sndstudio-ug.com/privacy');
   };
 
   return (
     <View style={styles.container}>
-      {Platform.OS === 'ios' ? (
-        <KeyboardAvoidingView 
-          style={styles.keyboardAvoid}
-          behavior="padding"
-          keyboardVerticalOffset={60}
-        >
-          <ScrollView 
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {renderContent()}
-          </ScrollView>
-        </KeyboardAvoidingView>
-      ) : (
-        // For Android - just use ScrollView with extra bottom padding
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+      >
         <ScrollView 
-          style={styles.scrollViewAndroid}
-          contentContainerStyle={styles.scrollContentAndroid}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
         >
           {renderContent()}
         </ScrollView>
-      )}
+      </KeyboardAvoidingView>
     </View>
   );
 
@@ -188,7 +223,7 @@ export default function SignupScreen({ navigation }) {
         <View style={styles.header}>
           <Text style={styles.title}>Join REMI</Text>
           <Text style={styles.subtitle}>
-            Create your account and start your academic journey
+            Create your account and start your journey
           </Text>
         </View>
 
@@ -206,24 +241,21 @@ export default function SignupScreen({ navigation }) {
               <Text style={styles.inputLabel}>Username</Text>
             </View>
             <TextInput
-              placeholder="john_doe"
-              style={styles.input}
+              placeholder="letters, numbers, _ and - only"
+              style={[styles.input, usernameError ? styles.inputError : null]}
               value={username}
               autoCapitalize="none"
-              onChangeText={(text) => {
-                setUsername(text);
-                if (error) setError("");
-              }}
-              placeholderTextColor="#94A3B8"
+              onChangeText={handleUsernameChange}
+              placeholderTextColor="rgba(255,255,255,0.6)"
               editable={!isLoading}
               maxLength={20}
             />
-            <View style={styles.usernameHintContainer}>
-              <SvgIcon name="info" size={14} color="#94A3B8" style={styles.hintIcon} />
-              <Text style={styles.usernameHint}>
-                3-20 characters, letters, numbers, _ and - only
-              </Text>
-            </View>
+            {usernameError ? (
+              <View style={styles.errorHintContainer}>
+                <SvgIcon name="warning" size={12} color="#F87171" />
+                <Text style={styles.errorHintText}>{usernameError}</Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Password Input */}
@@ -233,15 +265,12 @@ export default function SignupScreen({ navigation }) {
             </View>
             <View style={styles.passwordContainer}>
               <TextInput
-                placeholder="Create a password"
-                style={styles.passwordInput}
+                placeholder="••••••"
+                style={[styles.passwordInput, passwordError ? styles.inputError : null]}
                 value={password}
                 secureTextEntry={!showPassword}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  if (error) setError("");
-                }}
-                placeholderTextColor="#94A3B8"
+                onChangeText={handlePasswordChange}
+                placeholderTextColor="rgba(255,255,255,0.6)"
                 autoComplete="password-new"
                 editable={!isLoading}
               />
@@ -250,13 +279,15 @@ export default function SignupScreen({ navigation }) {
                 onPress={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
               >
-                <SvgIcon name="eye" size={22} color={showPassword ? "#535FFD" : "#94A3B8"} />
+                <SvgIcon name={showPassword ? "eye-off" : "eye"} size={20} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
-            <View style={styles.passwordHintContainer}>
-              <SvgIcon name="info" size={14} color="#94A3B8" style={styles.hintIcon} />
-              <Text style={styles.passwordHint}>Must be at least 6 characters</Text>
-            </View>
+            {passwordError ? (
+              <View style={styles.errorHintContainer}>
+                <SvgIcon name="warning" size={12} color="#F87171" />
+                <Text style={styles.errorHintText}>{passwordError}</Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Confirm Password Input */}
@@ -266,15 +297,12 @@ export default function SignupScreen({ navigation }) {
             </View>
             <View style={styles.passwordContainer}>
               <TextInput
-                placeholder="Confirm your password"
-                style={styles.passwordInput}
+                placeholder="••••••"
+                style={[styles.passwordInput, confirmError ? styles.inputError : null]}
                 value={confirmPassword}
                 secureTextEntry={!showConfirmPassword}
-                onChangeText={(text) => {
-                  setConfirmPassword(text);
-                  if (error) setError("");
-                }}
-                placeholderTextColor="#94A3B8"
+                onChangeText={handleConfirmChange}
+                placeholderTextColor="rgba(255,255,255,0.6)"
                 editable={!isLoading}
               />
               <TouchableOpacity 
@@ -282,39 +310,36 @@ export default function SignupScreen({ navigation }) {
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 disabled={isLoading}
               >
-                <SvgIcon name="eye" size={22} color={showConfirmPassword ? "#535FFD" : "#94A3B8"} />
+                <SvgIcon name={showConfirmPassword ? "eye-off" : "eye"} size={20} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
-            {password !== confirmPassword && confirmPassword.length > 0 && (
-              <View style={styles.passwordMatchContainer}>
-                <SvgIcon name="warning" size={14} color="#DC2626" style={styles.matchIcon} />
-                <Text style={styles.passwordMatchText}>Passwords do not match</Text>
+            {confirmError ? (
+              <View style={styles.errorHintContainer}>
+                <SvgIcon name="warning" size={12} color="#F87171" />
+                <Text style={styles.errorHintText}>{confirmError}</Text>
               </View>
-            )}
-            {password === confirmPassword && confirmPassword.length > 0 && (
-              <View style={[styles.passwordMatchContainer, styles.passwordMatchSuccess]}>
-                <SvgIcon name="check" size={14} color="#10B981" style={styles.matchIcon} />
-                <Text style={[styles.passwordMatchText, styles.passwordMatchSuccessText]}>Passwords match!</Text>
+            ) : null}
+            {password && confirmPassword && !confirmError && password === confirmPassword ? (
+              <View style={styles.successHintContainer}>
+                <SvgIcon name="check" size={12} color="#34D399" />
+                <Text style={styles.successHintText}>Passwords match!</Text>
               </View>
-            )}
+            ) : null}
           </View>
 
           <TouchableOpacity 
             style={[
               styles.signupButton,
               isLoading && styles.signupButtonDisabled,
-              !isFormValid() && styles.signupButtonDisabled
             ]}
             onPress={signup}
-            disabled={isLoading || !isFormValid()}
+            disabled={isLoading}
             activeOpacity={0.9}
           >
             {isLoading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color="#535FFD" />
             ) : (
-              <>
-                <Text style={styles.signupButtonText}>Create Account</Text>
-              </>
+              <Text style={styles.signupButtonText}>Create Account</Text>
             )}
           </TouchableOpacity>
 
@@ -343,219 +368,3 @@ export default function SignupScreen({ navigation }) {
     );
   }
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FAFAFA",
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  scrollViewAndroid: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 40,
-  },
-  scrollContentAndroid: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 100,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-    paddingTop: 20,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: "#383940",
-    marginTop: 60,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#64748B",
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 20,
-  },
-  formCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 32,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    gap: 12,
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 14,
-    fontWeight: '500',
-    flex: 1,
-  },
-  inputContainer: {
-    marginBottom: 24,
-  },
-  inputLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#383940",
-  },
-  input: {
-    backgroundColor: "#FAFAFA",
-    borderWidth: 2,
-    borderColor: "#F1F5F9",
-    padding: 16,
-    borderRadius: 12,
-    fontSize: 16,
-    color: "#383940",
-  },
-  usernameHintContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    gap: 6,
-    marginLeft: 4,
-  },
-  usernameHint: {
-    fontSize: 12,
-    color: "#94A3B8",
-  },
-  passwordContainer: {
-    position: 'relative',
-  },
-  passwordInput: {
-    backgroundColor: "#FAFAFA",
-    borderWidth: 2,
-    borderColor: "#F1F5F9",
-    padding: 16,
-    borderRadius: 12,
-    fontSize: 16,
-    color: "#383940",
-    paddingRight: 60,
-  },
-  eyeButton: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
-  passwordHintContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    gap: 6,
-    marginLeft: 4,
-  },
-  hintIcon: {
-    marginTop: 1,
-  },
-  passwordHint: {
-    fontSize: 12,
-    color: "#94A3B8",
-  },
-  passwordMatchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    gap: 6,
-    marginLeft: 4,
-  },
-  passwordMatchSuccess: {
-    marginTop: 8,
-  },
-  matchIcon: {
-    marginTop: 1,
-  },
-  passwordMatchText: {
-    fontSize: 12,
-    color: "#DC2626",
-  },
-  passwordMatchSuccessText: {
-    color: "#10B981",
-  },
-  signupButton: {
-    backgroundColor: "#535FFD",
-    padding: 18,
-    borderRadius: 12,
-    alignItems: "center",
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 12,
-    marginTop: 8,
-    marginBottom: 24,
-    shadowColor: "#535FFD",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  signupButtonDisabled: {
-    backgroundColor: "#94A3B8",
-    shadowColor: "#94A3B8",
-  },
-  buttonIcon: {
-    marginRight: 4,
-  },
-  signupButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  termsText: {
-    fontSize: 12,
-    color: "#94A3B8",
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  termsLink: {
-    color: "#535FFD",
-    fontWeight: "600",
-  },
-  loginSection: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loginText: {
-    color: "#64748B",
-    fontSize: 16,
-  },
-  loginLink: {
-    color: "#535FFD",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-});
