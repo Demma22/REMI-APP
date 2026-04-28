@@ -17,7 +17,10 @@ import SplashIntro from "./screens/splashscreen/SplashIntro";
 import LoginScreen from "./screens/auth/Login/LoginScreen";
 import SignupScreen from "./screens/auth/SignUp/SignupScreen";
 
-// ONBOARDING SCREENS
+// NEW ONBOARDING SCREEN
+import OnboardingScreen from "./screens/onboarding/OnboardingScreen";
+
+// OLD ONBOARDING SCREENS (KEEP FOR MIGRATION, WILL BE REMOVED LATER)
 import Nickname from "./screens/onboarding/Nickname/Nickname";
 import Course from "./screens/onboarding/Course/Course";
 import Semesters from "./screens/onboarding/Semesters/Semesters";
@@ -31,6 +34,9 @@ import TimetableScreen from "./screens/timetable/TimetableHome/TimetableScreen";
 import EditTimetableScreen from "./screens/timetable/EditTimetable/EditTimetableScreen";
 import ChatScreen from "./screens/chatbot/ChatScreen";
 import GPAScreen from "./screens/gpa/GPAHome/GPAScreen";
+import CurriculumSelectorScreen from "./screens/gpa/CurriculumSelector/CurriculumSelectorScreen";
+import ScanResultsScreen from "./screens/gpa/ScanResults/ScanResultsScreen";
+import ReviewScannedResults from "./screens/gpa/ReviewScannedResults/ReviewScannedResultsScreen";
 import ExportGPAScreen from "./screens/gpa/ExportGPA/ExportGPAScreen";
 import GPACalculationScreen from "./screens/gpa/GPACalculator/GPACalculationScreen";
 import ProfileScreen from "./screens/Profile/ProfileScreen";
@@ -40,7 +46,7 @@ import DataDeleteScreen from "./screens/DataProtection/DataDeletion/DataDeleteSc
 import AddExamScreen from "./screens/exam/AddExamScreen";
 import ExamTimetableScreen from "./screens/exam/ExamTimetableScreen";
 import SettingsScreen from "./screens/settings/SettingsHome/SettingsScreen";
-import EditNickname from "./screens/settings/EditNickname";
+import EditNickname from "./screens/settings/EditNickname/EditNickname";
 import ContactUsScreen from "./screens/settings/ContactUs/ContactUsScreen";
 import AboutUsScreen from "./screens/settings/AboutUs/AboutUsScreen";
 import EditCurrentSemester from "./screens/settings/EditCurrentSemester";
@@ -49,7 +55,7 @@ import ReviewScannedLectures from "./screens/timetable/ReviewScannedInfo/ReviewS
 import EditUnits from "./screens/settings/EditUnits";
 import EditCourse from "./screens/settings/EditCourse";
 import NotificationsSettingsScreen from "./screens/settings/NotificationsSettings/NotificationsSettingsScreen";
-import ManageFunNotifications from "./screens/admin/ManageFunNotifications"; // Import Admin Panel
+import ManageFunNotifications from "./screens/admin/ManageFunNotifications";
 
 const Stack = createStackNavigator();
 
@@ -71,13 +77,11 @@ function AppContent() {
 
   // Keep-awake management useEffect
   useEffect(() => {
-    // Disable keep-awake when component mounts
     deactivateKeepAwake();
     
-    // Set up periodic check to disable keep-awake (in case a screen activates it)
     const interval = setInterval(() => {
       deactivateKeepAwake();
-    }, 30000); // Check every 30 seconds
+    }, 30000);
     
     return () => {
       clearInterval(interval);
@@ -85,35 +89,42 @@ function AppContent() {
     };
   }, []);
 
+  // Migration function for old users (kept for backward compatibility)
   const migrateExistingUser = async (userData, userId) => {
     try {
       if (userData.nickname && userData.course && userData.total_semesters && userData.current_semester) {
         const userDocRef = doc(db, "users", userId);
-        await updateDoc(userDocRef, {
+        
+        // Convert old structure to new onboarding structure
+        const migrationData = {
           onboarding_completed: true,
           onboarding_completed_at: new Date(),
-          migrated_at: new Date()
-        });
+          migrated_at: new Date(),
+          // Map old data to new format
+          nickname: userData.nickname,
+          heardFrom: "legacy_user",
+          purpose: ["productivity"],
+          studyStage: userData.course ? "undergraduate" : "not_studying",
+          ageRange: null,
+        };
         
+        await updateDoc(userDocRef, migrationData);
         return true;
       }
     } catch (error) {
-      // Silent fail for migration
+      console.error("Migration error:", error);
     }
     return false;
   };
 
   // Function to schedule fun notifications for user
   const scheduleUserFunNotifications = async (userData, isOnboardingComplete) => {
-    // Only schedule fun notifications if onboarding is complete
     if (isOnboardingComplete) {
       try {
-        // Check if fun notifications have already been scheduled for this user
         if (!userData.fun_notifications_scheduled) {
           console.log("🎉 Scheduling fun notifications for existing user...");
           await scheduleFunNotifications(userData);
           
-          // Mark that fun notifications have been scheduled for this user
           const userDocRef = doc(db, "users", auth.currentUser.uid);
           await updateDoc(userDocRef, {
             fun_notifications_scheduled: true,
@@ -141,8 +152,10 @@ function AppContent() {
           if (userDoc.exists()) {
             const userData = userDoc.data();
             
+            // Check if user has completed new onboarding
             let isOnboardingComplete = userData.onboarding_completed === true;
             
+            // If not complete, try to migrate old users
             if (!isOnboardingComplete) {
               const wasMigrated = await migrateExistingUser(userData, currentUser.uid);
               if (wasMigrated) {
@@ -152,13 +165,15 @@ function AppContent() {
             
             setOnboardingCompleted(isOnboardingComplete);
             
-            // Schedule fun notifications for existing users who have completed onboarding
+            // Schedule fun notifications for users who have completed onboarding
             await scheduleUserFunNotifications(userData, isOnboardingComplete);
             
           } else {
+            // New user with no document
             setOnboardingCompleted(false);
           }
         } catch (error) {
+          console.error("Error checking user data:", error);
           setOnboardingCompleted(false);
         }
       } else {
@@ -186,7 +201,6 @@ function AppContent() {
 
   return (
     <NavigationContainer>
-      {/* Global StatusBar - This controls the status bar icons color */}
       <StatusBar 
         style={isDarkMode ? "light" : "dark"}
         backgroundColor="transparent"
@@ -201,12 +215,14 @@ function AppContent() {
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />
             
+            {/* Keep old onboarding screens for navigation consistency */}
             <Stack.Screen name="Nickname" component={Nickname} />
             <Stack.Screen name="Course" component={Course} />
             <Stack.Screen name="Semesters" component={Semesters} />
             <Stack.Screen name="Units" component={Units} />
             <Stack.Screen name="CurrentSemester" component={CurrentSemester} />
             
+            {/* App screens */}
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
@@ -217,6 +233,9 @@ function AppContent() {
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="GPA" component={GPAScreen} />
+            <Stack.Screen name="CurriculumSelector" component={CurriculumSelectorScreen} />
+            <Stack.Screen name="ScanResults" component={ScanResultsScreen} />
+            <Stack.Screen name="ReviewScannedResults" component={ReviewScannedResults} />
             <Stack.Screen name="AITimetableScanner" component={AITimetableScanner} />
             <Stack.Screen name="ReviewScannedLectures" component={ReviewScannedLectures} />
             <Stack.Screen name="ExportGPA" component={ExportGPAScreen} />
@@ -236,12 +255,17 @@ function AppContent() {
         ) : !onboardingCompleted ? (
           // ONBOARDING FLOW - User logged in but hasn't completed onboarding
           <>
+            {/* NEW ONBOARDING SCREEN */}
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+            
+            {/* Keep old onboarding screens for reference (to be removed later) */}
             <Stack.Screen name="Nickname" component={Nickname} />
             <Stack.Screen name="Course" component={Course} />
             <Stack.Screen name="Semesters" component={Semesters} />
             <Stack.Screen name="Units" component={Units} />
             <Stack.Screen name="CurrentSemester" component={CurrentSemester} />
             
+            {/* App screens for navigation after onboarding */}
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
@@ -252,6 +276,9 @@ function AppContent() {
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="GPA" component={GPAScreen} />
+            <Stack.Screen name="CurriculumSelector" component={CurriculumSelectorScreen} />
+            <Stack.Screen name="ScanResults" component={ScanResultsScreen} />
+            <Stack.Screen name="ReviewScannedResults" component={ReviewScannedResults} />
             <Stack.Screen name="ExportGPA" component={ExportGPAScreen} />
             <Stack.Screen name="GPACalculation" component={GPACalculationScreen} />
             <Stack.Screen name="AddExam" component={AddExamScreen} />
@@ -283,8 +310,12 @@ function AppContent() {
             <Stack.Screen name="Timetable" component={TimetableScreen} />
             <Stack.Screen name="AddActivity" component={AddActivityScreen} />
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="GPA" component={GPAScreen} />
+            <Stack.Screen name="CurriculumSelector" component={CurriculumSelectorScreen} />
+            <Stack.Screen name="ScanResults" component={ScanResultsScreen} />
+            <Stack.Screen name="ReviewScannedResults" component={ReviewScannedResults} />
             <Stack.Screen name="ExportGPA" component={ExportGPAScreen} />
             <Stack.Screen name="GPACalculation" component={GPACalculationScreen} />
             <Stack.Screen name="AddExam" component={AddExamScreen} />
@@ -301,6 +332,7 @@ function AppContent() {
             <Stack.Screen name="EditCourse" component={EditCourse} />
             <Stack.Screen name="ManageFunNotifications" component={ManageFunNotifications} />
 
+            {/* Keep old onboarding screens for settings navigation */}
             <Stack.Screen name="Nickname" component={Nickname} />
             <Stack.Screen name="Course" component={Course} />
             <Stack.Screen name="Semesters" component={Semesters} />
