@@ -105,8 +105,37 @@ export const getStyles = (theme) => StyleSheet.create({
   chart: {
     borderRadius: 16,
   },
+  
+  // Curriculum Bar - positioned below header
+  curriculumBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: theme.colors.card,
+    marginHorizontal: 24,
+    marginTop: 16,
+    marginBottom: 24,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  curriculumBarContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  curriculumBarText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: theme.colors.textPrimary,
+  },
+  
+  // Semesters Section - proper spacing
   semestersSection: {
+    marginTop: 30,
     paddingHorizontal: 24,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 20,
@@ -170,6 +199,8 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
+  
+  // Empty State - with proper spacing
   emptyState: {
     backgroundColor: theme.colors.card,
     padding: 40,
@@ -180,6 +211,8 @@ export const getStyles = (theme) => StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 5,
+    marginHorizontal: 24,
+    marginBottom: 24,
   },
   emptyIcon: {
     marginBottom: 16,
@@ -197,12 +230,14 @@ export const getStyles = (theme) => StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
   },
+  
+  // Action Buttons Container
   actionsContainer: {
     paddingHorizontal: 24,
     gap: 12,
     marginBottom: 24,
   },
-  calculateButton: {
+  scanButton: {
     padding: 20,
     borderRadius: 16,
     alignItems: "center",
@@ -214,8 +249,9 @@ export const getStyles = (theme) => StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
+    marginBottom: 12,
   },
-  calculateButtonText: {
+  scanButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
@@ -238,6 +274,7 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
+  
   bottomSpacing: {
     height: 20,
   },
@@ -260,49 +297,5 @@ export const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.textSecondary, 
     textAlign: "center",
     lineHeight: 20,
-  },
-    // Add to GPAScreen.styles.js inside the getStyles function
-
-  curriculumBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.colors.card,
-    marginHorizontal: 24,
-    marginTop: 16,
-    marginBottom: 8,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  curriculumBarContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  curriculumBarText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: theme.colors.textPrimary,
-  },
-  scanButton: {
-    padding: 20,
-    borderRadius: 16,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 10,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-    marginBottom: 12,
-  },
-  scanButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
   },
 });

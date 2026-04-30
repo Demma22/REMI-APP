@@ -206,7 +206,6 @@ export default function GPAScreen({ navigation }) {
 
         {/* Semesters List */}
         <View style={styles.semestersSection}>
-          <Text style={styles.sectionTitle}>Semester GPAs</Text>
           
           {availableSemesters.length > 0 ? (
             availableSemesters.map((semesterNumber) => {
