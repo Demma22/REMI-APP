@@ -1,7 +1,8 @@
 // components/NavigationBar.js
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SvgIcon from './SvgIcon';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -9,6 +10,10 @@ const NavigationBar = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  
+  // Calculate bottom padding to account for Android navigation bar/gesture area
+  const bottomPadding = Platform.OS === 'android' ? Math.max(insets.bottom, 16) : insets.bottom + 8;
 
   const navItems = [
     { 
@@ -47,7 +52,7 @@ const NavigationBar = () => {
     return route.name === screenName;
   };
 
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, bottomPadding);
 
   return (
     <View style={styles.container}>
@@ -80,25 +85,25 @@ const NavigationBar = () => {
   );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme, bottomPadding) => StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 16,
+    bottom: bottomPadding,
     left: 16,
     right: 16,
     flexDirection: 'row',
     backgroundColor: theme.colors.navBackground,
     paddingVertical: 8,
     paddingHorizontal: 8,
-    borderRadius: 24,
+    borderRadius: 28,
     shadowColor: theme.colors.shadow,
     shadowOffset: {
       width: 0,
-      height: 3,
+      height: 4,
     },
     shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 12,
+    elevation: 8,
     borderWidth: 1,
     borderColor: theme.colors.navBorder,
   },
@@ -106,15 +111,15 @@ const getStyles = (theme) => StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   navIconContainer: {
     width: 40,
-    height: 30,
+    height: 32,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 3,
+    marginBottom: 2,
     backgroundColor: 'transparent',
   },
   activeIconContainer: {

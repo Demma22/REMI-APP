@@ -1,3 +1,4 @@
+// App.js
 import React, { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -7,6 +8,7 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { View, Image, useColorScheme } from "react-native";
 import { deactivateKeepAwake } from "expo-keep-awake";
 import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 // Import ThemeProvider and NotificationsProvider
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
@@ -44,6 +46,7 @@ import TermsConditionsScreen from "./screens/DataProtection/TermsConditionsScree
 import PrivacyPolicyScreen from "./screens/DataProtection/PrivacyPolicyScreen";
 import DataDeleteScreen from "./screens/DataProtection/DataDeletion/DataDeleteScreen";
 import AddExamScreen from "./screens/exam/AddExamScreen";
+import RateReviewModal from "./components/RateReviewModal";
 import ExamTimetableScreen from "./screens/exam/ExamTimetableScreen";
 import SettingsScreen from "./screens/settings/SettingsHome/SettingsScreen";
 import EditNickname from "./screens/settings/EditNickname/EditNickname";
@@ -56,8 +59,19 @@ import EditUnits from "./screens/settings/EditUnits";
 import EditCourse from "./screens/settings/EditCourse";
 import NotificationsSettingsScreen from "./screens/settings/NotificationsSettings/NotificationsSettingsScreen";
 import ManageFunNotifications from "./screens/admin/ManageFunNotifications";
+import StatisticsDashboard from "./screens/admin/StatisticsDashboard/StatisticsDashboard";
 
 const Stack = createStackNavigator();
+
+// SafeAreaWrapper component to wrap all screens
+const SafeAreaWrapper = ({ children }) => {
+  const { theme } = useTheme();
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={['top']}>
+      {children}
+    </SafeAreaView>
+  );
+};
 
 function AppContent() {
   const [user, setUser] = useState(null);
@@ -188,14 +202,14 @@ function AppContent() {
 
   if (checkingAuth) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#535ffd' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#535ffd' }} edges={['top', 'bottom']}>
         <StatusBar style="light" backgroundColor="#535ffd" />
         <Image
           source={require('./assets/splash-icon.png')}
           style={{ flex: 1, width: '100%', height: '100%' }}
           resizeMode="contain"
         />
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -233,6 +247,7 @@ function AppContent() {
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="GPA" component={GPAScreen} />
+            <Stack.Screen name="RateReviewModal" component={RateReviewModal} />
             <Stack.Screen name="CurriculumSelector" component={CurriculumSelectorScreen} />
             <Stack.Screen name="ScanResults" component={ScanResultsScreen} />
             <Stack.Screen name="ReviewScannedResults" component={ReviewScannedResults} />
@@ -251,6 +266,7 @@ function AppContent() {
             <Stack.Screen name="EditUnits" component={EditUnits} />
             <Stack.Screen name="EditCourse" component={EditCourse} />
             <Stack.Screen name="ManageFunNotifications" component={ManageFunNotifications} />
+            <Stack.Screen name="StatisticsDashboard" component={StatisticsDashboard} />
           </>
         ) : !onboardingCompleted ? (
           // ONBOARDING FLOW - User logged in but hasn't completed onboarding
@@ -276,6 +292,7 @@ function AppContent() {
             <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="GPA" component={GPAScreen} />
+            <Stack.Screen name="RateReviewModal" component={RateReviewModal} />
             <Stack.Screen name="CurriculumSelector" component={CurriculumSelectorScreen} />
             <Stack.Screen name="ScanResults" component={ScanResultsScreen} />
             <Stack.Screen name="ReviewScannedResults" component={ReviewScannedResults} />
@@ -294,7 +311,7 @@ function AppContent() {
             <Stack.Screen name="EditUnits" component={EditUnits} />
             <Stack.Screen name="EditCourse" component={EditCourse} />
             <Stack.Screen name="ManageFunNotifications" component={ManageFunNotifications} />
-
+            <Stack.Screen name="StatisticsDashboard" component={StatisticsDashboard} />
             <Stack.Screen name="SplashIntro" component={SplashIntro} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />
@@ -313,6 +330,7 @@ function AppContent() {
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="GPA" component={GPAScreen} />
+            <Stack.Screen name="RateReviewModal" component={RateReviewModal} />
             <Stack.Screen name="CurriculumSelector" component={CurriculumSelectorScreen} />
             <Stack.Screen name="ScanResults" component={ScanResultsScreen} />
             <Stack.Screen name="ReviewScannedResults" component={ReviewScannedResults} />
@@ -331,6 +349,7 @@ function AppContent() {
             <Stack.Screen name="EditUnits" component={EditUnits} />
             <Stack.Screen name="EditCourse" component={EditCourse} />
             <Stack.Screen name="ManageFunNotifications" component={ManageFunNotifications} />
+            <Stack.Screen name="StatisticsDashboard" component={StatisticsDashboard} />
 
             {/* Keep old onboarding screens for settings navigation */}
             <Stack.Screen name="Nickname" component={Nickname} />
@@ -351,10 +370,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <NotificationsProvider>
-        <AppContent />
-      </NotificationsProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <NotificationsProvider>
+          <AppContent />
+        </NotificationsProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
