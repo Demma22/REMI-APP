@@ -1,4 +1,4 @@
-// styles/SettingsScreen.styles.js
+// screens/settings/SettingsHome/SettingsScreen.styles.js
 import { StyleSheet, Dimensions, Platform } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -21,11 +21,11 @@ export const getStyles = (theme) => StyleSheet.create({
     paddingBottom: 20,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 5,
+    shadowColor: theme.colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
   headerTop: {
     flexDirection: "row",
@@ -36,20 +36,16 @@ export const getStyles = (theme) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
-  },
-  backText: { 
-    fontSize: 24, 
-    color: '#FFFFFF', 
-    fontWeight: "300",
-    lineHeight: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: '#000000',
+    color: theme.colors.textPrimary,
     textAlign: "center",
   },
   headerSpacer: {
@@ -86,11 +82,18 @@ export const getStyles = (theme) => StyleSheet.create({
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    // iOS shadow only
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.colors.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 0, // No elevation on Android to avoid inner shadow
+      },
+    }),
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
@@ -116,25 +119,28 @@ export const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.textSecondary,
     lineHeight: 16,
   },
-  // Danger button without red strip - just red text
   dangerButton: {
     borderWidth: 1,
     borderColor: theme.colors.danger,
     backgroundColor: `${theme.colors.danger}10`,
-  },
-  dangerText: {
-    color: theme.colors.danger,
   },
   accountInfo: {
     backgroundColor: theme.colors.card,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    // iOS shadow only - no elevation on Android
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.colors.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
     borderWidth: 1,
     borderColor: theme.colors.border,
     alignItems: 'center',
@@ -173,11 +179,18 @@ export const getStyles = (theme) => StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     marginTop: 8,
-    shadowColor: theme.colors.danger,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    // iOS shadow only
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.colors.danger,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   logoutButtonText: {
     color: "#FFFFFF",
@@ -186,20 +199,5 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   bottomSpacing: {
     height: 20,
-  },
-  // Version info styles
-  versionContainer: {
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  versionText: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-  },
-  copyrightText: {
-    fontSize: 11,
-    color: theme.colors.textTertiary,
-    marginTop: 4,
   },
 });

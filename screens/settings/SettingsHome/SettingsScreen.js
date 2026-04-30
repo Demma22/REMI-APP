@@ -1,3 +1,4 @@
+// screens/settings/SettingsHome/SettingsScreen.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -19,7 +20,7 @@ import { useNotifications } from '../../../contexts/NotificationsContext';
 import { getStyles } from './SettingsScreen.styles';
 
 // Admin emails list - must match the list in ManageFunNotifications.js
-const ADMIN_EMAILS = ['denis@gmail.com', 'your-email@gmail.com']; // Add your admin emails here
+const ADMIN_EMAILS = ['denis@gmail.com', 'your-email@gmail.com'];
 
 export default function SettingsScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
@@ -33,7 +34,15 @@ export default function SettingsScreen({ navigation }) {
   useEffect(() => {
     loadUserData();
     checkAdminStatus();
-  }, []);
+    
+    // Refresh data when screen comes into focus
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadUserData();
+      checkAdminStatus();
+    });
+    
+    return unsubscribe;
+  }, [navigation]);
 
   const checkAdminStatus = () => {
     const currentUser = auth.currentUser;
@@ -53,7 +62,7 @@ export default function SettingsScreen({ navigation }) {
         setUserData(userDoc.data());
       }
     } catch (error) {
-
+      console.error("Error loading user data:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -94,34 +103,8 @@ export default function SettingsScreen({ navigation }) {
     }
   };
 
-  const handleChangeCurrentSemester = () => {
-    navigation.navigate("EditCurrentSemester", {
-      nick: userData?.nickname,
-      course: userData?.course,
-      semesters: userData?.total_semesters
-    });
-  };
-
   const handleEditNickname = () => {
-    navigation.navigate("EditNickname", {
-      isEditing: true,
-      currentNickname: userData?.nickname
-    });
-  };
-
-  const handleEditCourse = () => {
-    navigation.navigate("EditCourse", {
-      isEditing: true,
-      currentCourse: userData?.course
-    });
-  };
-
-  const handleEditCourseUnits = () => {
-    navigation.navigate("EditUnits", {
-      isEditing: true,
-      currentSemesters: userData?.total_semesters,
-      currentUnits: userData?.units
-    });
+    navigation.navigate("EditNickname");
   };
 
   const handleNotificationSettings = () => {
@@ -195,7 +178,7 @@ export default function SettingsScreen({ navigation }) {
             style={styles.backBtn} 
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.backText}>‹</Text>
+            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>SETTINGS</Text>
           <View style={styles.headerSpacer} />
@@ -217,13 +200,29 @@ export default function SettingsScreen({ navigation }) {
       >
         <View style={styles.content}>
           {/* ========== ADMIN SECTION ========== */}
-          {/* Only visible to admin users */}
           {isAdmin && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: theme.colors.secondary }]}>
-                🔧 Admin Settings
+              Admin Settings
               </Text>
               
+              {/* Statistics Dashboard Button - Add this inside the Admin Settings section */}
+              <TouchableOpacity 
+                style={[styles.menuButton, { backgroundColor: theme.colors.primaryLight }]}
+                onPress={() => navigation.navigate("StatisticsDashboard")}
+              >
+                <View style={[styles.menuIconContainer, { backgroundColor: theme.colors.primary }]}>
+                  <SvgIcon name="chart-line" size={20} color="#FFFFFF" />
+                </View>
+                <View style={styles.menuTextContainer}>
+                  <Text style={styles.menuTitle}>Statistics Dashboard</Text>
+                  <Text style={styles.menuSubtitle}>
+                    View user onboarding analytics and insights
+                  </Text>
+                </View>
+                <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+
               <TouchableOpacity 
                 style={[styles.menuButton, { backgroundColor: theme.colors.secondaryLight }]}
                 onPress={handleManageFunNotifications}
@@ -273,54 +272,6 @@ export default function SettingsScreen({ navigation }) {
                 <Text style={styles.menuTitle}>Edit Nickname</Text>
                 <Text style={styles.menuSubtitle}>
                   {userData?.nickname ? `Current: ${userData.nickname}` : 'Set your display name'}
-                </Text>
-              </View>
-              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.menuButton}
-              onPress={handleEditCourse}
-            >
-              <View style={[styles.menuIconContainer, { backgroundColor: theme.colors.successLight }]}>
-                <SvgIcon name="graduation-cap" size={20} color={theme.colors.success} />
-              </View>
-              <View style={styles.menuTextContainer}>
-                <Text style={styles.menuTitle}>Edit Course</Text>
-                <Text style={styles.menuSubtitle}>
-                  {userData?.course ? `Current: ${userData.course}` : 'Set your course name'}
-                </Text>
-              </View>
-              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.menuButton}
-              onPress={handleChangeCurrentSemester}
-            >
-              <View style={[styles.menuIconContainer, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
-                <SvgIcon name="book" size={20} color="#8B5CF6" />
-              </View>
-              <View style={styles.menuTextContainer}>
-                <Text style={styles.menuTitle}>Change Current Semester</Text>
-                <Text style={styles.menuSubtitle}>
-                  {userData?.current_semester ? `Current: Semester ${userData.current_semester}` : 'Set your current semester'}
-                </Text>
-              </View>
-              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.menuButton}
-              onPress={handleEditCourseUnits}
-            >
-              <View style={[styles.menuIconContainer, { backgroundColor: theme.colors.dangerLight }]}>
-                <SvgIcon name="file" size={20} color={theme.colors.danger} />
-              </View>
-              <View style={styles.menuTextContainer}>
-                <Text style={styles.menuTitle}>Edit Course Units</Text>
-                <Text style={styles.menuSubtitle}>
-                  {userData?.course ? `Current: ${userData.course}` : 'Manage your course units'}
                 </Text>
               </View>
               <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
@@ -384,9 +335,9 @@ export default function SettingsScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* About Us Button */}
+          {/* About Us Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About Us</Text>
+            <Text style={styles.sectionTitle}>About</Text>
 
             <TouchableOpacity 
               style={styles.menuButton}
@@ -398,10 +349,10 @@ export default function SettingsScreen({ navigation }) {
               <View style={styles.menuTextContainer}>
                 <Text style={styles.menuTitle}>About Us</Text>
                 <Text style={styles.menuSubtitle}>
-                  Our Social Media Hundles and More
+                  Learn more about REMI and connect with us
                 </Text>
               </View>
-              <SvgIcon name="info" size={20} color={theme.colors.textSecondary} />
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
