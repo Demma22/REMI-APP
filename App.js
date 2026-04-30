@@ -22,12 +22,7 @@ import SignupScreen from "./screens/auth/SignUp/SignupScreen";
 // NEW ONBOARDING SCREEN
 import OnboardingScreen from "./screens/onboarding/OnboardingScreen";
 
-// OLD ONBOARDING SCREENS (KEEP FOR MIGRATION, WILL BE REMOVED LATER)
-import Nickname from "./screens/onboarding/Nickname/Nickname";
-import Course from "./screens/onboarding/Course/Course";
-import Semesters from "./screens/onboarding/Semesters/Semesters";
-import Units from "./screens/onboarding/Units/Units";
-import CurrentSemester from "./screens/onboarding/CurrentSem/CurrentSemester";
+
 
 // APP SCREENS
 import HomeScreen from "./screens/Home/HomeScreen";
@@ -47,7 +42,6 @@ import PrivacyPolicyScreen from "./screens/DataProtection/PrivacyPolicyScreen";
 import DataDeleteScreen from "./screens/DataProtection/DataDeletion/DataDeleteScreen";
 import AddExamScreen from "./screens/exam/AddExamScreen";
 import RateReviewModal from "./components/RateReviewModal";
-import ExamTimetableScreen from "./screens/exam/ExamTimetableScreen";
 import SettingsScreen from "./screens/settings/SettingsHome/SettingsScreen";
 import EditNickname from "./screens/settings/EditNickname/EditNickname";
 import ContactUsScreen from "./screens/settings/ContactUs/ContactUsScreen";
@@ -229,12 +223,7 @@ function AppContent() {
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />
             
-            {/* Keep old onboarding screens for navigation consistency */}
-            <Stack.Screen name="Nickname" component={Nickname} />
-            <Stack.Screen name="Course" component={Course} />
-            <Stack.Screen name="Semesters" component={Semesters} />
-            <Stack.Screen name="Units" component={Units} />
-            <Stack.Screen name="CurrentSemester" component={CurrentSemester} />
+
             
             {/* App screens */}
             <Stack.Screen name="Home" component={HomeScreen} />
@@ -256,7 +245,6 @@ function AppContent() {
             <Stack.Screen name="ExportGPA" component={ExportGPAScreen} />
             <Stack.Screen name="GPACalculation" component={GPACalculationScreen} />
             <Stack.Screen name="AddExam" component={AddExamScreen} />
-            <Stack.Screen name="ExamTimetable" component={ExamTimetableScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="AboutUs" component={AboutUsScreen} />
             <Stack.Screen name="NotificationsSettings" component={NotificationsSettingsScreen} />
@@ -274,12 +262,7 @@ function AppContent() {
             {/* NEW ONBOARDING SCREEN */}
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             
-            {/* Keep old onboarding screens for reference (to be removed later) */}
-            <Stack.Screen name="Nickname" component={Nickname} />
-            <Stack.Screen name="Course" component={Course} />
-            <Stack.Screen name="Semesters" component={Semesters} />
-            <Stack.Screen name="Units" component={Units} />
-            <Stack.Screen name="CurrentSemester" component={CurrentSemester} />
+
             
             {/* App screens for navigation after onboarding */}
             <Stack.Screen name="Home" component={HomeScreen} />
@@ -299,7 +282,6 @@ function AppContent() {
             <Stack.Screen name="ExportGPA" component={ExportGPAScreen} />
             <Stack.Screen name="GPACalculation" component={GPACalculationScreen} />
             <Stack.Screen name="AddExam" component={AddExamScreen} />
-            <Stack.Screen name="ExamTimetable" component={ExamTimetableScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="NotificationsSettings" component={NotificationsSettingsScreen} />
             <Stack.Screen name="EditNickname" component={EditNickname} />
@@ -337,7 +319,6 @@ function AppContent() {
             <Stack.Screen name="ExportGPA" component={ExportGPAScreen} />
             <Stack.Screen name="GPACalculation" component={GPACalculationScreen} />
             <Stack.Screen name="AddExam" component={AddExamScreen} />
-            <Stack.Screen name="ExamTimetable" component={ExamTimetableScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="NotificationsSettings" component={NotificationsSettingsScreen} />
             <Stack.Screen name="EditNickname" component={EditNickname} />
@@ -351,12 +332,6 @@ function AppContent() {
             <Stack.Screen name="ManageFunNotifications" component={ManageFunNotifications} />
             <Stack.Screen name="StatisticsDashboard" component={StatisticsDashboard} />
 
-            {/* Keep old onboarding screens for settings navigation */}
-            <Stack.Screen name="Nickname" component={Nickname} />
-            <Stack.Screen name="Course" component={Course} />
-            <Stack.Screen name="Semesters" component={Semesters} />
-            <Stack.Screen name="Units" component={Units} />
-            <Stack.Screen name="CurrentSemester" component={CurrentSemester} />
             
             <Stack.Screen name="SplashIntro" component={SplashIntro} />
             <Stack.Screen name="Login" component={LoginScreen} />
