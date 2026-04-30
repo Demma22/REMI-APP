@@ -424,7 +424,7 @@ export const NotificationsProvider = ({ children }) => {
         }
       }
       
-      console.log(`✅ Scheduled ${totalScheduled} weekly repeating lecture notifications`);
+      console.log(`Scheduled ${totalScheduled} weekly repeating lecture notifications`);
       return totalScheduled;
     } catch (error) {
       console.error('Error scheduling lecture notifications:', error);

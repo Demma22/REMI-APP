@@ -390,7 +390,6 @@ export const getSummaryCardStyles = (theme, colors) => StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 20,
-    marginTop: 25,
     ...Platform.select({
       ios: {
         shadowColor: theme.colors.shadow,
