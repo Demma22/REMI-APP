@@ -214,7 +214,7 @@ export default function LoginScreen({ navigation }) {
                 setUsername(text);
                 if (error) setError("");
               }}
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="rgba(255,255,255,0.6)"
               editable={!isLoading}
               maxLength={20}
             />
@@ -235,7 +235,7 @@ export default function LoginScreen({ navigation }) {
                   setPassword(text);
                   if (error) setError("");
                 }}
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor="rgba(255,255,255,0.6)"
                 editable={!isLoading}
                 onSubmitEditing={login}
                 returnKeyType="go"
@@ -245,7 +245,7 @@ export default function LoginScreen({ navigation }) {
                 onPress={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
               >
-                <SvgIcon name="eye" size={22} color={showPassword ? "#535FFD" : "#94A3B8"} />
+                <SvgIcon name="eye" size={22} color={showPassword ? "#ffffff" : "rgba(255,255,255,0.5)"} />
               </TouchableOpacity>
             </View>
           </View>

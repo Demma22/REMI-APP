@@ -279,7 +279,7 @@ export default function SignupScreen({ navigation }) {
                 onPress={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
               >
-                <SvgIcon name={showPassword ? "eye-off" : "eye"} size={20} color="#FFFFFF" />
+                <SvgIcon name="eye" size={22} color={showPassword ? "#ffffff" : "rgba(255,255,255,0.5)"} />
               </TouchableOpacity>
             </View>
             {passwordError ? (
@@ -310,7 +310,7 @@ export default function SignupScreen({ navigation }) {
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 disabled={isLoading}
               >
-                <SvgIcon name={showConfirmPassword ? "eye-off" : "eye"} size={20} color="#FFFFFF" />
+                <SvgIcon name="eye" size={22} color={showConfirmPassword ? "#ffffff" : "rgba(255,255,255,0.5)"} />
               </TouchableOpacity>
             </View>
             {confirmError ? (
