@@ -126,7 +126,7 @@ function SummaryCard({ type, data, theme, navigation }) {
               <Text style={styles.emptySubtitle}>Enjoy your free time!</Text>
             </View>
           ) : (
-            todayLectures.slice(0, 2).map((lec, idx) => (
+            todayLectures.slice(0, 3).map((lec, idx) => (
               <View key={idx} style={styles.lectureItem}>
                 <View style={styles.lectureDot}></View>
                 <View style={styles.lectureInfo}>
@@ -136,12 +136,12 @@ function SummaryCard({ type, data, theme, navigation }) {
               </View>
             ))
           )}
-          {todayLectures.length > 2 && (
+          {todayLectures.length > 3 && (
             <TouchableOpacity 
               style={styles.moreContainer}
               onPress={() => navigation.navigate("Timetable")}
             >
-              <Text style={styles.moreText}>View {todayLectures.length - 2} more</Text>
+              <Text style={styles.moreText}>View {todayLectures.length - 3} more</Text>
               <SvgIcon name="chevron-right" size={12} color={colors.accent} />
             </TouchableOpacity>
           )}
@@ -301,7 +301,9 @@ export default function HomeScreen({ navigation }) {
         course: lecture.name,
         time: `${lecture.start} - ${lecture.end}`,
         room: lecture.room,
-        lecturer: lecture.lecturer
+        lecturer: lecture.lecturer,
+        start: lecture.start,
+        end: lecture.end
       }));
       
       setTodayLectures(formattedLectures);

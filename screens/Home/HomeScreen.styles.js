@@ -21,11 +21,17 @@ export const getStyles = (theme) => StyleSheet.create({
     backgroundColor: theme.colors.backgroundSecondary,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.colors.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   headerTop: {
     flexDirection: "row",
@@ -75,7 +81,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   section: {
     marginBottom: 24,
-    marginTop: 30,
+    marginTop: 10,
   },
   sectionTitle: {
     fontSize: 18,
@@ -115,11 +121,17 @@ export const getStyles = (theme) => StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     marginHorizontal: 20,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.colors.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   examHeader: {
     flexDirection: "row",
@@ -195,6 +207,87 @@ export const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.textTertiary,
     fontStyle: "italic",
   },
+  // Onboarding Banner Styles - Fixed for Android (no shadow)
+  onboardingBanner: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    marginTop: 30,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    // iOS shadow only - no elevation on Android to prevent inner shadow
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.colors.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
+  },
+  onboardingBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  onboardingBannerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  onboardingBannerText: {
+    flex: 1,
+  },
+  onboardingBannerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  onboardingBannerSubtitle: {
+    fontSize: 12,
+  },
+  onboardingBannerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    // No elevation/shadow on Android
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
+  },
+  onboardingBannerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  // Logo styles
+  logoWrapper: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomLogo: {
+    width: 100,
+    height: 50,
+    resizeMode: 'contain',
+  },
 });
 
 export const getMenuItemStyles = (theme, color) => StyleSheet.create({
@@ -204,13 +297,24 @@ export const getMenuItemStyles = (theme, color) => StyleSheet.create({
     padding: 16,
     marginBottom: 1,
     alignItems: "center",
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
+    // iOS shadow
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.colors.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
     borderWidth: 2,
-    borderColor: theme.colors.secondary + '40',
+    borderColor: theme.colors.primary + '40',
+    // Android: compensate for no elevation with a slightly more visible border
+    ...(Platform.OS === 'android' && {
+      borderColor: theme.colors.primary + '60',
+    }),
   },
   menuIconContainer: {
     width: 48,
@@ -243,11 +347,17 @@ export const getStatItemStyles = (theme) => StyleSheet.create({
     padding: 16,
     marginHorizontal: 6,
     alignItems: "center",
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.colors.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
@@ -280,11 +390,18 @@ export const getSummaryCardStyles = (theme, colors) => StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     marginHorizontal: 20,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    marginTop: 25,
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.colors.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 0,
+      },
+    }),
   },
   cardHeader: {
     flexDirection: "row",
@@ -439,15 +556,5 @@ export const getSettingsMenuItemStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: theme.colors.textPrimary,
-  },
-  logoWrapper: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomLogo: {
-    width: 100,
-    height: 50,
-    resizeMode: 'contain',
   },
 });
