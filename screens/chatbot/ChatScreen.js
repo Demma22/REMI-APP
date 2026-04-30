@@ -1,4 +1,4 @@
-// screens/ChatScreen.js
+// screens/chatbot/ChatScreen.js
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
@@ -10,14 +10,17 @@ import {
   LayoutAnimation,
   UIManager,
   Keyboard,
+  KeyboardAvoidingView,
   Alert,
   Dimensions,
 } from "react-native";
+import { LinearGradient } from 'expo-linear-gradient';
 import { auth, db } from "../../firebase";
 import { doc, getDoc, collection, addDoc, query, orderBy, getDocs, deleteDoc, serverTimestamp } from "firebase/firestore";
 import SvgIcon from "../../components/SvgIcon";
 import { useTheme } from '../../contexts/ThemeContext';
 import * as Clipboard from 'expo-clipboard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getStyles } from './ChatScreen.styles';
 
 const { height: screenHeight } = Dimensions.get("window");
@@ -30,6 +33,8 @@ if (
 }
 
 export default function ChatScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
+  
   if (!auth.currentUser) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -41,8 +46,6 @@ export default function ChatScreen({ navigation }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [userData, setUserData] = useState(null);
   const flatRef = useRef();
   
@@ -50,9 +53,9 @@ export default function ChatScreen({ navigation }) {
   const dotsIntervalRef = useRef(null);
   
   const { theme } = useTheme();
-  const styles = getStyles(theme);
+  const styles = getStyles(theme, insets);
 
-  // Card Components defined inside the main component so they have access to styles and theme
+  // Card Components for structured data (lectures, exams, GPA) - these keep their cards
   const LectureCard = ({ lecture, index }) => {
     return (
       <View style={[styles.lectureCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
@@ -161,29 +164,6 @@ export default function ChatScreen({ navigation }) {
   };
 
   useEffect(() => {
-    const showSubscription = Keyboard.addListener(
-      'keyboardDidShow',
-      (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
-        setKeyboardVisible(true);
-        setTimeout(() => scrollToEnd(), 100);
-      }
-    );
-    const hideSubscription = Keyboard.addListener(
-      'keyboardDidHide',
-      () => {
-        setKeyboardHeight(0);
-        setKeyboardVisible(false);
-      }
-    );
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
-
-  useEffect(() => {
     if (dotsIntervalRef.current) {
       clearInterval(dotsIntervalRef.current);
     }
@@ -283,7 +263,7 @@ export default function ChatScreen({ navigation }) {
       if (flatRef.current && messages.length > 0) {
         flatRef.current.scrollToEnd({ animated });
       }
-    }, 150);
+    }, 100);
   };
 
   const addMessage = async (text, sender, structuredData = null) => {
@@ -300,10 +280,7 @@ export default function ChatScreen({ navigation }) {
     
     setMessages((prev) => [...prev, msg]);
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-
-    setTimeout(() => {
-      scrollToEnd();
-    }, 200);
+    scrollToEnd();
     
     if (sender === "user" && text) {
       await saveChatMessage(text, true);
@@ -385,7 +362,6 @@ export default function ChatScreen({ navigation }) {
       
       const json = await res.json();
       
-      // Handle different response types
       if (json.type === "lecture_list" && json.data?.lectures?.length > 0) {
         if (json.data.summary) {
           await addMessage(json.data.summary, "remi");
@@ -464,36 +440,41 @@ export default function ChatScreen({ navigation }) {
     );
   };
 
-  const handleInputFocus = () => {
-    setTimeout(() => scrollToEnd(), 300);
-  };
-
   const hasMessages = messages.length > 0;
-  const contentHeight = screenHeight - (keyboardVisible ? keyboardHeight : 0) - 180;
 
-  const renderMessageItem = ({ item }) => (
-    <TouchableOpacity
-      onLongPress={() => handleMessageLongPress(item.text)}
-      activeOpacity={0.9}
-      delayLongPress={500}
-    >
-      <View
-        style={[
-          styles.bubble,
-          item.sender === "user" ? styles.userBubble : styles.remiBubble,
-          item.isStructured && styles.structuredBubble
-        ]}
-      >
-        {item.sender === "remi" && !item.isStructured && (
-          <View style={[styles.remiAvatar, { backgroundColor: theme.colors.primaryLight }]}>
-            <SvgIcon name="robot" size={16} color={theme.colors.primary} />
+  const renderMessageItem = ({ item }) => {
+    // User message - keep card style
+    if (item.sender === "user") {
+      return (
+        <TouchableOpacity
+          onLongPress={() => handleMessageLongPress(item.text)}
+          activeOpacity={0.9}
+          delayLongPress={500}
+        >
+          <View
+            style={[
+              styles.bubble,
+              styles.userBubble,
+              item.isStructured && styles.structuredBubble
+            ]}
+          >
+            <Text style={styles.userText}>{item.text}</Text>
+            <View style={[styles.userAvatar, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+              <SvgIcon name="user" size={16} color="white" />
+            </View>
           </View>
-        )}
-        
+        </TouchableOpacity>
+      );
+    }
+    
+    // AI response - no card, just text on background
+    return (
+      <View>
         {item.isStructured ? (
-          <View style={{ flex: 1 }}>
+          // Structured data (lectures, exams, GPA) - keep cards for readability
+          <View style={styles.structuredContainer}>
             {item.text && item.text !== "" && (
-              <Text style={[styles.remiText, { marginBottom: 8 }]}>{item.text}</Text>
+              <Text style={[styles.remiText, { marginBottom: 8, marginLeft: 40 }]}>{item.text}</Text>
             )}
             {item.structuredData?.type === "lecture_list" && (
               <View>
@@ -514,76 +495,98 @@ export default function ChatScreen({ navigation }) {
             )}
           </View>
         ) : (
-          <Text style={item.sender === "user" ? styles.userText : styles.remiText}>
-            {item.text}
-          </Text>
-        )}
-        
-        {item.sender === "user" && (
-          <View style={[styles.userAvatar, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-            <SvgIcon name="user" size={16} color="white" />
-          </View>
+          // Plain text response - no card
+          <TouchableOpacity
+            onLongPress={() => handleMessageLongPress(item.text)}
+            activeOpacity={0.9}
+            delayLongPress={500}
+          >
+            <View style={styles.remiTextContainer}>
+              <View style={[styles.remiAvatar, { backgroundColor: theme.colors.primaryLight }]}>
+                <SvgIcon name="robot" size={16} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.remiText}>{item.text}</Text>
+            </View>
+          </TouchableOpacity>
         )}
       </View>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backText}>‹</Text>
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <SvgIcon name="robot" size={24} color={theme.colors.primary} style={styles.headerIcon} />
-            <Text style={styles.headerTitle}>REMI</Text>
-          </View>
-          {hasMessages && (
-            <TouchableOpacity onPress={handleClearChat} style={[styles.clearButton, { backgroundColor: theme.mode === 'dark' ? 'rgba(255, 159, 77, 0.2)' : 'rgba(247, 133, 34, 0.1)' }]}>
-              <SvgIcon name="trash" size={16} color={theme.colors.secondary} />
-              <Text style={[styles.clearButtonText, { color: theme.colors.secondary }]}> Clear</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+    >
+      {/* Gradient Overlay at Top - Light fade so old chats become less visible under status bar */}
+      <LinearGradient
+        colors={theme.mode === 'dark' 
+          ? [
+              '#000000',
+              'rgba(0,0,0,0.9)',
+              'rgba(0,0,0,0.6)',
+              'transparent'
+            ]
+          : [
+              '#FAFAFA',           // EXACT match to your background
+              '#FAFAFA',           // Keep solid for longer
+              'rgba(250,250,250,0.9)',
+              'rgba(250,250,250,0.5)',
+              'rgba(250,250,250,0)'
+            ]
+        }
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 0.25 }}
+        style={styles.gradientOverlay}
+        pointerEvents="none"
+      />
+      {/* Floating Back Button */}
+      <TouchableOpacity 
+        style={[styles.floatingBackBtn, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+        onPress={() => navigation.goBack()}
+      >
+        <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
+      </TouchableOpacity>
+
+      {/* Floating Clear Button */}
+      {hasMessages && (
+        <TouchableOpacity 
+          style={[styles.floatingClearBtn, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+          onPress={handleClearChat}
+        >
+          <SvgIcon name="trash" size={18} color={theme.colors.danger} />
+        </TouchableOpacity>
+      )}
 
       {/* Main Content */}
-      <View style={[styles.content, { height: contentHeight }]}>
-        {!hasMessages ? (
-          <View style={styles.emptyState}>
-            <View style={[styles.emptyIcon, { backgroundColor: theme.colors.primaryLight }]}>
-              <SvgIcon name="message" size={32} color={theme.colors.primary} />
+      <View style={styles.content}>
+        <FlatList
+          ref={flatRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.messagesContainer}
+          renderItem={renderMessageItem}
+          onContentSizeChange={() => scrollToEnd(false)}
+          onLayout={() => scrollToEnd(false)}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <View style={[styles.emptyIcon, { backgroundColor: theme.colors.primaryLight }]}>
+                <SvgIcon name="ai-home" size={102} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>Start a conversation with Remi</Text>
+              <Text style={styles.emptySubtitle}>
+                Ask about classes, timetable, GPA, or exams
+              </Text>
             </View>
-            <Text style={styles.emptyTitle}>What would you like to ask today?</Text>
-            <Text style={styles.emptySubtitle}>
-              Ask about classes • timetable • GPA • exams • study help
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            ref={flatRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.messagesContainer}
-            renderItem={renderMessageItem}
-            onContentSizeChange={() => scrollToEnd(false)}
-            onLayout={() => scrollToEnd(false)}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
+          }
+        />
       </View>
 
       {/* Thinking dots indicator */}
       {loading && (
-        <View style={[
-          styles.thinkingDotsContainer,
-          { bottom: keyboardHeight + 70 }
-        ]}>
+        <View style={styles.thinkingDotsContainer}>
           <View style={styles.thinkingDotsBubble}>
             <SvgIcon name="robot" size={16} color={theme.colors.primary} style={styles.thinkingRobot} />
             <Text style={[styles.thinkingDotsText, { color: theme.colors.primary }]}>{thinkingDots}</Text>
@@ -591,14 +594,13 @@ export default function ChatScreen({ navigation }) {
         </View>
       )}
 
-      {/* Input Bar */}
+      {/* Input Bar - UNCHANGED */}
       <View style={[
         styles.inputBar, 
         { 
-          bottom: keyboardHeight,
-          marginBottom: 0,
           backgroundColor: theme.colors.backgroundSecondary,
           borderTopColor: theme.colors.border,
+          ...(Platform.OS === 'android' && { paddingBottom: Math.max(insets.bottom, 12) }),
         }
       ]}>
         <TextInput
@@ -611,21 +613,18 @@ export default function ChatScreen({ navigation }) {
           placeholderTextColor={theme.colors.textTertiary}
           multiline={true}
           maxLength={500}
-          onFocus={handleInputFocus}
         />
-
         <TouchableOpacity 
           onPress={send} 
           style={[
             styles.sendBtn,
-            { backgroundColor: input.trim() ? theme.colors.primary : theme.colors.textTertiary },
-            !input.trim() && styles.sendBtnDisabled
+            { backgroundColor: input.trim() ? theme.colors.primary : theme.colors.textTertiary }
           ]}
           disabled={!input.trim()}
         >
           <SvgIcon name="send" size={18} color="white" />
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
