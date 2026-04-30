@@ -149,19 +149,7 @@ export default function GPAScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Curriculum Info Bar */}
-        <TouchableOpacity 
-          style={styles.curriculumBar}
-          onPress={() => navigation.navigate("CurriculumSelector")}
-        >
-          <View style={styles.curriculumBarContent}>
-            <SvgIcon name="flag" size={16} color={theme.colors.primary} />
-            <Text style={styles.curriculumBarText}>
-              Grading System: {selectedCurriculum.toUpperCase()}
-            </Text>
-          </View>
-          <SvgIcon name="chevron-right" size={16} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
+
 
         {/* Overall GPA Card */}
         {overallGPA && (
@@ -260,7 +248,7 @@ export default function GPAScreen({ navigation }) {
             })
           ) : (
             <View style={styles.emptyState}>
-              <Text style={[styles.emptyIcon, { fontSize: 48 }]}>📊</Text>
+              <SvgIcon name="highschool" size={48} color={theme.colors.textSecondary} />
               <Text style={styles.emptyTitle}>No Academic Profile</Text>
               <Text style={styles.emptySubtitle}>
                 Set up your academic profile to start tracking GPA
