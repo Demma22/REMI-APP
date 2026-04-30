@@ -338,8 +338,24 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
     color: "rgba(255,255,255,0.85)",
   },
+  // Past Tests styles - visible in both light and dark mode
   pastExamCard: {
-    opacity: 0.9,
+    backgroundColor: theme.colors.backgroundTertiary,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  pastExamName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+    marginBottom: 8,
+  },
+  pastExamInfoText: {
+    fontSize: 13,
+    color: theme.colors.textTertiary,
   },
   bottomSpacing: {
     height: 100,

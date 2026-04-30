@@ -26,7 +26,7 @@ const daysOrder = ["monday", "tuesday", "wednesday", "thursday", "friday", "satu
 // Tab options
 const tabs = [
   { id: "timetable", name: "Timetable", icon: "calendar" },
-  { id: "exams", name: "Exams", icon: "book" },
+  { id: "exams", name: "Tests", icon: "book" },
 ];
 
 export default function TimetableScreen({ navigation }) {
@@ -58,8 +58,13 @@ export default function TimetableScreen({ navigation }) {
         const userData = userDoc.data();
         setTimetable(userData.timetable || {});
         
+        // FIX: Ensure exams is always an array
+        let allExams = userData.exams;
+        if (!allExams || !Array.isArray(allExams)) {
+          allExams = [];
+        }
+        
         // Clean up old exams (older than 7 days)
-        const allExams = userData.exams || [];
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
         
@@ -128,7 +133,7 @@ export default function TimetableScreen({ navigation }) {
 
   const handleDeleteExam = async (examIndex, exam) => {
     Alert.alert(
-      "Delete Exam",
+      "Delete Test",
       `Are you sure you want to delete "${exam.name}"?`,
       [
         { text: "Cancel", style: "cancel" },
@@ -147,9 +152,9 @@ export default function TimetableScreen({ navigation }) {
               await setDoc(userDocRef, { exams: updatedExams }, { merge: true });
 
               setExams(updatedExams);
-              Alert.alert("Success", "Exam deleted successfully");
+              Alert.alert("Success", "Test deleted successfully");
             } catch (error) {
-              Alert.alert("Error", "Failed to delete exam");
+              Alert.alert("Error", "Failed to delete test");
             }
           }
         }
@@ -166,7 +171,7 @@ export default function TimetableScreen({ navigation }) {
   };
 
   const handleEditExam = (examIndex, exam) => {
-    navigation.navigate("EditExam", { exam, examIndex });
+    navigation.navigate("AddExam", { exam, isEditing: true });
   };
 
   const handleAddTimetable = () => {
@@ -398,16 +403,16 @@ export default function TimetableScreen({ navigation }) {
               )}
             </>
           ) : (
-            // Exams Tab
+            // Tests Tab
             <View>
               {!hasAnyExam ? (
                 <View style={styles.emptyCard}>
                   <View style={[styles.emptyIcon, { backgroundColor: theme.colors.dangerLight }]}>
                     <SvgIcon name="book" size={32} color={theme.colors.danger} />
                   </View>
-                  <Text style={styles.emptyTitle}>No exams scheduled</Text>
+                  <Text style={styles.emptyTitle}>No tests/exams scheduled</Text>
                   <Text style={styles.emptySub}>
-                    Add your exams to get reminders and stay prepared.
+                    Add your tests to get reminders and stay prepared.
                   </Text>
                   
                   <TouchableOpacity
@@ -415,15 +420,15 @@ export default function TimetableScreen({ navigation }) {
                     onPress={handleAddButtonPress}
                   >
                     <SvgIcon name="plus" size={18} color="white" />
-                    <Text style={styles.primaryButtonText}>Add Exam</Text>
+                    <Text style={styles.primaryButtonText}>Add Test</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <>
-                  {/* Upcoming Exams */}
+                  {/* Upcoming Tests */}
                   {upcomingExams.length > 0 && (
                     <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>Upcoming Exams</Text>
+                      <Text style={styles.sectionTitle}>Upcoming Tests</Text>
                       {upcomingExams.map((exam, idx) => (
                         <View key={idx} style={styles.examCard}>
                           <View style={styles.examHeader}>
@@ -455,17 +460,17 @@ export default function TimetableScreen({ navigation }) {
                     </View>
                   )}
                   
-                  {/* Past Exams */}
+                  {/* Past Tests */}
                   {pastExams.length > 0 && (
                     <View style={styles.section}>
-                      <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>Past Exams</Text>
+                      <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>Past Tests</Text>
                       {pastExams.map((exam, idx) => (
-                        <View key={idx} style={[styles.pastExamCard, { opacity: 0.5 }]}>
-                          <Text style={styles.examName}>{exam.name}</Text>
+                        <View key={idx} style={styles.pastExamCard}>
+                          <Text style={styles.pastExamName}>{exam.name}</Text>
                           <View style={styles.examDetails}>
                             <View style={styles.examInfoRow}>
-                              <SvgIcon name="calendar" size={14} color={theme.colors.secondary} />
-                              <Text style={styles.examInfoText}>{formatExamDate(exam.date)}</Text>
+                              <SvgIcon name="calendar" size={14} color={theme.colors.textTertiary} />
+                              <Text style={styles.pastExamInfoText}>{formatExamDate(exam.date)}</Text>
                             </View>
                           </View>
                         </View>
@@ -545,7 +550,7 @@ export default function TimetableScreen({ navigation }) {
                       Scan with AI
                     </Text>
                     <Text style={[styles.menuItemDesc, { color: theme.colors.textSecondary }]}>
-                      Use screenshots to extract timetable from image
+                      Use screenshots to extract test timetable from image
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -559,7 +564,7 @@ export default function TimetableScreen({ navigation }) {
                       Add Manually
                     </Text>
                     <Text style={[styles.menuItemDesc, { color: theme.colors.textSecondary }]}>
-                      Enter exam details manually
+                      Enter test details manually
                     </Text>
                   </View>
                 </TouchableOpacity>
