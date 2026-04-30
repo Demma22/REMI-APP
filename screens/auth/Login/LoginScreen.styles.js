@@ -138,7 +138,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   loginButton: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FDAC1B",
     padding: 18,
     borderRadius: 12,
     alignItems: "center",
@@ -149,11 +149,11 @@ export const styles = StyleSheet.create({
     elevation: 4,
   },
   loginButtonDisabled: {
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: "#FDAC1B",
     shadowColor: "transparent",
   },
   loginButtonText: {
-    color: "#535FFD",
+    color: "#ffffff",
     fontSize: 16,
     fontWeight: "700",
   },
