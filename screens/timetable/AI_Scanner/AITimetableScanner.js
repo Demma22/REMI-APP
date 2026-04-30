@@ -19,6 +19,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import SvgIcon from '../../../components/SvgIcon';
 import { pickAndScanTimetableWithUri, takePhotoAndScanWithUri } from '../../../utils/smartTimetableScanner';
 import TimePicker from '../components/TimePicker';
+import { trackFeatureUsage, shouldShowRateReview } from '../../../utils/rateReviewTracker';
 import { getStyles } from './AITimetableScanner.styles';
 
 const { width, height } = Dimensions.get('window');
@@ -309,6 +310,15 @@ export default function AITimetableScanner({ navigation, route }) {
       
       await setDoc(userDocRef, { timetable: timetableData }, { merge: true });
       
+      // ========== ADD THIS TRACKING CODE ==========
+      await trackFeatureUsage();
+      const showRateReview = await shouldShowRateReview();
+      if (showRateReview) {
+        navigation.navigate('RateReviewModal');
+        return;
+      }
+      // ========== END TRACKING CODE ==========
+      
       Alert.alert('Success!', `${savedCount} lecture(s) added.`, [
         { text: 'View Timetable', onPress: () => navigation.navigate('Timetable') },
         { text: 'OK', onPress: () => navigation.goBack() },
@@ -351,6 +361,15 @@ export default function AITimetableScanner({ navigation, route }) {
       
       const allExams = [...existingExams, ...newExams];
       await setDoc(userDocRef, { exams: allExams }, { merge: true });
+      
+      // ========== ADD THIS TRACKING CODE ==========
+      await trackFeatureUsage();
+      const showRateReview = await shouldShowRateReview();
+      if (showRateReview) {
+        navigation.navigate('RateReviewModal');
+        return;
+      }
+      // ========== END TRACKING CODE ==========
       
       Alert.alert('Success!', `${exams.length} exam(s) added.`, [
         { text: 'View Exams', onPress: () => navigation.navigate('ExamTimetable') },

@@ -86,7 +86,7 @@ export const takePhotoAndScan = async (mode = 'lectures') => {
   return await scanTimetableFromImage(result.assets[0].uri, mode);
 };
 
-// NEW: Functions that return both URI and scan result
+// ========== NEW FUNCTIONS WITH URI ==========
 export const pickAndScanTimetableWithUri = async (mode = 'lectures') => {
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (status !== 'granted') {

@@ -20,6 +20,7 @@ import NavigationBar from '../../../components/NavigationBar';
 import { pickAndScanResultsWithUri, takePhotoAndScanResultsWithUri } from '../../../utils/smartResultsScanner';
 import { getAllCountries, GRADING_SCALES } from '../../../utils/gradingScales';
 import { getStyles } from './ScanResultsScreen.styles';
+import { trackFeatureUsage, shouldShowRateReview } from '../../../utils/rateReviewTracker';
 
 const { width, height } = Dimensions.get('window');
 
@@ -221,27 +222,27 @@ export default function ScanResultsScreen({ navigation }) {
     }
   };
 
-  const handleSave = async () => {
+    const handleSave = async () => {
     if (!selectedSemester) {
-      Alert.alert('Select Semester', 'Please select which semester these results belong to.');
-      setShowSemesterModal(true);
-      return;
+        Alert.alert('Select Semester', 'Please select which semester these results belong to.');
+        setShowSemesterModal(true);
+        return;
     }
     
     setSaving(true);
     try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      let existingGpaData = {};
-      if (userDoc.exists && userDoc.data().gpa_data) {
+        const userDocRef = doc(db, "users", auth.currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        let existingGpaData = {};
+        if (userDoc.exists && userDoc.data().gpa_data) {
         existingGpaData = userDoc.data().gpa_data;
-      }
-      
-      const semesterKey = `semester${selectedSemester}`;
-      const scale = GRADING_SCALES[selectedCurriculum];
-      
-      const coursesData = scannedData.results.map(course => {
+        }
+        
+        const semesterKey = `semester${selectedSemester}`;
+        const scale = GRADING_SCALES[selectedCurriculum];
+        
+        const coursesData = scannedData.results.map(course => {
         const marks = course.percentage || course.marks || 0;
         const credits = course.credits || 3;
         const gradePoint = course.gradePoint || scale.getGradePoint(marks);
@@ -249,16 +250,16 @@ export default function ScanResultsScreen({ navigation }) {
         const qualityPoints = credits * gradePoint;
         
         return {
-          name: course.name || "Unknown Course",
-          marks: parseFloat(marks),
-          grade: gradeLetter,
-          creditUnits: parseFloat(credits),
-          gradePoints: parseFloat(gradePoint),
-          qualityPoints: parseFloat(qualityPoints)
+            name: course.name || "Unknown Course",
+            marks: parseFloat(marks),
+            grade: gradeLetter,
+            creditUnits: parseFloat(credits),
+            gradePoints: parseFloat(gradePoint),
+            qualityPoints: parseFloat(qualityPoints)
         };
-      });
-      
-      const gpaData = {
+        });
+        
+        const gpaData = {
         semester: semesterKey,
         semesterNumber: parseInt(selectedSemester),
         gpa: scannedData.gpa,
@@ -267,29 +268,38 @@ export default function ScanResultsScreen({ navigation }) {
         courses: coursesData,
         scannedAt: new Date().toISOString(),
         scannedVia: "ocr_ai"
-      };
-      
-      existingGpaData[semesterKey] = gpaData;
-      
-      await setDoc(userDocRef, { gpa_data: existingGpaData }, { merge: true });
-      
-      Alert.alert(
+        };
+        
+        existingGpaData[semesterKey] = gpaData;
+        
+        await setDoc(userDocRef, { gpa_data: existingGpaData }, { merge: true });
+        
+        // ========== ADD THIS TRACKING CODE ==========
+        await trackFeatureUsage();
+        const showRateReview = await shouldShowRateReview();
+        if (showRateReview) {
+        navigation.replace('RateReviewModal');
+        return;
+        }
+        // ========== END TRACKING CODE ==========
+        
+        Alert.alert(
         'Success!', 
         `GPA ${scannedData.gpa} saved for Semester ${selectedSemester}\n\nClassification: ${scannedData.classification}`,
         [
-          { 
+            { 
             text: 'View GPA', 
             onPress: () => navigation.replace('GPA') 
-          }
+            }
         ]
-      );
+        );
     } catch (error) {
-      console.error('Save error:', error);
-      Alert.alert('Error', 'Failed to save results: ' + error.message);
+        console.error('Save error:', error);
+        Alert.alert('Error', 'Failed to save results: ' + error.message);
     } finally {
-      setSaving(false);
+        setSaving(false);
     }
-  };
+    };
 
   const handleRescan = () => {
     setScanStage('idle');

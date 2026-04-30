@@ -56,11 +56,13 @@ import productiveIcon from '../assets/icons/productive.svg';
 import highschoolIcon from '../assets/icons/highschool.svg';
 import lockIcon from '../assets/icons/lock.svg';
 import calenderIcon from '../assets/icons/calender.svg';
+import starIcon from '../assets/icons/star.svg';
 
 const iconComponents = {
   'home': HomeIcon,
   'eye': EyeIcon,
   'instagram':InstagramIcon,
+  'star': starIcon,
   'lock': lockIcon,
   'calender': calenderIcon,
   'x': XIcon,

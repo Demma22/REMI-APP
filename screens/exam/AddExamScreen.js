@@ -214,19 +214,19 @@ export default function AddExamScreen({ navigation }) {
               >
                 <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>ADD EXAM</Text>
+              <Text style={styles.headerTitle}>ADD TEST</Text>
               <TouchableOpacity 
                 style={styles.menuBtn}
                 onPress={() => setShowMenuModal(true)}
                 disabled={saving || preparingNotifications}
               >
-                <SvgIcon name="more-vertical" size={20} color={theme.colors.primary} />
+                <SvgIcon name="scan" size={20} color={theme.colors.primary} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.content}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Exam/Test Name *</Text>
+                <Text style={styles.label}>Test/Exam Name *</Text>
                 <TextInput
                   style={styles.input}
                   value={examName}
@@ -237,7 +237,7 @@ export default function AddExamScreen({ navigation }) {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Exam Date *</Text>
+                <Text style={styles.label}>Test Date *</Text>
                 <TouchableOpacity
                   style={styles.datePickerButton}
                   onPress={() => setShowDatePicker(true)}
@@ -260,7 +260,7 @@ export default function AddExamScreen({ navigation }) {
               )}
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Exam Time *</Text>
+                <Text style={styles.label}>Test Time *</Text>
                 <TouchableOpacity
                   style={styles.timePickerButton}
                   onPress={() => setShowTimePicker(true)}
