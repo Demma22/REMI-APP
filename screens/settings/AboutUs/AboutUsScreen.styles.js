@@ -46,14 +46,79 @@ export const getStyles = (theme) => StyleSheet.create({
     padding: 24,
   },
 
-  appName: {
-    fontSize: 28,
+  // SND Studio Logo Section
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    borderRadius: 20,
+  },
+
+  // SND Studio Branding
+  studioSection: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  studioName: {
+    fontSize: 24,
     fontWeight: '800',
     marginBottom: 4,
   },
-  tagline: {
+  studioTagline: {
     fontSize: 14,
+    fontWeight: '500',
+    fontStyle: 'italic',
   },
+
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginVertical: 20,
+  },
+
+  // REMI Product Section
+  productSection: {
+    marginBottom: 24,
+  },
+  productLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 4,
+    letterSpacing: 1,
+  },
+  productName: {
+    fontSize: 28,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  productDesc: {
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+
+  // Website Button
+  websiteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 24,
+  },
+  websiteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+
   section: {
     marginBottom: 32,
   },
@@ -61,22 +126,10 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 12,
-    marginTop: 30,
   },
   description: {
     fontSize: 14,
     lineHeight: 22,
-  },
-  featureList: {
-    gap: 10,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  featureText: {
-    fontSize: 14,
   },
   socialSubtitle: {
     fontSize: 12,
