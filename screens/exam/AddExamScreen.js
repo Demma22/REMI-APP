@@ -11,7 +11,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
-  TouchableWithoutFeedback,
   ActivityIndicator,
   Switch,
 } from "react-native";
@@ -199,214 +198,215 @@ export default function AddExamScreen({ navigation }) {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
-        <TouchableWithoutFeedback onPress={dismissKeyboard}>
-          <ScrollView 
-            style={styles.wrap} 
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
+        {/* Header - STATIC (outside ScrollView) */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+            disabled={saving || preparingNotifications}
           >
-            <View style={styles.header}>
-              <TouchableOpacity 
-                style={styles.backBtn} 
-                onPress={() => navigation.goBack()}
-                activeOpacity={0.7}
-                disabled={saving || preparingNotifications}
+            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>ADD TEST</Text>
+          <TouchableOpacity 
+            style={styles.menuBtn}
+            onPress={() => setShowMenuModal(true)}
+            disabled={saving || preparingNotifications}
+          >
+            <SvgIcon name="scan" size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Scrollable Content */}
+        <ScrollView 
+          style={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.content}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Test/Exam Name *</Text>
+              <TextInput
+                style={styles.input}
+                value={examName}
+                onChangeText={setExamName}
+                placeholder="e.g., Final Exam, Midterm Test"
+                placeholderTextColor={theme.colors.textTertiary}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Test Date *</Text>
+              <TouchableOpacity
+                style={styles.datePickerButton}
+                onPress={() => setShowDatePicker(true)}
               >
-                <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>ADD TEST</Text>
-              <TouchableOpacity 
-                style={styles.menuBtn}
-                onPress={() => setShowMenuModal(true)}
-                disabled={saving || preparingNotifications}
-              >
-                <SvgIcon name="scan" size={20} color={theme.colors.primary} />
+                <SvgIcon name="calendar" size={20} color={theme.colors.primary} />
+                <Text style={styles.datePickerText}>{formatDate(examDate)}</Text>
+                <SvgIcon name="chevron-down" size={16} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.content}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Test/Exam Name *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={examName}
-                  onChangeText={setExamName}
-                  placeholder="e.g., Final Exam, Midterm Test"
-                  placeholderTextColor={theme.colors.textTertiary}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Test Date *</Text>
-                <TouchableOpacity
-                  style={styles.datePickerButton}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <SvgIcon name="calendar" size={20} color={theme.colors.primary} />
-                  <Text style={styles.datePickerText}>{formatDate(examDate)}</Text>
-                  <SvgIcon name="chevron-down" size={16} color={theme.colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Date Picker - Android */}
-              {showDatePicker && Platform.OS === 'android' && (
-                <DateTimePicker
-                  value={examDate}
-                  mode="date"
-                  display="default"
-                  onChange={handleDateChange}
-                  minimumDate={new Date()}
-                />
-              )}
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Test Time *</Text>
-                <TouchableOpacity
-                  style={styles.timePickerButton}
-                  onPress={() => setShowTimePicker(true)}
-                >
-                  <SvgIcon name="clock" size={20} color={theme.colors.primary} />
-                  <Text style={styles.timePickerText}>
-                    {formatTimeForDisplay(hour, minute, period)}
-                  </Text>
-                  <SvgIcon name="chevron-down" size={16} color={theme.colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Room / Location</Text>
-                <TextInput
-                  style={styles.input}
-                  value={room}
-                  onChangeText={setRoom}
-                  placeholder="e.g., Room 304, Online"
-                  placeholderTextColor={theme.colors.textTertiary}
-                />
-              </View>
-
-              <View style={styles.switchRow}>
-                <View style={styles.switchLabel}>
-                  <SvgIcon name="bell" size={20} color={theme.colors.primary} />
-                  <Text style={styles.label}>Send Reminders</Text>
-                </View>
-                <Switch
-                  value={reminder}
-                  onValueChange={setReminder}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                  thumbColor="#FFFFFF"
-                />
-              </View>
-              <Text style={styles.hintText}>
-                {reminder 
-                  ? "You will receive reminders 2 days and 2 hours before the exam" 
-                  : "No reminders will be sent for this exam"}
-              </Text>
-
-              <TouchableOpacity 
-                style={[styles.saveBtn, (saving || preparingNotifications) && styles.saveBtnProcessing]} 
-                onPress={saveExam} 
-                activeOpacity={0.8}
-                disabled={saving || preparingNotifications}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <SvgIcon name="save" size={18} color="white" />
-                    <Text style={styles.saveBtnText}>
-                      {saving ? "Saving..." : preparingNotifications ? "Processing..." : "ADD EXAM"}
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <View style={styles.bottomSpacing} />
-            </View>
-
-            {/* Date Picker - iOS Modal */}
-            {showDatePicker && Platform.OS === 'ios' && (
-              <Modal
-                transparent={true}
-                animationType="slide"
-                visible={showDatePicker}
-                onRequestClose={() => setShowDatePicker(false)}
-              >
-                <View style={styles.modalOverlay}>
-                  <View style={[styles.pickerModalContent, { backgroundColor: theme.colors.card }]}>
-                    <View style={styles.pickerModalHeader}>
-                      <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                        <Text style={[styles.pickerModalCancel, { color: theme.colors.danger }]}>Cancel</Text>
-                      </TouchableOpacity>
-                      <Text style={[styles.pickerModalTitle, { color: theme.colors.textPrimary }]}>Select Date</Text>
-                      <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                        <Text style={[styles.pickerModalDone, { color: theme.colors.primary }]}>Done</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <DateTimePicker
-                      value={examDate}
-                      mode="date"
-                      display="spinner"
-                      onChange={handleDateChange}
-                      minimumDate={new Date()}
-                      style={styles.datePickerIOS}
-                    />
-                  </View>
-                </View>
-              </Modal>
+            {/* Date Picker - Android */}
+            {showDatePicker && Platform.OS === 'android' && (
+              <DateTimePicker
+                value={examDate}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+                minimumDate={new Date()}
+              />
             )}
 
-            {/* Time Picker Modal */}
-            <Modal
-              visible={showTimePicker}
-              transparent={true}
-              animationType="slide"
-              onRequestClose={() => setShowTimePicker(false)}
-            >
-              <TimePicker
-                hour={hour}
-                minute={minute}
-                period={period}
-                onHourChange={setHour}
-                onMinuteChange={setMinute}
-                onPeriodChange={setPeriod}
-                onClose={() => setShowTimePicker(false)}
-                theme={theme}
-                styles={styles}
-              />
-            </Modal>
-
-            {/* Menu Modal */}
-            <Modal
-              visible={showMenuModal}
-              transparent={true}
-              animationType="fade"
-              onRequestClose={() => setShowMenuModal(false)}
-            >
-              <TouchableOpacity 
-                style={styles.modalOverlay} 
-                activeOpacity={1} 
-                onPress={() => setShowMenuModal(false)}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Test Time *</Text>
+              <TouchableOpacity
+                style={styles.timePickerButton}
+                onPress={() => setShowTimePicker(true)}
               >
-                <View style={[styles.menuModal, { backgroundColor: theme.colors.card }]}>
-                  <TouchableOpacity style={styles.menuItem} onPress={handleScanTimetable}>
-                    <SvgIcon name="scan" size={20} color={theme.colors.primary} />
-                    <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
-                      Scan Exam Timetable
-                    </Text>
-                  </TouchableOpacity>
-                  <View style={[styles.menuDivider, { backgroundColor: theme.colors.border }]} />
-                  <TouchableOpacity style={styles.menuItem} onPress={handleManualAdd}>
-                    <SvgIcon name="edit" size={20} color={theme.colors.primary} />
-                    <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
-                      Add Manually
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                <SvgIcon name="clock" size={20} color={theme.colors.primary} />
+                <Text style={styles.timePickerText}>
+                  {formatTimeForDisplay(hour, minute, period)}
+                </Text>
+                <SvgIcon name="chevron-down" size={16} color={theme.colors.textSecondary} />
               </TouchableOpacity>
-            </Modal>
-          </ScrollView>
-        </TouchableWithoutFeedback>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Room / Location</Text>
+              <TextInput
+                style={styles.input}
+                value={room}
+                onChangeText={setRoom}
+                placeholder="e.g., Room 304, Online"
+                placeholderTextColor={theme.colors.textTertiary}
+              />
+            </View>
+
+            <View style={styles.switchRow}>
+              <View style={styles.switchLabel}>
+                <SvgIcon name="bell" size={20} color={theme.colors.primary} />
+                <Text style={styles.label}>Send Reminders</Text>
+              </View>
+              <Switch
+                value={reminder}
+                onValueChange={setReminder}
+                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+            <Text style={styles.hintText}>
+              {reminder 
+                ? "You will receive reminders 2 days and 2 hours before the exam" 
+                : "No reminders will be sent for this exam"}
+            </Text>
+
+            <TouchableOpacity 
+              style={[styles.saveBtn, (saving || preparingNotifications) && styles.saveBtnProcessing]} 
+              onPress={saveExam} 
+              activeOpacity={0.8}
+              disabled={saving || preparingNotifications}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Text style={styles.saveBtnText}>
+                    {saving ? "Saving..." : preparingNotifications ? "Processing..." : "ADD EXAM"}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.bottomSpacing} />
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Date Picker - iOS Modal */}
+      {showDatePicker && Platform.OS === 'ios' && (
+        <Modal
+          transparent={true}
+          animationType="slide"
+          visible={showDatePicker}
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.pickerModalContent, { backgroundColor: theme.colors.card }]}>
+              <View style={styles.pickerModalHeader}>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={[styles.pickerModalCancel, { color: theme.colors.danger }]}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={[styles.pickerModalTitle, { color: theme.colors.textPrimary }]}>Select Date</Text>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={[styles.pickerModalDone, { color: theme.colors.primary }]}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={examDate}
+                mode="date"
+                display="spinner"
+                onChange={handleDateChange}
+                minimumDate={new Date()}
+                style={styles.datePickerIOS}
+                textColor={theme.colors.textPrimary}
+                themeVariant={theme.mode === 'dark' ? 'dark' : 'light'}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Time Picker Modal */}
+      <Modal
+        visible={showTimePicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowTimePicker(false)}
+      >
+        <TimePicker
+          hour={hour}
+          minute={minute}
+          period={period}
+          onHourChange={setHour}
+          onMinuteChange={setMinute}
+          onPeriodChange={setPeriod}
+          onClose={() => setShowTimePicker(false)}
+          theme={theme}
+          styles={styles}
+        />
+      </Modal>
+
+      {/* Menu Modal */}
+      <Modal
+        visible={showMenuModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowMenuModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowMenuModal(false)}
+        >
+          <View style={[styles.menuModal, { backgroundColor: theme.colors.card }]}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleScanTimetable}>
+              <SvgIcon name="scan" size={20} color={theme.colors.primary} />
+              <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
+                Scan Exam Timetable
+              </Text>
+            </TouchableOpacity>
+            <View style={[styles.menuDivider, { backgroundColor: theme.colors.border }]} />
+            <TouchableOpacity style={styles.menuItem} onPress={handleManualAdd}>
+              <SvgIcon name="edit" size={20} color={theme.colors.primary} />
+              <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
+                Add Manually
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <NavigationBar />
     </View>

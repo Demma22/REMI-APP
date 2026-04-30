@@ -12,6 +12,9 @@ export const getStyles = (theme) => StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  scrollContent: {
+    flex: 1,
+  },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',

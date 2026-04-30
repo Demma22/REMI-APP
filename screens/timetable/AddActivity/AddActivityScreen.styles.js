@@ -11,6 +11,9 @@ export const getStyles = (theme) => StyleSheet.create({
   wrap: { 
     flex: 1, 
   },
+  scrollContent: {
+    flex: 1,
+  },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
@@ -86,42 +89,6 @@ export const getStyles = (theme) => StyleSheet.create({
   // Content
   content: {
     padding: 24,
-  },
-
-  // Scan Button
-  scanButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 16,
-    gap: 12,
-  },
-  scanButtonTextContainer: {
-    flex: 1,
-  },
-  scanButtonTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  scanButtonSubtitle: {
-    fontSize: 12,
-  },
-
-  // OR Divider
-  orDivider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  orLine: {
-    flex: 1,
-    height: 1,
-  },
-  orText: {
-    fontSize: 12,
-    marginHorizontal: 12,
   },
 
   // Input Groups
@@ -287,88 +254,88 @@ export const getStyles = (theme) => StyleSheet.create({
     height: 80,
   },
 
-    // Time Picker Modal Styles
-    timePickerContainer: {
+  // Time Picker Modal Styles
+  timePickerContainer: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
-    },
-    timePickerContent: {
+  },
+  timePickerContent: {
     width: "90%",
     borderRadius: 24,
     padding: 20,
-    },
-    timePickerHeader: {
+  },
+  timePickerHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
-    },
-    timePickerTitle: {
+  },
+  timePickerTitle: {
     fontSize: 18,
     fontWeight: "700",
-    },
-    timePickerColumns: {
+  },
+  timePickerColumns: {
     flexDirection: "row",
     justifyContent: "space-between",
     height: 200,
-    },
-    timePickerColumn: {
+  },
+  timePickerColumn: {
     flex: 1,
     alignItems: "center",
-    },
-    timePickerColumnLabel: {
+  },
+  timePickerColumnLabel: {
     fontSize: 14,
     marginBottom: 8,
-    },
-    pickerList: {
+  },
+  pickerList: {
     alignItems: "center",
-    },
-    pickerItem: {
+  },
+  pickerItem: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
     marginVertical: 2,
-    },
-    pickerItemSelected: {
+  },
+  pickerItemSelected: {
     backgroundColor: theme.colors.primaryLight,
-    },
-    pickerItemText: {
+  },
+  pickerItemText: {
     fontSize: 20,
     color: theme.colors.textPrimary,
-    },
-    pickerItemTextSelected: {
+  },
+  pickerItemTextSelected: {
     color: theme.colors.primary,
     fontWeight: "700",
-    },
-    timePickerConfirmBtn: {
+  },
+  timePickerConfirmBtn: {
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
     marginTop: 20,
-    },
-    timePickerConfirmText: {
+  },
+  timePickerConfirmText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
-    },
-    typeContainer: {
+  },
+  typeContainer: {
     flexDirection: "row",
     marginBottom: 4,
-    },
-    typeButton: {
+  },
+  typeButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     marginRight: 8,
     backgroundColor: theme.colors.backgroundTertiary,
-    },
-    typeButtonText: {
+  },
+  typeButtonText: {
     fontSize: 14,
     color: theme.colors.textSecondary,
-    },
-    typeButtonTextSelected: {
+  },
+  typeButtonTextSelected: {
     color: "#FFFFFF",
-    },
+  },
 });
