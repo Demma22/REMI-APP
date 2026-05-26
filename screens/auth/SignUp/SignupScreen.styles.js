@@ -159,6 +159,37 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  dividerText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    marginBottom: 16,
+  },
+  googleButtonText: {
+    color: '#383940',
+    fontSize: 15,
+    fontWeight: '600',
+  },
   termsText: {
     fontSize: 12,
     color: "rgba(255,255,255,0.7)",

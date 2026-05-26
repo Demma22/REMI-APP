@@ -2,7 +2,8 @@
   "expo": {
     "name": "Remi",
     "slug": "remi",
-    "version": "1.0.4",
+    "scheme": "com.anonymous.remi",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -103,7 +104,8 @@
       ],
       "expo-font",
       "@react-native-community/datetimepicker",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {
