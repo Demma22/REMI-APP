@@ -15,13 +15,14 @@ import {
   Keyboard,
   ActivityIndicator,
 } from "react-native";
-import { auth, db } from "../../../firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { getUserData, updateUserData } from "../../../services/userDataService";
 import NavigationBar from "../../../components/NavigationBar";
 import SvgIcon from "../../../components/SvgIcon";
 import { useTheme } from '../../../contexts/ThemeContext';
+import ScreenHeader from "../../../components/ScreenHeader";
 import { useNotifications } from '../../../hooks/useNotifications';
 import { getStyles } from "./AddActivityScreen.styles";
+import { FormSkeleton } from "../../../components/SkeletonLoader";
 import TimePicker from "../components/TimePicker";
 import ActivityTypeSelector from "../components/ActivityTypeSelector";
 import { trackFeatureUsage, shouldShowRateReview } from '../../../utils/rateReviewTracker';
@@ -70,13 +71,9 @@ export default function AddActivityScreen({ navigation }) {
 
   const loadUserData = async () => {
     try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const semester = userData.current_semester || 1;
-        setCurrentSemester(semester);
+      const data = await getUserData();
+      if (data) {
+        setCurrentSemester(data.currentSemester || 1);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -104,13 +101,8 @@ export default function AddActivityScreen({ navigation }) {
 
     setSaving(true);
     try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      let timetableData = {};
-      if (userDoc.exists() && userDoc.data().timetable) {
-        timetableData = userDoc.data().timetable;
-      }
+      const existingData = await getUserData();
+      let timetableData = existingData?.timetable || {};
 
       const dayKey = day.toLowerCase();
       if (!timetableData[dayKey]) {
@@ -137,8 +129,7 @@ export default function AddActivityScreen({ navigation }) {
       };
 
       timetableData[dayKey] = [...timetableData[dayKey], newActivity];
-
-      await setDoc(userDocRef, { timetable: timetableData }, { merge: true });
+      await updateUserData({ timetable: timetableData });
 
       // Schedule notifications if reminder is enabled
       if (reminder) {
@@ -203,10 +194,8 @@ export default function AddActivityScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.centerText}>Loading...</Text>
-        </View>
+        <ScreenHeader title="ADD ACTIVITY" onBackPress={() => navigation.goBack()} />
+        <FormSkeleton />
         <NavigationBar />
       </View>
     );
@@ -234,18 +223,7 @@ export default function AddActivityScreen({ navigation }) {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         {/* Header - STATIC */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-            disabled={saving || preparingNotifications}
-          >
-            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>ADD ACTIVITY</Text>
-          <View style={styles.placeholder} />
-        </View>
+        <ScreenHeader title="ADD ACTIVITY" onBackPress={() => navigation.goBack()} />
 
         {/* Scrollable Content */}
         <ScrollView 

@@ -11,11 +11,11 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { auth, db } from "../../../firebase";
+import { getUserData, updateUserData } from "../../../services/userDataService";
 import { useTheme } from '../../../contexts/ThemeContext';
 import SvgIcon from "../../../components/SvgIcon";
 import { getStyles } from "./EditNickname.styles";
+import ScreenHeader from "../../../components/ScreenHeader";
 
 export default function EditNickname({ navigation, route }) {
   const [nick, setNick] = useState("");
@@ -31,19 +31,11 @@ export default function EditNickname({ navigation, route }) {
   useEffect(() => {
     const loadCurrentNickname = async () => {
       try {
-        const userDocRef = doc(db, "users", auth.currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const currentNick = userData.nickname || "";
-          setCurrentNickname(currentNick);
-          setNick(currentNick);
-          
-          if (currentNick) {
-            validateNickname(currentNick);
-          }
-        }
+        const data = await getUserData();
+        const currentNick = data?.nickname || "";
+        setCurrentNickname(currentNick);
+        setNick(currentNick);
+        if (currentNick) validateNickname(currentNick);
       } catch (error) {
         // Silent error handling
       }
@@ -82,14 +74,7 @@ export default function EditNickname({ navigation, route }) {
     setIsSaving(true);
 
     try {
-      await setDoc(
-        doc(db, "users", auth.currentUser.uid),
-        {
-          nickname: trimmedNick,
-          updatedAt: new Date(),
-        },
-        { merge: true }
-      );
+      await updateUserData({ nickname: trimmedNick });
 
       Alert.alert(
         "Success!",
@@ -133,19 +118,7 @@ export default function EditNickname({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={handleCancel}
-          >
-            <SvgIcon name="arrow-back" size={20} color="#535FFD" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>EDIT NICKNAME</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      </View>
+      <ScreenHeader title="EDIT NICKNAME" onBackPress={handleCancel} />
 
       <KeyboardAvoidingView 
         style={styles.keyboardAvoidingView}

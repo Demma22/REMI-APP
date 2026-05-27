@@ -9,13 +9,14 @@ import {
   RefreshControl,
   Modal,
 } from "react-native";
-import { auth, db } from "../../../firebase";
-import { doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { getUserData, updateUserData } from "../../../services/userDataService";
 import NavigationBar from "../../../components/NavigationBar";
 import SvgIcon from "../../../components/SvgIcon";
+import ScreenHeader from "../../../components/ScreenHeader";
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { getStyles } from "./TimetableScreen.styles";
+import { TimetableSkeleton } from "../../../components/SkeletonLoader";
 
 // Helper function to capitalize first letter
 const capitalize = (s) => s && s[0].toUpperCase() + s.slice(1);
@@ -26,14 +27,14 @@ const daysOrder = ["monday", "tuesday", "wednesday", "thursday", "friday", "satu
 // Tab options
 const tabs = [
   { id: "timetable", name: "Timetable", icon: "calendar" },
-  { id: "exams", name: "Tests", icon: "book" },
+  { id: "exams", name: "Deadlines", icon: "book" },
 ];
 
 export default function TimetableScreen({ navigation }) {
   const { theme } = useTheme();
   const { cancelLectureNotifications, cancelExamNotifications } = useNotifications();
   const styles = getStyles(theme);
-  
+
   const [activeTab, setActiveTab] = useState("timetable");
   const [timetable, setTimetable] = useState({});
   const [exams, setExams] = useState([]);
@@ -50,35 +51,26 @@ export default function TimetableScreen({ navigation }) {
   const loadData = async () => {
     try {
       setLoading(true);
-      
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
+
+      const userData = await getUserData();
+      if (userData) {
         setTimetable(userData.timetable || {});
-        
-        // FIX: Ensure exams is always an array
+
         let allExams = userData.exams;
         if (!allExams || !Array.isArray(allExams)) {
           allExams = [];
         }
-        
-        // Clean up old exams (older than 7 days)
+
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        
+
         const filteredExams = allExams.filter(exam => {
-          let examDate;
-          if (exam.date?.toDate) examDate = exam.date.toDate();
-          else if (exam.date) examDate = new Date(exam.date);
-          else return true;
-          return examDate >= oneWeekAgo;
+          if (!exam.date) return true;
+          return new Date(exam.date) >= oneWeekAgo;
         });
-        
-        // If exams were removed, update Firestore
+
         if (filteredExams.length !== allExams.length) {
-          await setDoc(userDocRef, { exams: filteredExams }, { merge: true });
+          await updateUserData({ exams: filteredExams });
           setExams(filteredExams);
         } else {
           setExams(allExams);
@@ -114,11 +106,9 @@ export default function TimetableScreen({ navigation }) {
 
               const dayLectures = [...(timetable[dayKey] || [])];
               dayLectures.splice(lectureIndex, 1);
-              
-              const updatedTimetable = { ...timetable, [dayKey]: dayLectures };
 
-              const userDocRef = doc(db, "users", auth.currentUser.uid);
-              await setDoc(userDocRef, { timetable: updatedTimetable }, { merge: true });
+              const updatedTimetable = { ...timetable, [dayKey]: dayLectures };
+              await updateUserData({ timetable: updatedTimetable });
 
               setTimetable(updatedTimetable);
               Alert.alert("Success", "Activity deleted successfully");
@@ -133,7 +123,7 @@ export default function TimetableScreen({ navigation }) {
 
   const handleDeleteExam = async (examIndex, exam) => {
     Alert.alert(
-      "Delete Test",
+      "Delete Deadline",
       `Are you sure you want to delete "${exam.name}"?`,
       [
         { text: "Cancel", style: "cancel" },
@@ -147,14 +137,12 @@ export default function TimetableScreen({ navigation }) {
               }
 
               const updatedExams = exams.filter((_, i) => i !== examIndex);
-              
-              const userDocRef = doc(db, "users", auth.currentUser.uid);
-              await setDoc(userDocRef, { exams: updatedExams }, { merge: true });
+              await updateUserData({ exams: updatedExams });
 
               setExams(updatedExams);
-              Alert.alert("Success", "Test deleted successfully");
+              Alert.alert("Success", "Deadline deleted successfully");
             } catch (error) {
-              Alert.alert("Error", "Failed to delete test");
+              Alert.alert("Error", "Failed to delete deadline");
             }
           }
         }
@@ -199,7 +187,6 @@ export default function TimetableScreen({ navigation }) {
   };
 
   const getFilteredTimetable = () => {
-    // No semester filtering - return all activities
     return timetable;
   };
 
@@ -209,42 +196,21 @@ export default function TimetableScreen({ navigation }) {
 
   const formatExamDate = (date) => {
     if (!date) return "TBD";
-    if (date.toDate) return date.toDate().toLocaleDateString();
     return new Date(date).toLocaleDateString();
   };
 
   const getUpcomingExams = () => {
     const now = new Date();
     return exams
-      .filter(exam => {
-        let examDate;
-        if (exam.date?.toDate) examDate = exam.date.toDate();
-        else if (exam.date) examDate = new Date(exam.date);
-        else return false;
-        return examDate >= now;
-      })
-      .sort((a, b) => {
-        let dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date);
-        let dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date);
-        return dateA - dateB;
-      });
+      .filter(exam => exam.date && new Date(exam.date) >= now)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
   };
 
   const getPastExams = () => {
     const now = new Date();
     return exams
-      .filter(exam => {
-        let examDate;
-        if (exam.date?.toDate) examDate = exam.date.toDate();
-        else if (exam.date) examDate = new Date(exam.date);
-        else return false;
-        return examDate < now;
-      })
-      .sort((a, b) => {
-        let dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date);
-        let dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date);
-        return dateB - dateA;
-      });
+      .filter(exam => exam.date && new Date(exam.date) < now)
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
   };
 
   const upcomingExams = getUpcomingExams();
@@ -253,20 +219,8 @@ export default function TimetableScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-              <SvgIcon name="arrow-back" size={20} color={theme.colors.secondary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>MY SCHEDULE</Text>
-            <View style={styles.headerSpacer} />
-          </View>
-        </View>
-        <View style={styles.content}>
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptySub}>Loading your schedule...</Text>
-          </View>
-        </View>
+        <ScreenHeader title="MY SCHEDULE" onBackPress={() => navigation.goBack()} />
+        <TimetableSkeleton />
         <NavigationBar />
       </View>
     );
@@ -274,15 +228,7 @@ export default function TimetableScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>MY SCHEDULE</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      </View>
+      <ScreenHeader title="MY SCHEDULE" onBackPress={() => navigation.goBack()} />
 
       {/* Tab Navigation */}
       <View style={styles.tabBar}>
@@ -292,10 +238,10 @@ export default function TimetableScreen({ navigation }) {
             style={[styles.tab, activeTab === tab.id && styles.tabActive]}
             onPress={() => setActiveTab(tab.id)}
           >
-            <SvgIcon 
-              name={tab.icon} 
-              size={18} 
-              color={activeTab === tab.id ? theme.colors.primary : theme.colors.textSecondary} 
+            <SvgIcon
+              name={tab.icon}
+              size={18}
+              color={activeTab === tab.id ? theme.colors.primary : theme.colors.textSecondary}
             />
             <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>
               {tab.name}
@@ -304,8 +250,8 @@ export default function TimetableScreen({ navigation }) {
         ))}
       </View>
 
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
@@ -323,7 +269,7 @@ export default function TimetableScreen({ navigation }) {
                   <Text style={styles.emptySub}>
                     Add your weekly activities (study time, lectures, etc.) to stay organized.
                   </Text>
-                  
+
                   <TouchableOpacity
                     style={[styles.primaryButton, { backgroundColor: theme.colors.primary }]}
                     onPress={handleAddButtonPress}
@@ -337,7 +283,7 @@ export default function TimetableScreen({ navigation }) {
                   {daysOrder.map((dayKey) => {
                     const list = filteredTimetable[dayKey] || [];
                     if (!list.length) return null;
-                    
+
                     return (
                       <View key={dayKey} style={styles.dayCard}>
                         <View style={styles.dayHeader}>
@@ -347,7 +293,7 @@ export default function TimetableScreen({ navigation }) {
                             <Text style={styles.lectureCountText}> {list.length}</Text>
                           </View>
                         </View>
-                        
+
                         {list.map((lecture, i) => (
                           <View key={`${dayKey}-${i}`} style={styles.lectureCard}>
                             <View style={styles.lectureColorBar} />
@@ -378,7 +324,7 @@ export default function TimetableScreen({ navigation }) {
                                 )}
                               </View>
                             </View>
-                            
+
                             <View style={styles.lectureActions}>
                               <TouchableOpacity
                                 style={[styles.actionButton, styles.editButton]}
@@ -386,7 +332,7 @@ export default function TimetableScreen({ navigation }) {
                               >
                                 <SvgIcon name="pencil" size={18} color="#FFFFFF" />
                               </TouchableOpacity>
-                              
+
                               <TouchableOpacity
                                 style={[styles.actionButton, styles.deleteButton]}
                                 onPress={() => handleDeleteLecture(dayKey, i, lecture)}
@@ -403,32 +349,32 @@ export default function TimetableScreen({ navigation }) {
               )}
             </>
           ) : (
-            // Tests Tab
+            // Deadlines Tab
             <View>
               {!hasAnyExam ? (
                 <View style={styles.emptyCard}>
                   <View style={[styles.emptyIcon, { backgroundColor: theme.colors.dangerLight }]}>
                     <SvgIcon name="book" size={32} color={theme.colors.danger} />
                   </View>
-                  <Text style={styles.emptyTitle}>No tests/exams scheduled</Text>
+                  <Text style={styles.emptyTitle}>No deadlines scheduled</Text>
                   <Text style={styles.emptySub}>
-                    Add your tests to get reminders and stay prepared.
+                    Add your tests and deadlines to get reminders and stay prepared.
                   </Text>
-                  
+
                   <TouchableOpacity
                     style={[styles.primaryButton, { backgroundColor: theme.colors.danger }]}
                     onPress={handleAddButtonPress}
                   >
                     <SvgIcon name="plus" size={18} color="white" />
-                    <Text style={styles.primaryButtonText}>Add Test</Text>
+                    <Text style={styles.primaryButtonText}>Add Deadline</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <>
-                  {/* Upcoming Tests */}
+                  {/* Upcoming Deadlines */}
                   {upcomingExams.length > 0 && (
                     <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>Upcoming Tests</Text>
+                      <Text style={styles.sectionTitle}>Upcoming Deadlines</Text>
                       {upcomingExams.map((exam, idx) => (
                         <View key={idx} style={styles.examCard}>
                           <View style={styles.examHeader}>
@@ -459,11 +405,11 @@ export default function TimetableScreen({ navigation }) {
                       ))}
                     </View>
                   )}
-                  
-                  {/* Past Tests */}
+
+                  {/* Past Deadlines */}
                   {pastExams.length > 0 && (
                     <View style={styles.section}>
-                      <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>Past Tests</Text>
+                      <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>Past Deadlines</Text>
                       {pastExams.map((exam, idx) => (
                         <View key={idx} style={styles.pastExamCard}>
                           <Text style={styles.pastExamName}>{exam.name}</Text>
@@ -482,7 +428,7 @@ export default function TimetableScreen({ navigation }) {
             </View>
           )}
         </View>
-        
+
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
@@ -501,11 +447,12 @@ export default function TimetableScreen({ navigation }) {
         visible={showAddMenu}
         transparent={true}
         animationType="fade"
+        statusBarTranslucent={true}
         onRequestClose={() => setShowAddMenu(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={() => setShowAddMenu(false)}
         >
           <View style={[styles.menuModal, { backgroundColor: theme.colors.card }]}>
@@ -550,7 +497,7 @@ export default function TimetableScreen({ navigation }) {
                       Scan with AI
                     </Text>
                     <Text style={[styles.menuItemDesc, { color: theme.colors.textSecondary }]}>
-                      Use screenshots to extract test timetable from image
+                      Use screenshots to extract deadline timetable from image
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -564,7 +511,7 @@ export default function TimetableScreen({ navigation }) {
                       Add Manually
                     </Text>
                     <Text style={[styles.menuItemDesc, { color: theme.colors.textSecondary }]}>
-                      Enter test details manually
+                      Enter deadline details manually
                     </Text>
                   </View>
                 </TouchableOpacity>

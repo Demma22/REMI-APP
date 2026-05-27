@@ -1,559 +1,127 @@
-// screens/HomeScreen.styles.js
-import { StyleSheet, Dimensions, Platform } from 'react-native';
+// screens/Home/HomeScreen.styles.js
+import { StyleSheet, Platform } from "react-native";
 
-const { width, height } = Dimensions.get('window');
+export const getStyles = (theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 120,
+    },
 
-export const getStyles = (theme) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    ...Platform.select({
-      ios: {
-        shadowColor: theme.colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
-  },
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  userNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  waveEmoji: {
-    fontSize: 24,
-  },
-  profileSection: {
-    marginLeft: 15,
-  },
-  profileImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-  },
-  profileIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-  },
-  welcome: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginBottom: 4,
-    fontWeight: '500',
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-  },
-  section: {
-    marginBottom: 24,
-    marginTop: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-    marginBottom: 16,
-    paddingHorizontal: 20,
-  },
-  cardsContainer: {
-    paddingLeft: 0,
-  },
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-    paddingHorizontal: 20,
-  },
-  paginationDot: {
-    marginHorizontal: 4,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-  },
-  statsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  examCard: {
-    borderRadius: 20,
-    padding: 16,
-    marginHorizontal: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: theme.colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
-  },
-  examHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 12,
-  },
-  examIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-    flexShrink: 0,
-  },
-  examTitleContainer: {
-    flex: 1,
-  },
-  examCourse: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 6,
-  },
-  examDetailsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  examDetail: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  examDetailText: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  examFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#FFFFFF30',
-  },
-  semesterBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  semesterText: {
-    fontSize: 11,
-    fontWeight: "600",
-    marginLeft: 4,
-  },
-  viewDetailsButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  viewDetailsText: {
-    fontSize: 12,
-    fontWeight: "600",
-    marginRight: 4,
-  },
-  bottomHint: {
-    alignItems: "center",
-    paddingHorizontal: 20,
-    marginTop: 8,
-  },
-  hintText: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-    fontStyle: "italic",
-  },
-  // Onboarding Banner Styles - Fixed for Android (no shadow)
-  onboardingBanner: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    marginTop: 30,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    // iOS shadow only - no elevation on Android to prevent inner shadow
-    ...Platform.select({
-      ios: {
-        shadowColor: theme.colors.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
-  },
-  onboardingBannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  onboardingBannerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  onboardingBannerText: {
-    flex: 1,
-  },
-  onboardingBannerTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  onboardingBannerSubtitle: {
-    fontSize: 12,
-  },
-  onboardingBannerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    // No elevation/shadow on Android
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
-  },
-  onboardingBannerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  // Logo styles
-  logoWrapper: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomLogo: {
-    width: 100,
-    height: 50,
-    resizeMode: 'contain',
-  },
-});
+    // ── Section ──────────────────────────────────────────────────
+    section: {
+      marginTop: 24,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "800",
+      color: theme.colors.textPrimary,
+      marginBottom: 14,
+      paddingHorizontal: 20,
+    },
 
-export const getMenuItemStyles = (theme, color) => StyleSheet.create({
-  menuItem: {
-    width: (width - 60) / 3,
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 1,
-    alignItems: "center",
-    // iOS shadow
-    ...Platform.select({
-      ios: {
-        shadowColor: theme.colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
-    borderWidth: 2,
-    borderColor: theme.colors.primary + '40',
-    // Android: compensate for no elevation with a slightly more visible border
-    ...(Platform.OS === 'android' && {
-      borderColor: theme.colors.primary + '60',
-    }),
-  },
-  menuIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-    backgroundColor: color + '20',
-  },
-  menuText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  menuSubtitle: {
-    fontSize: 10,
-    color: theme.colors.textSecondary,
-    textAlign: "center",
-  },
-});
+    // ── Activity circles row ──────────────────────────────────────
+    circlesRow: {
+      paddingHorizontal: 20,
+      paddingBottom: 4,
+    },
 
-export const getStatItemStyles = (theme) => StyleSheet.create({
-  statItem: {
-    flex: 1,
-    backgroundColor: theme.colors.primaryLight,
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 6,
-    alignItems: "center",
-    ...Platform.select({
-      ios: {
-        shadowColor: theme.colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  statIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-    backgroundColor: theme.colors.primary + '20',
-  },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: theme.colors.primary,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-    textAlign: "center",
-  },
-});
+    // ── Action cards ──────────────────────────────────────────────
+    actionCardsRow: {
+      flexDirection: "row",
+      gap: 12,
+      paddingHorizontal: 20,
+    },
 
-export const getSummaryCardStyles = (theme, colors) => StyleSheet.create({
-  summaryCard: {
-    width: width - 40,
-    backgroundColor: colors.background,
-    borderRadius: 20,
-    padding: 20,
-    marginHorizontal: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: theme.colors.shadow,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 16,
-    minHeight: 40,
-  },
-  cardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-    flexShrink: 0,
-    backgroundColor: colors.iconBackground,
-  },
-  cardTitleContainer: {
-    flex: 1,
-    justifyContent: "flex-start",
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.textColor,
-    lineHeight: 18,
-  },
-  cardContent: {
-    minHeight: 80,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-  },
-  summaryEmpty: {
-    color: colors.textColor,
-    fontSize: 13,
-    fontWeight: '600',
-    textAlign: "center",
-    marginTop: 8,
-    marginBottom: 2,
-  },
-  emptySubtitle: {
-    color: colors.textColor,
-    fontSize: 11,
-    textAlign: "center",
-    opacity: 0.8,
-  },
-  lectureItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 10,
-  },
-  lectureDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 10,
-    marginTop: 8,
-    flexShrink: 0,
-    backgroundColor: colors.accent,
-  },
-  lectureInfo: {
-    flex: 1,
-  },
-  lectureCourse: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.textColor,
-    marginBottom: 2,
-  },
-  lectureTime: {
-    fontSize: 11,
-    color: colors.textColor,
-    opacity: 0.9,
-  },
-  gpaItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: `${colors.accent}30`,
-  },
-  overallGpaItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-    paddingBottom: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: `${colors.accent}40`,
-  },
-  gpaSemester: {
-    fontSize: 13,
-    color: colors.textColor,
-    opacity: 0.9,
-  },
-  overallGpaLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.textColor,
-  },
-  gpaValue: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.textColor,
-  },
-  overallGpaValue: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: colors.textColor,
-  },
-  moreContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-    padding: 4,
-  },
-  moreText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: colors.accent,
-  },
-});
+    // ── Upcoming exam card ────────────────────────────────────────
+    examCard: {
+      borderRadius: 20,
+      padding: 16,
+      marginHorizontal: 20,
+      ...Platform.select({
+        ios: {
+          shadowColor: "#EF4444",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.25,
+          shadowRadius: 12,
+        },
+        android: { elevation: 0 },
+      }),
+    },
+    examHeader: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+    },
+    examIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+      flexShrink: 0,
+    },
+    examTitleContainer: {
+      flex: 1,
+    },
+    examCourse: {
+      fontSize: 15,
+      fontWeight: "700",
+      marginBottom: 6,
+    },
+    examDetailsRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12,
+    },
+    examDetail: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    examDetailText: {
+      fontSize: 12,
+      fontWeight: "500",
+    },
 
-export const getSettingsMenuItemStyles = (theme) => StyleSheet.create({
-  settingsItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.card,
-    borderRadius: 16,
-    padding: 14,
-    marginHorizontal: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  settingsIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-    backgroundColor: theme.colors.backgroundTertiary,
-  },
-  settingsText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-});
+    // ── Onboarding nudge banner ───────────────────────────────────
+    onboardingBanner: {
+      marginHorizontal: 20,
+      marginTop: 20,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    onboardingBannerContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    onboardingBannerText: {
+      flex: 1,
+    },
+    onboardingBannerTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      marginBottom: 2,
+    },
+    onboardingBannerSubtitle: {
+      fontSize: 11,
+    },
+    onboardingBannerButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+    },
+    onboardingBannerButtonText: {
+      color: "#FFFFFF",
+      fontSize: 13,
+      fontWeight: "600",
+    },
+  });

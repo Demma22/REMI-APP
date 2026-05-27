@@ -4,9 +4,6 @@ import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
 import { Platform } from 'react-native';
-import { auth, db } from '../firebase';
-import { doc, getDoc, collection, getDocs, query, where, updateDoc, increment } from 'firebase/firestore';
-import { getHolidayNotification } from '../utils/funNotifications';
 
 export const NotificationsContext = createContext({});
 
@@ -24,18 +21,7 @@ const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND_NOTIFICATION_TASK';
 
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async () => {
   try {
-    if (!auth.currentUser) {
-      return BackgroundFetch.BackgroundFetchResult.NoData;
-    }
-    
-    const userDocRef = doc(db, "users", auth.currentUser.uid);
-    const userDoc = await getDoc(userDocRef);
-    
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-    }
-    
-    return BackgroundFetch.BackgroundFetchResult.NewData;
+    return BackgroundFetch.BackgroundFetchResult.NoData;
   } catch (error) {
     return BackgroundFetch.BackgroundFetchResult.Failed;
   }
@@ -571,172 +557,6 @@ export const NotificationsProvider = ({ children }) => {
     }
   };
 
-  // ========== FUN NOTIFICATIONS ==========
-  const getActiveAdminNotifications = async () => {
-    try {
-      const q = query(
-        collection(db, 'fun_notifications'),
-        where('active', '==', true)
-      );
-      const querySnapshot = await getDocs(q);
-      const notifications = [];
-      
-      querySnapshot.forEach((doc) => {
-        notifications.push({
-          id: doc.id,
-          title: doc.data().title,
-          body: doc.data().body,
-          category: doc.data().category || 'fun',
-          timesSent: doc.data().timesSent || 0,
-          lastSentAt: doc.data().lastSentAt,
-        });
-      });
-      
-      console.log(`📋 Found ${notifications.length} active admin notifications`);
-      return notifications;
-    } catch (error) {
-      console.error('Error fetching admin notifications:', error);
-      return [];
-    }
-  };
-
-  const getRandomNotificationToSend = async () => {
-    try {
-      const holiday = getHolidayNotification();
-      if (holiday && holiday.notification) {
-        console.log('🎉 Holiday notification detected:', holiday.notification.title);
-        return {
-          source: 'holiday',
-          title: holiday.notification.title,
-          body: holiday.notification.body,
-          category: holiday.notification.category
-        };
-      }
-      
-      const adminNotifications = await getActiveAdminNotifications();
-      
-      if (adminNotifications.length > 0) {
-        const randomIndex = Math.floor(Math.random() * adminNotifications.length);
-        const selected = adminNotifications[randomIndex];
-        console.log(`📨 Selected random admin notification: ${selected.title}`);
-        return {
-          source: 'admin',
-          title: selected.title,
-          body: selected.body,
-          category: selected.category,
-          id: selected.id
-        };
-      }
-      
-      console.log('⚠️ No active admin notifications found. Nothing to send.');
-      return null;
-      
-    } catch (error) {
-      console.error('Error getting random notification:', error);
-      return null;
-    }
-  };
-
-  const sendRandomFunNotification = async (userData = null) => {
-    try {
-      const notification = await getRandomNotificationToSend();
-      
-      if (notification) {
-        await schedulePushNotification(
-          notification.title,
-          notification.body,
-          { 
-            type: 'fun', 
-            category: notification.category,
-            source: notification.source,
-            notificationId: notification.id
-          },
-          {
-            type: 'date',
-            date: new Date(Date.now() + 1000),
-          }
-        );
-        
-        console.log(`✨ Sent ${notification.source} notification: ${notification.title}`);
-        
-        if (notification.source === 'admin' && notification.id) {
-          const notificationRef = doc(db, 'fun_notifications', notification.id);
-          await updateDoc(notificationRef, {
-            timesSent: increment(1),
-            lastSentAt: new Date()
-          });
-        }
-      } else {
-        console.log('No notifications to send. Add some in the admin panel!');
-      }
-      
-    } catch (error) {
-      console.error('Error sending fun notification:', error);
-    }
-  };
-
-  const scheduleFunNotifications = async (userData) => {
-    try {
-      console.log('📅 Starting fun notifications scheduling...');
-      
-      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-      const funNotifications = scheduled.filter(n => n.content.data?.type === 'fun');
-      
-      console.log(`🗑️ Cancelling ${funNotifications.length} existing fun notifications`);
-      for (const notification of funNotifications) {
-        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-      }
-      
-      const adminNotifications = await getActiveAdminNotifications();
-      
-      if (adminNotifications.length === 0) {
-        console.log('❌ No active admin notifications found. Nothing to schedule.');
-        return;
-      }
-      
-      console.log(`✅ Found ${adminNotifications.length} active admin notifications`);
-      console.log(`📅 Scheduling random fun notifications (2-4 days apart)...`);
-      
-      const intervals = [3, 2, 4, 3, 2];
-      let cumulativeDays = 0;
-      let scheduledCount = 0;
-      
-      for (let i = 0; i < intervals.length; i++) {
-        cumulativeDays += intervals[i];
-        const notificationDate = new Date();
-        notificationDate.setDate(notificationDate.getDate() + cumulativeDays);
-        notificationDate.setHours(12, 0, 0, 0);
-        
-        const randomIndex = Math.floor(Math.random() * adminNotifications.length);
-        const selectedNotification = adminNotifications[randomIndex];
-        
-        await schedulePushNotification(
-          selectedNotification.title,
-          selectedNotification.body,
-          { 
-            type: 'fun', 
-            category: selectedNotification.category || 'fun',
-            source: 'scheduled',
-            notificationId: selectedNotification.id
-          },
-          {
-            type: 'date',
-            date: notificationDate,
-          }
-        );
-        
-        scheduledCount++;
-        console.log(`📅 Scheduled #${scheduledCount}: "${selectedNotification.title}" on ${notificationDate.toLocaleDateString()}`);
-      }
-      
-      await sendRandomFunNotification(userData);
-      console.log(`✅ Fun notifications scheduled successfully! Total: ${scheduledCount + 1}`);
-      
-    } catch (error) {
-      console.error('❌ Error scheduling fun notifications:', error);
-    }
-  };
-
   // ========== CANCEL FUNCTIONS ==========
   const cancelLectureNotifications = async (lectureIds) => {
     try {
@@ -799,8 +619,6 @@ export const NotificationsProvider = ({ children }) => {
         scheduleActivityNotifications,
         rescheduleAllActivityNotifications,
         scheduleScannedLecturesNotifications,
-        scheduleFunNotifications,
-        sendRandomFunNotification,
         cancelLectureNotifications,
         cancelLectureNotificationsById,
         cancelAllNotifications,

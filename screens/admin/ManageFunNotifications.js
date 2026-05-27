@@ -10,11 +10,12 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { auth, db } from '../../firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { supabase } from '../../supabase';
 import { useTheme } from '../../contexts/ThemeContext';
 import SvgIcon from '../../components/SvgIcon';
 import { getStyles } from './ManageFunNotifications.styles';
+import ScreenHeader from '../../components/ScreenHeader';
+import { ListSkeleton } from '../../components/SkeletonLoader';
 
 // Admin email list - add your admin emails here
 const ADMIN_EMAILS = ['denis@gmail.com', 'your-email@gmail.com'];
@@ -46,8 +47,9 @@ export default function ManageFunNotifications({ navigation }) {
   }, []);
 
   const checkAdminAndLoad = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser || !ADMIN_EMAILS.includes(currentUser.email)) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const email = session?.user?.email;
+    if (!email || !ADMIN_EMAILS.includes(email)) {
       Alert.alert(
         'Access Denied',
         'You do not have permission to access this page.',
@@ -61,20 +63,12 @@ export default function ManageFunNotifications({ navigation }) {
   const loadNotifications = async () => {
     setLoading(true);
     try {
-      const q = query(
-        collection(db, 'fun_notifications'),
-        orderBy('createdAt', 'desc')
-      );
-      const querySnapshot = await getDocs(q);
-      const notificationsList = [];
-      querySnapshot.forEach((doc) => {
-        notificationsList.push({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || new Date()
-        });
-      });
-      setNotifications(notificationsList);
+      const { data, error } = await supabase
+        .from('fun_notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setNotifications(data || []);
     } catch (error) {
       console.error('Error loading notifications:', error);
       Alert.alert('Error', 'Failed to load notifications');
@@ -97,16 +91,16 @@ export default function ManageFunNotifications({ navigation }) {
 
     setSaving(true);
     try {
-      await addDoc(collection(db, 'fun_notifications'), {
+      const { error } = await supabase.from('fun_notifications').insert({
         title: newTitle.trim(),
         body: newBody.trim(),
         category: selectedCategory,
         active: true,
-        createdAt: new Date(),
-        timesShown: 0,
-        timesClicked: 0
+        times_shown: 0,
+        times_clicked: 0,
       });
-      
+      if (error) throw error;
+
       Alert.alert('Success', 'Notification added successfully!');
       setModalVisible(false);
       setNewTitle('');
@@ -130,14 +124,17 @@ export default function ManageFunNotifications({ navigation }) {
 
     setSaving(true);
     try {
-      const notificationRef = doc(db, 'fun_notifications', editingNotification.id);
-      await updateDoc(notificationRef, {
-        title: newTitle.trim(),
-        body: newBody.trim(),
-        category: selectedCategory,
-        updatedAt: new Date()
-      });
-      
+      const { error } = await supabase
+        .from('fun_notifications')
+        .update({
+          title: newTitle.trim(),
+          body: newBody.trim(),
+          category: selectedCategory,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editingNotification.id);
+      if (error) throw error;
+
       Alert.alert('Success', 'Notification updated successfully!');
       setEditModalVisible(false);
       setEditingNotification(null);
@@ -154,11 +151,11 @@ export default function ManageFunNotifications({ navigation }) {
 
   const handleToggleActive = async (notification) => {
     try {
-      const notificationRef = doc(db, 'fun_notifications', notification.id);
-      await updateDoc(notificationRef, {
-        active: !notification.active,
-        updatedAt: new Date()
-      });
+      const { error } = await supabase
+        .from('fun_notifications')
+        .update({ active: !notification.active, updated_at: new Date().toISOString() })
+        .eq('id', notification.id);
+      if (error) throw error;
       loadNotifications();
     } catch (error) {
       console.error('Error toggling notification:', error);
@@ -177,14 +174,15 @@ export default function ManageFunNotifications({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteDoc(doc(db, 'fun_notifications', id));
+              const { error } = await supabase.from('fun_notifications').delete().eq('id', id);
+              if (error) throw error;
               loadNotifications();
             } catch (error) {
               console.error('Error deleting notification:', error);
               Alert.alert('Error', 'Failed to delete notification');
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
@@ -201,16 +199,15 @@ export default function ManageFunNotifications({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <SvgIcon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Fun Notifications</Text>
-        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
-          <SvgIcon name="edit" size={24} color='white' />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="Fun Notifications"
+        onBackPress={() => navigation.goBack()}
+        rightElement={
+          <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
+            <SvgIcon name="edit" size={24} color='white' />
+          </TouchableOpacity>
+        }
+      />
 
       {/* Stats */}
       <View style={styles.statsContainer}>
@@ -250,7 +247,7 @@ export default function ManageFunNotifications({ navigation }) {
         }
       >
         {loading ? (
-          <ActivityIndicator size="large" color={theme.colors.primary} style={styles.loader} />
+          <ListSkeleton />
         ) : notifications.length === 0 ? (
           <View style={styles.emptyState}>
             <SvgIcon name="smile" size={60} color={theme.colors.textSecondary} />
@@ -283,16 +280,16 @@ export default function ManageFunNotifications({ navigation }) {
                   {item.body}
                 </Text>
 
-                {item.timesSent > 0 && (
+                {item.times_sent > 0 && (
                   <Text style={[styles.sentInfo, { color: theme.colors.textTertiary }]}>
-                    Sent {item.timesSent} time{item.timesSent !== 1 ? 's' : ''}
-                    {item.lastSentAt && ` • Last: ${item.lastSentAt.toDate().toLocaleDateString()}`}
+                    Sent {item.times_sent} time{item.times_sent !== 1 ? 's' : ''}
+                    {item.last_sent_at && ` • Last: ${new Date(item.last_sent_at).toLocaleDateString()}`}
                   </Text>
                 )}
 
                 <View style={styles.notificationFooter}>
                   <Text style={[styles.notificationMeta, { color: theme.colors.textTertiary }]}>
-                    Created: {item.createdAt.toLocaleDateString()}
+                    Created: {new Date(item.created_at).toLocaleDateString()}
                   </Text>
                   <View style={styles.actionButtons}>
                     <TouchableOpacity onPress={() => openEditModal(item)} style={styles.actionButton}>

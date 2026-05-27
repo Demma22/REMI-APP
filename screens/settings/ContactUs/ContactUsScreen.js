@@ -13,6 +13,7 @@ import SvgIcon from "../../../components/SvgIcon";
 import NavigationBar from "../../../components/NavigationBar";
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getStyles } from './ContactUsScreen.styles';
+import ScreenHeader from "../../../components/ScreenHeader";
 
 export default function ContactUsScreen({ navigation }) {
   const { theme } = useTheme();
@@ -116,19 +117,7 @@ export default function ContactUsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backText}>‹</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>CONTACT US</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      </View>
+      <ScreenHeader title="CONTACT US" onBackPress={() => navigation.goBack()} />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>

@@ -18,19 +18,16 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 
-import { auth, db } from "../../../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { getUserData } from "../../../services/userDataService";
 import NavigationBar from "../../../components/NavigationBar";
 import SvgIcon from "../../../components/SvgIcon";
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getStyles } from './ExportGPAScreen.styles';
+import ScreenHeader from "../../../components/ScreenHeader";
+import { ListSkeleton } from "../../../components/SkeletonLoader";
 
 export default function ExportGPAScreen({ navigation }) {
   const { theme } = useTheme();
-  
-  if (!auth.currentUser) {
-    return <Text style={styles.center}>Not logged in</Text>;
-  }
 
   const [userData, setUserData] = useState(null);
   const [gpaData, setGpaData] = useState({});
@@ -52,17 +49,11 @@ export default function ExportGPAScreen({ navigation }) {
   const loadGPA = async () => {
     try {
       setLoading(true);
-      
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const data = userDoc.data();
+
+      const data = await getUserData();
+      if (data) {
         setUserData(data);
-        
-        const loadedGpaData = data.gpa_data || {};
-        setGpaData(loadedGpaData);
-        
+        setGpaData(data.gpaData || {});
         setSelectedSemesters([]);
       }
     } catch (error) {
@@ -453,22 +444,8 @@ export default function ExportGPAScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity 
-              style={styles.backBtn} 
-              onPress={() => navigation.goBack()}
-            >
-              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>EXPORT GPA</Text>
-            <View style={styles.headerSpacer} />
-          </View>
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loadingText}>Loading your GPA data...</Text>
-        </View>
+        <ScreenHeader title="EXPORT GPA" onBackPress={() => navigation.goBack()} />
+        <ListSkeleton />
         <NavigationBar />
       </View>
     );
@@ -517,19 +494,7 @@ export default function ExportGPAScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={() => navigation.goBack()}
-          >
-            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>EXPORT GPA</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      </View>
+      <ScreenHeader title="EXPORT GPA" onBackPress={() => navigation.goBack()} />
 
       <ScrollView 
         style={styles.scrollView}

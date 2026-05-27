@@ -13,14 +13,15 @@ import {
   Modal,
   Dimensions,
 } from 'react-native';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../../../firebase';
+import { getUserData, updateUserData } from '../../../services/userDataService';
 import { useTheme } from '../../../contexts/ThemeContext';
 import SvgIcon from '../../../components/SvgIcon';
+import ScreenHeader from '../../../components/ScreenHeader';
 import { pickAndScanTimetableWithUri, takePhotoAndScanWithUri } from '../../../utils/smartTimetableScanner';
 import TimePicker from '../components/TimePicker';
 import { trackFeatureUsage, shouldShowRateReview } from '../../../utils/rateReviewTracker';
 import { getStyles } from './AITimetableScanner.styles';
+import { ListSkeleton } from '../../../components/SkeletonLoader';
 
 const { width, height } = Dimensions.get('window');
 
@@ -267,28 +268,20 @@ export default function AITimetableScanner({ navigation, route }) {
       Alert.alert('No Lectures', 'No lectures to save.');
       return;
     }
-    
+
     setSaving(true);
     try {
-      const userDocRef = doc(db, 'users', auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      let timetableData = {};
-      if (userDoc.exists() && userDoc.data().timetable) {
-        timetableData = userDoc.data().timetable;
-      }
-      
-      const currentSemester = userDoc.data()?.current_semester || 1;
+      const userData = await getUserData();
+      let timetableData = userData?.timetable || {};
+      const currentSemester = userData?.currentSemester || 1;
       let savedCount = 0;
-      
+
       for (const lecture of lectures) {
         if (!lecture.name || lecture.name.trim() === '') continue;
-        
         const dayKey = lecture.day.toLowerCase();
         if (!timetableData[dayKey]) {
           timetableData[dayKey] = [];
         }
-        
         timetableData[dayKey].push({
           name: lecture.name.trim(),
           start: lecture.start || 'TBD',
@@ -302,23 +295,21 @@ export default function AITimetableScanner({ navigation, route }) {
         });
         savedCount++;
       }
-      
+
       if (savedCount === 0) {
         Alert.alert('Error', 'No valid lectures to save.');
         return;
       }
-      
-      await setDoc(userDocRef, { timetable: timetableData }, { merge: true });
-      
-      // ========== ADD THIS TRACKING CODE ==========
+
+      await updateUserData({ timetable: timetableData });
+
       await trackFeatureUsage();
       const showRateReview = await shouldShowRateReview();
       if (showRateReview) {
         navigation.navigate('RateReviewModal');
         return;
       }
-      // ========== END TRACKING CODE ==========
-      
+
       Alert.alert('Success!', `${savedCount} lecture(s) added.`, [
         { text: 'View Timetable', onPress: () => navigation.navigate('Timetable') },
         { text: 'OK', onPress: () => navigation.goBack() },
@@ -333,46 +324,39 @@ export default function AITimetableScanner({ navigation, route }) {
 
   const handleSaveExams = async () => {
     if (exams.length === 0) {
-      Alert.alert('No Exams', 'No exams to save.');
+      Alert.alert('No Items', 'No items to save.');
       return;
     }
-    
+
     setSaving(true);
     try {
-      const userDocRef = doc(db, 'users', auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      let existingExams = [];
-      if (userDoc.exists() && userDoc.data().exams) {
-        existingExams = userDoc.data().exams;
-      }
-      
-      const currentSemester = userDoc.data()?.current_semester || 1;
-      
+      const userData = await getUserData();
+      let existingExams = userData?.exams || [];
+      if (!Array.isArray(existingExams)) existingExams = [];
+      const currentSemester = userData?.currentSemester || 1;
+
       const newExams = exams.map(exam => ({
         name: exam.name.trim(),
-        date: new Date(exam.date),
+        date: new Date(exam.date).toISOString(),
         start: exam.start || 'TBD',
         room: exam.room || '',
         semester: currentSemester,
         id: Date.now() + Math.random(),
         createdAt: new Date().toISOString(),
       }));
-      
+
       const allExams = [...existingExams, ...newExams];
-      await setDoc(userDocRef, { exams: allExams }, { merge: true });
-      
-      // ========== ADD THIS TRACKING CODE ==========
+      await updateUserData({ exams: allExams });
+
       await trackFeatureUsage();
       const showRateReview = await shouldShowRateReview();
       if (showRateReview) {
         navigation.navigate('RateReviewModal');
         return;
       }
-      // ========== END TRACKING CODE ==========
-      
-      Alert.alert('Success!', `${exams.length} exam(s) added.`, [
-        { text: 'View Exams', onPress: () => navigation.navigate('ExamTimetable') },
+
+      Alert.alert('Success!', `${exams.length} item(s) added.`, [
+        { text: 'View Deadlines', onPress: () => navigation.navigate('Timetable') },
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
@@ -411,7 +395,7 @@ export default function AITimetableScanner({ navigation, route }) {
   };
 
   const handleRemoveExam = (index) => {
-    Alert.alert('Remove Exam', 'Remove this exam?', [
+    Alert.alert('Remove Item', 'Remove this item?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
@@ -464,10 +448,9 @@ export default function AITimetableScanner({ navigation, route }) {
   // LOADING STATE
   if (scanStage === 'loading') {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingTitle}>Wait a moment</Text>
-        <Text style={styles.loadingSubtitle}>Processing your selection...</Text>
+      <View style={styles.container}>
+        <ScreenHeader title={mode === 'lectures' ? 'AI Timetable Scanner' : 'AI Scanner'} onBackPress={() => navigation.goBack()} />
+        <ListSkeleton />
       </View>
     );
   }
@@ -540,15 +523,15 @@ export default function AITimetableScanner({ navigation, route }) {
   if (scanStage === 'confirming' && mode === 'lectures') {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleRetry} style={styles.backBtn}>
-            <SvgIcon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Confirm Lectures</Text>
-          <TouchableOpacity onPress={handleAddManualLecture} style={styles.addBtn}>
-            <SvgIcon name="plus" size={24} color={theme.colors.primary} />
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader
+          title="Confirm Lectures"
+          onBackPress={handleRetry}
+          rightElement={
+            <TouchableOpacity onPress={handleAddManualLecture} style={styles.addBtn}>
+              <SvgIcon name="plus" size={24} color={theme.colors.primary} />
+            </TouchableOpacity>
+          }
+        />
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.aiSummary}>
@@ -691,19 +674,19 @@ export default function AITimetableScanner({ navigation, route }) {
   if (scanStage === 'confirming' && mode === 'exams') {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleRetry} style={styles.backBtn}>
-            <SvgIcon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Confirm Exams</Text>
-          <TouchableOpacity onPress={handleAddManualExam} style={styles.addBtn}>
-            <SvgIcon name="plus" size={24} color={theme.colors.primary} />
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader
+          title="Confirm Deadlines"
+          onBackPress={handleRetry}
+          rightElement={
+            <TouchableOpacity onPress={handleAddManualExam} style={styles.addBtn}>
+              <SvgIcon name="plus" size={24} color={theme.colors.primary} />
+            </TouchableOpacity>
+          }
+        />
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.aiSummary}>
-            <Text style={styles.aiSummaryText}>AI detected {exams.length} exam(s). Review and edit.</Text>
+            <Text style={styles.aiSummaryText}>AI detected {exams.length} item(s). Review and edit.</Text>
           </View>
           
           {exams.map((exam, idx) => (
@@ -715,12 +698,12 @@ export default function AITimetableScanner({ navigation, route }) {
                 </TouchableOpacity>
               </View>
               
-              <Text style={styles.label}>Exam Name *</Text>
-              <TextInput 
-                style={[styles.input, !exam.name && styles.inputError]} 
-                value={exam.name} 
-                onChangeText={(text) => handleEditExam(idx, 'name', text)} 
-                placeholder="Exam name"
+              <Text style={styles.label}>Name *</Text>
+              <TextInput
+                style={[styles.input, !exam.name && styles.inputError]}
+                value={exam.name}
+                onChangeText={(text) => handleEditExam(idx, 'name', text)}
+                placeholder="e.g. Calculus Exam, Assignment 1"
                 placeholderTextColor={theme.colors.textTertiary}
               />
               
@@ -755,7 +738,7 @@ export default function AITimetableScanner({ navigation, route }) {
           
           <TouchableOpacity style={styles.addButton} onPress={handleAddManualExam}>
             <SvgIcon name="plus" size={20} color={theme.colors.primary} />
-            <Text style={styles.addButtonText}>Add Another Exam</Text>
+            <Text style={styles.addButtonText}>Add Another</Text>
           </TouchableOpacity>
           
           <View style={styles.bottomSpacing} />
@@ -770,7 +753,7 @@ export default function AITimetableScanner({ navigation, route }) {
             {saving ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.saveButtonText}>Save {exams.length} Exam(s)</Text>
+              <Text style={styles.saveButtonText}>Save {exams.length} Item(s)</Text>
             )}
           </TouchableOpacity>
           
@@ -785,18 +768,12 @@ export default function AITimetableScanner({ navigation, route }) {
   // INITIAL SCREEN
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <SvgIcon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI {mode === 'lectures' ? 'Timetable' : 'Exam'} Scanner</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title={mode === 'lectures' ? 'AI Timetable Scanner' : 'AI Scanner'} onBackPress={() => navigation.goBack()} />
       <ScrollView style={styles.content}>
         <View style={styles.introCard}>
           <SvgIcon name="scan" size={68} color={theme.colors.primary} />
-          <Text style={styles.introTitle}>Smart {mode === 'lectures' ? 'Timetable' : 'Exam'} Scanner</Text>
-          <Text style={styles.introText}>Take a photo or upload an image. AI will extract all {mode === 'lectures' ? 'lectures' : 'exams'} automatically.</Text>
+          <Text style={styles.introTitle}>{mode === 'lectures' ? 'Smart Timetable Scanner' : 'Smart Scanner'}</Text>
+          <Text style={styles.introText}>Take a photo or upload an image. AI will extract all {mode === 'lectures' ? 'lectures' : 'items'} automatically.</Text>
         </View>
         {errorMessage !== '' && (
           <View style={styles.errorCard}>

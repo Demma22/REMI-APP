@@ -10,16 +10,15 @@ import {
   RefreshControl,
   Switch,
 } from "react-native";
-import { auth, db } from "../../../firebase";
-import { signOut } from "firebase/auth";
-import { doc, getDoc, updateDoc, deleteField } from "firebase/firestore";
+import { supabase } from "../../../supabase";
+import { getUserData, signOutUser } from "../../../services/userDataService";
 import NavigationBar from "../../../components/NavigationBar";
 import SvgIcon from "../../../components/SvgIcon";
+import ScreenHeader from "../../../components/ScreenHeader";
 import { useTheme } from '../../../contexts/ThemeContext';
-import { useNotifications } from '../../../contexts/NotificationsContext';
 import { getStyles } from './SettingsScreen.styles';
+import { SettingsSkeleton } from '../../../components/SkeletonLoader';
 
-// Admin emails list - must match the list in ManageFunNotifications.js
 const ADMIN_EMAILS = ['denis@gmail.com', 'your-email@gmail.com'];
 
 export default function SettingsScreen({ navigation }) {
@@ -29,7 +28,6 @@ export default function SettingsScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const { theme, toggleTheme, isDarkMode } = useTheme();
-  const { sendRandomFunNotification, scheduleFunNotifications } = useNotifications();
 
   useEffect(() => {
     loadUserData();
@@ -44,23 +42,15 @@ export default function SettingsScreen({ navigation }) {
     return unsubscribe;
   }, [navigation]);
 
-  const checkAdminStatus = () => {
-    const currentUser = auth.currentUser;
-    if (currentUser && ADMIN_EMAILS.includes(currentUser.email)) {
-      setIsAdmin(true);
-    } else {
-      setIsAdmin(false);
-    }
+  const checkAdminStatus = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setIsAdmin(!!(session?.user && ADMIN_EMAILS.includes(session.user.email)));
   };
 
   const loadUserData = async () => {
     try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        setUserData(userDoc.data());
-      }
+      const data = await getUserData();
+      if (data) setUserData(data);
     } catch (error) {
       console.error("Error loading user data:", error);
     } finally {
@@ -92,11 +82,8 @@ export default function SettingsScreen({ navigation }) {
   const performLogout = async () => {
     setSigningOut(true);
     try {
-      await signOut(auth);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'SplashIntro' }],
-      });
+      await signOutUser();
+      // App.js onAuthStateChange handles navigation automatically
     } catch (error) {
       Alert.alert("Logout Error", "Failed to logout. Please try again.");
       setSigningOut(false);
@@ -137,33 +124,13 @@ export default function SettingsScreen({ navigation }) {
     navigation.navigate("Profile");
   };
 
-  const handleManageFunNotifications = () => {
-    navigation.navigate("ManageFunNotifications");
-  };
-
   const styles = getStyles(theme);
 
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity 
-              style={styles.backBtn} 
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.backText}>‹</Text>
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>SETTINGS</Text>
-            <View style={styles.headerSpacer} />
-          </View>
-        </View>
-        <View style={styles.content}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={styles.loadingText}>Loading settings...</Text>
-          </View>
-        </View>
+        <ScreenHeader title="SETTINGS" onBackPress={() => navigation.goBack()} />
+        <SettingsSkeleton />
         <NavigationBar />
       </View>
     );
@@ -171,19 +138,7 @@ export default function SettingsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={() => navigation.goBack()}
-          >
-            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>SETTINGS</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      </View>
+      <ScreenHeader title="SETTINGS" onBackPress={() => navigation.goBack()} />
 
       <ScrollView 
         style={styles.scrollView}
@@ -223,21 +178,6 @@ export default function SettingsScreen({ navigation }) {
                 <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.menuButton, { backgroundColor: theme.colors.secondaryLight }]}
-                onPress={handleManageFunNotifications}
-              >
-                <View style={[styles.menuIconContainer, { backgroundColor: theme.colors.secondary }]}>
-                  <SvgIcon name="smile" size={20} color="#FFFFFF" />
-                </View>
-                <View style={styles.menuTextContainer}>
-                  <Text style={styles.menuTitle}>Manage Fun Notifications</Text>
-                  <Text style={styles.menuSubtitle}>
-                    Add, edit, or delete fun messages for all users
-                  </Text>
-                </View>
-                <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
             </View>
           )}
 
@@ -381,8 +321,8 @@ export default function SettingsScreen({ navigation }) {
             
             <View style={styles.accountInfo}>
               <View style={styles.emailContainer}>
-                <SvgIcon name="email" size={16} color={theme.colors.textSecondary} style={styles.accountIcon} />
-                <Text style={styles.accountEmail}>{auth.currentUser?.email}</Text>
+                <SvgIcon name="user" size={16} color={theme.colors.textSecondary} style={styles.accountIcon} />
+                <Text style={styles.accountEmail}>{userData?.username || 'User'}</Text>
               </View>
               <View style={styles.statusBadge}>
                 <SvgIcon name="check-circle" size={12} color={theme.colors.success} />

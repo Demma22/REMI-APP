@@ -14,14 +14,15 @@ import {
   ActivityIndicator,
   Switch,
 } from "react-native";
-import { auth, db } from "../../firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { getUserData, updateUserData } from "../../services/userDataService";
 import NavigationBar from "../../components/NavigationBar";
 import SvgIcon from "../../components/SvgIcon";
 import { useTheme } from '../../contexts/ThemeContext';
+import ScreenHeader from "../../components/ScreenHeader";
 import { useNotifications } from '../../hooks/useNotifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getStyles } from "./AddExamScreen.styles";
+import { ListSkeleton } from "../../components/SkeletonLoader";
 import TimePicker from "../timetable/components/TimePicker";
 
 export default function AddExamScreen({ navigation }) {
@@ -41,7 +42,7 @@ export default function AddExamScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [preparingNotifications, setPreparingNotifications] = useState(false);
   const [showMenuModal, setShowMenuModal] = useState(false);
-  
+
   const { theme } = useTheme();
   const { scheduleExamNotifications } = useNotifications();
   const styles = getStyles(theme);
@@ -52,11 +53,7 @@ export default function AddExamScreen({ navigation }) {
 
   const loadUserData = async () => {
     try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      if (userDoc.exists()) {
-        // No need to set semester anymore
-      }
+      await getUserData();
     } catch (error) {
       console.error("Error loading user data:", error);
     } finally {
@@ -109,20 +106,17 @@ export default function AddExamScreen({ navigation }) {
 
     setSaving(true);
     try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
+      const userData = await getUserData();
       let examsList = [];
-      if (userDoc.exists() && userDoc.data().exams) {
-        examsList = userDoc.data().exams;
+      if (userData?.exams && Array.isArray(userData.exams)) {
+        examsList = userData.exams;
       }
 
       const examTimeStr = formatTimeForStorage(hour, minute, period);
-      const examDateObj = examDate;
 
       const newExam = {
         name: examName.trim(),
-        date: examDateObj,
+        date: examDate.toISOString(),
         start: examTimeStr,
         room: room.trim(),
         reminder: reminder,
@@ -131,14 +125,14 @@ export default function AddExamScreen({ navigation }) {
       };
 
       examsList.push(newExam);
-      await setDoc(userDocRef, { exams: examsList }, { merge: true });
+      await updateUserData({ exams: examsList });
 
       if (reminder) {
         setPreparingNotifications(true);
         try {
-          const updatedUserDoc = await getDoc(userDocRef);
-          if (updatedUserDoc.exists()) {
-            await scheduleExamNotifications(updatedUserDoc.data());
+          const updatedUserData = await getUserData();
+          if (updatedUserData) {
+            await scheduleExamNotifications(updatedUserData);
           }
         } catch (notifError) {
           console.error("Notification error:", notifError);
@@ -148,10 +142,10 @@ export default function AddExamScreen({ navigation }) {
       }
 
       Alert.alert(
-        "Success", 
+        "Success",
         `Exam added successfully!\n\nYou will receive reminders 2 days and 2 hours before the exam.`
       );
-      
+
       navigation.goBack();
     } catch (error) {
       console.error("Save error:", error);
@@ -168,10 +162,8 @@ export default function AddExamScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.centerText}>Loading...</Text>
-        </View>
+        <ScreenHeader title="ADD DEADLINE" onBackPress={() => navigation.goBack()} />
+        <ListSkeleton />
         <NavigationBar />
       </View>
     );
@@ -199,24 +191,19 @@ export default function AddExamScreen({ navigation }) {
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
         {/* Header - STATIC (outside ScrollView) */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-            disabled={saving || preparingNotifications}
-          >
-            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>ADD TEST</Text>
-          <TouchableOpacity 
-            style={styles.menuBtn}
-            onPress={() => setShowMenuModal(true)}
-            disabled={saving || preparingNotifications}
-          >
-            <SvgIcon name="scan" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader
+          title="ADD DEADLINE"
+          onBackPress={() => navigation.goBack()}
+          rightElement={
+            <TouchableOpacity
+              style={styles.menuBtn}
+              onPress={() => setShowMenuModal(true)}
+              disabled={saving || preparingNotifications}
+            >
+              <SvgIcon name="scan" size={20} color={theme.colors.primary} />
+            </TouchableOpacity>
+          }
+        />
 
         {/* Scrollable Content */}
         <ScrollView 
@@ -385,9 +372,9 @@ export default function AddExamScreen({ navigation }) {
         animationType="fade"
         onRequestClose={() => setShowMenuModal(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={() => setShowMenuModal(false)}
         >
           <View style={[styles.menuModal, { backgroundColor: theme.colors.card }]}>

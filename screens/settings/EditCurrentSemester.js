@@ -9,9 +9,9 @@ import {
   Alert
 } from "react-native";
 
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { auth, db } from "../../firebase";
+import { getUserData, updateUserData } from "../../services/userDataService";
 import { useTheme } from '../../contexts/ThemeContext'; // Add this import
+import ScreenHeader from "../../components/ScreenHeader";
 
 export default function EditCurrentSemester({ navigation, route }) {
   const [current, setCurrent] = useState(null);
@@ -27,18 +27,12 @@ export default function EditCurrentSemester({ navigation, route }) {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const userDocRef = doc(db, "users", auth.currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const total = userData.total_semesters || 0;
-          const currentSem = userData.current_semester || 0;
-          
-          setTotalSemesters(total);
-          setCurrentSemester(currentSem);
-          setCurrent(currentSem); // Set current selection to existing semester
-        }
+        const data = await getUserData();
+        const total = data?.totalSemesters || 0;
+        const currentSem = data?.currentSemester || 0;
+        setTotalSemesters(total);
+        setCurrentSemester(currentSem);
+        setCurrent(currentSem);
       } catch (error) {
         Alert.alert("Error", "Could not load your data");
       }
@@ -75,14 +69,7 @@ export default function EditCurrentSemester({ navigation, route }) {
     setLoading(true);
 
     try {
-      await setDoc(
-        doc(db, "users", auth.currentUser.uid),
-        {
-          current_semester: current,
-          updatedAt: new Date(),
-        },
-        { merge: true }
-      );
+      await updateUserData({ currentSemester: current });
 
       Alert.alert(
         "Success", 
@@ -135,19 +122,7 @@ export default function EditCurrentSemester({ navigation, route }) {
         <View style={[styles.circle, styles.circle2, { backgroundColor: theme.mode === 'dark' ? 'rgba(247, 133, 34, 0.04)' : 'rgba(247, 133, 34, 0.06)' }]} />
       </View>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={handleCancel}
-          >
-            <Text style={styles.backText}>‹</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>CHANGE SEMESTER</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      </View>
+      <ScreenHeader title="CHANGE SEMESTER" onBackPress={handleCancel} />
 
       <Animated.View 
         style={[

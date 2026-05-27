@@ -11,8 +11,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { auth, db } from '../../firebase';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { getUserData, saveUserData, getCurrentUserInfo } from '../../services/userDataService';
 import { useTheme } from '../../contexts/ThemeContext';
 import SvgIcon from '../../components/SvgIcon';
 import { getStyles } from './OnboardingScreen.styles';
@@ -99,17 +98,15 @@ export default function OnboardingScreen({ navigation }) {
 
   const loadExistingUserData = async () => {
     try {
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
+      const userInfo = await getCurrentUserInfo();
+      if (!userInfo) {
         setLoadingUserData(false);
         return;
       }
 
-      const userRef = doc(db, 'users', userId);
-      const userDoc = await getDoc(userRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
+      const userData = await getUserData();
+
+      if (userData) {
         const existing = {};
         
         // Check which questions already have answers
@@ -250,17 +247,16 @@ export default function OnboardingScreen({ navigation }) {
 
   const completeOnboarding = async () => {
     setLoading(true);
-    
+
     try {
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
+      const userInfo = await getCurrentUserInfo();
+      if (!userInfo) {
         Alert.alert('Error', 'Not logged in');
         return;
       }
 
-      // Merge with existing answers
       const finalAnswers = { ...existingAnswers, ...answers };
-      
+
       const onboardingData = {
         heardFrom: finalAnswers.heardFrom || null,
         purpose: finalAnswers.purpose || [],
@@ -268,11 +264,10 @@ export default function OnboardingScreen({ navigation }) {
         nickname: finalAnswers.nickname || '',
         ageRange: finalAnswers.ageRange || null,
         onboarding_completed: true,
-        onboarding_completed_at: new Date(),
+        onboarding_completed_at: new Date().toISOString(),
       };
 
-      const userRef = doc(db, 'users', userId);
-      await setDoc(userRef, onboardingData, { merge: true });
+      await saveUserData(onboardingData);
 
       navigation.reset({
         index: 0,

@@ -12,9 +12,7 @@ import {
   ActivityIndicator,
   Linking,
 } from "react-native";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, query, collection, where, getDocs } from "firebase/firestore";
-import { auth, db } from "../../../firebase";
+import { supabase } from "../../../supabase";
 import { Svg, Path } from "react-native-svg";
 import SvgIcon from "../../../components/SvgIcon";
 import { usernameToEmail, validateUsernameFormat } from "../../../utils/usernameHelper";
@@ -37,14 +35,15 @@ export default function SignupScreen({ navigation }) {
   const { theme } = useTheme();
   const styles = getStyles(theme);
 
-  // Check if username exists in Firestore
   const checkUsernameExists = async (username) => {
     try {
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("username", "==", username.trim().toLowerCase()));
-      const querySnapshot = await getDocs(q);
-      return !querySnapshot.empty;
-    } catch (error) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username.trim().toLowerCase())
+        .maybeSingle();
+      return !!data;
+    } catch {
       return false;
     }
   };
@@ -126,38 +125,30 @@ export default function SignupScreen({ navigation }) {
     setIsLoading(true);
 
     try {
-      const firebaseEmail = usernameToEmail(username);
-      const cleanUsername = username.trim().toLowerCase();
-      
-      const userCredential = await createUserWithEmailAndPassword(auth, firebaseEmail, password);
-      const user = userCredential.user;
-      
-      await setDoc(doc(db, "users", user.uid), {
-        username: cleanUsername,
-        email: user.email,
-        created_at: new Date(),
-        onboarding_completed: false,
-        nickname: null,
-      });
+      const email = usernameToEmail(username.trim().toLowerCase());
+      const { data, error } = await supabase.auth.signUp({ email, password });
 
-      navigation.navigate("Onboarding");
-      
-    } catch (error) {
-      if (error.code === 'auth/email-already-in-use') {
-        setError("Username already taken. Please choose another.");
-      } else if (error.code === 'auth/weak-password') {
-        setError("Password is too weak. Please use a stronger password");
-      } else if (error.code === 'auth/operation-not-allowed') {
-        setError("Signup is temporarily unavailable. Please try again later.");
-      } else {
-        setError("Failed to create account. Please try again.");
+      if (error) {
+        if (error.message.includes('already registered')) {
+          setError("Username already taken. Please choose another.");
+        } else {
+          setError(error.message);
+        }
+        setIsLoading(false);
+        return;
       }
-      
+
+      // Save username to profile (trigger already created the row)
+      await supabase
+        .from('profiles')
+        .update({ username: username.trim().toLowerCase() })
+        .eq('id', data.user.id);
+
+      // App.js onAuthStateChange handles navigation automatically
+    } catch (err) {
+      setError("Failed to create account. Please try again.");
       setIsLoading(false);
-      return;
     }
-    
-    setIsLoading(false);
   };
 
   const isFormValid = () => {

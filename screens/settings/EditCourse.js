@@ -9,9 +9,9 @@ import {
   Animated
 } from "react-native";
 
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { auth, db } from "../../firebase";
+import { getUserData, updateUserData } from "../../services/userDataService";
 import { useTheme } from '../../contexts/ThemeContext'; // Add this import
+import ScreenHeader from "../../components/ScreenHeader";
 
 export default function EditCourse({ navigation }) {
   const [course, setCourse] = useState("");
@@ -28,17 +28,11 @@ export default function EditCourse({ navigation }) {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const userDocRef = doc(db, "users", auth.currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const currentCourse = userData.course || "";
-          
-          setCourse(currentCourse);
-          setOriginalCourse(currentCourse);
-          validateCourse(currentCourse);
-        }
+        const data = await getUserData();
+        const currentCourse = data?.course || "";
+        setCourse(currentCourse);
+        setOriginalCourse(currentCourse);
+        validateCourse(currentCourse);
       } catch (error) {
         Alert.alert("Error", "Could not load your course information");
       }
@@ -91,10 +85,7 @@ export default function EditCourse({ navigation }) {
     setLoading(true);
 
     try {
-      await updateDoc(doc(db, "users", auth.currentUser.uid), {
-        course: trimmedCourse,
-        updatedAt: new Date(),
-      });
+      await updateUserData({ course: trimmedCourse });
 
       Alert.alert(
         "Success", 
@@ -141,19 +132,7 @@ export default function EditCourse({ navigation }) {
         <View style={[styles.circle, styles.circle2, { backgroundColor: theme.mode === 'dark' ? 'rgba(247, 133, 34, 0.04)' : 'rgba(247, 133, 34, 0.06)' }]} />
       </View>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={handleCancel}
-          >
-            <Text style={styles.backText}>‹</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>EDIT COURSE</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      </View>
+      <ScreenHeader title="EDIT COURSE" onBackPress={handleCancel} />
 
       <Animated.View 
         style={[

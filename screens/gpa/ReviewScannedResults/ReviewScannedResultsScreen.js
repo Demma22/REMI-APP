@@ -8,11 +8,11 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { auth, db } from '../../../firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { getUserData, updateUserData } from '../../../services/userDataService';
 import { useTheme } from '../../../contexts/ThemeContext';
 import SvgIcon from '../../../components/SvgIcon';
 import NavigationBar from '../../../components/NavigationBar';
+import ScreenHeader from '../../../components/ScreenHeader';
 import { GRADING_SCALES } from '../../../utils/gradingScales';
 import { getStyles } from './ReviewScannedResultsScreen.styles';
 
@@ -60,38 +60,32 @@ export default function ReviewScannedResultsScreen({ navigation, route }) {
   
   const handleSave = async () => {
     const recalculated = recalculateGPA();
-    
+
     setSaving(true);
     try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      let existingGpaData = {};
-      if (userDoc.exists && userDoc.data().gpa_data) {
-        existingGpaData = userDoc.data().gpa_data;
-      }
-      
+      const userData = await getUserData();
+      let existingGpaData = userData?.gpaData || {};
+
       const semesterKey = `semester${semester}`;
-      
-      // Build courses array with safe values
+
       const coursesData = editedResults.map(course => {
         const credits = course.credits || 3;
         const marks = course.percentage || course.marks || 0;
         const gradePoint = course.gradePoint || scale.getGradePoint(marks);
         const gradeLetter = course.gradeLetter || scale.getGradeLetter(marks);
         const qualityPoints = credits * gradePoint;
-        
+
         return {
           name: course.name || "Unknown Course",
           marks: parseFloat(marks),
           grade: gradeLetter,
           creditUnits: parseFloat(credits),
           gradePoints: parseFloat(gradePoint),
-          qualityPoints: parseFloat(qualityPoints)
+          qualityPoints: parseFloat(qualityPoints),
         };
       });
-      
-      const gpaData = {
+
+      existingGpaData[semesterKey] = {
         semester: semesterKey,
         semesterNumber: parseInt(semester),
         gpa: recalculated.gpa,
@@ -99,23 +93,15 @@ export default function ReviewScannedResultsScreen({ navigation, route }) {
         totalQualityPoints: recalculated.totalQualityPoints,
         courses: coursesData,
         scannedAt: new Date().toISOString(),
-        scannedVia: "ocr_ai"
+        scannedVia: "ocr_ai",
       };
-      
-      existingGpaData[semesterKey] = gpaData;
-      
-      // Use updateDoc instead of setDoc to avoid overwriting other fields
-      await setDoc(userDocRef, { gpa_data: existingGpaData }, { merge: true });
-      
+
+      await updateUserData({ gpaData: existingGpaData });
+
       Alert.alert(
-        'Success!', 
+        'Success!',
         `GPA ${recalculated.gpa} saved for Semester ${semester}\n\nClassification: ${recalculated.classification}`,
-        [
-          { 
-            text: 'View GPA', 
-            onPress: () => navigation.replace('GPA') 
-          }
-        ]
+        [{ text: 'View GPA', onPress: () => navigation.replace('GPA') }]
       );
     } catch (error) {
       console.error('Save error:', error);
@@ -129,13 +115,7 @@ export default function ReviewScannedResultsScreen({ navigation, route }) {
   
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <SvgIcon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Scan Results</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Scan Results" onBackPress={() => navigation.goBack()} />
       
       <ScrollView style={styles.content}>
         {/* GPA Summary Card */}

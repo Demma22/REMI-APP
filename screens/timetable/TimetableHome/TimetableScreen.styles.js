@@ -338,7 +338,7 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
     color: "rgba(255,255,255,0.85)",
   },
-  // Past Tests styles - visible in both light and dark mode
+  // Past deadline styles
   pastExamCard: {
     backgroundColor: theme.colors.backgroundTertiary,
     borderRadius: 16,

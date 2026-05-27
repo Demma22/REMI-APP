@@ -5,17 +5,17 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   RefreshControl,
   Dimensions,
 } from 'react-native';
 import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
-import { auth, db } from '../../../firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { supabase } from '../../../supabase';
 import { useTheme } from '../../../contexts/ThemeContext';
 import SvgIcon from '../../../components/SvgIcon';
 import NavigationBar from '../../../components/NavigationBar';
 import { getStyles } from './StatisticsDashboard.styles';
+import ScreenHeader from '../../../components/ScreenHeader';
+import { DashboardSkeleton } from '../../../components/SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 
@@ -52,8 +52,8 @@ export default function StatisticsDashboard({ navigation }) {
   }, []);
 
   const checkAuthorization = async () => {
-    const currentUser = auth.currentUser;
-    if (currentUser?.email === ADMIN_EMAIL) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.email === ADMIN_EMAIL) {
       setIsAuthorized(true);
       loadStatistics();
     } else {
@@ -65,10 +65,10 @@ export default function StatisticsDashboard({ navigation }) {
   const loadStatistics = async () => {
     try {
       setLoading(true);
-      
-      const usersRef = collection(db, 'users');
-      const usersSnapshot = await getDocs(usersRef);
-      
+
+      const { data: usersData, error } = await supabase.from('profiles').select('*');
+      if (error) throw error;
+
       let totalUsers = 0;
       let onboardingCompleted = 0;
       let usersWithTimetable = 0;
@@ -78,62 +78,52 @@ export default function StatisticsDashboard({ navigation }) {
       const studyStageCount = {};
       const ageRangeCount = {};
       const recent = [];
-      
-      for (const userDoc of usersSnapshot.docs) {
-        const userData = userDoc.data();
+
+      for (const userData of (usersData || [])) {
         totalUsers++;
-        
-        if (userData.onboarding_completed === true) {
-          onboardingCompleted++;
-        }
-        
+
+        if (userData.onboarding_completed === true) onboardingCompleted++;
+
         const timetable = userData.timetable || {};
         const hasLectures = Object.values(timetable).some(day => day && day.length > 0);
         if (hasLectures) usersWithTimetable++;
-        
+
         const gpaData = userData.gpa_data || {};
         const hasGPA = Object.keys(gpaData).length > 0;
         if (hasGPA) usersWithGPA++;
-        
-        if (userData.heardFrom) {
-          heardFromCount[userData.heardFrom] = (heardFromCount[userData.heardFrom] || 0) + 1;
+
+        if (userData.heard_from) {
+          heardFromCount[userData.heard_from] = (heardFromCount[userData.heard_from] || 0) + 1;
         }
-        
+
         if (userData.purpose && Array.isArray(userData.purpose)) {
           userData.purpose.forEach(p => {
             purposeCount[p] = (purposeCount[p] || 0) + 1;
           });
         }
-        
-        if (userData.studyStage) {
-          studyStageCount[userData.studyStage] = (studyStageCount[userData.studyStage] || 0) + 1;
+
+        if (userData.study_stage) {
+          studyStageCount[userData.study_stage] = (studyStageCount[userData.study_stage] || 0) + 1;
         }
-        
-        if (userData.ageRange) {
-          ageRangeCount[userData.ageRange] = (ageRangeCount[userData.ageRange] || 0) + 1;
+
+        if (userData.age_range) {
+          ageRangeCount[userData.age_range] = (ageRangeCount[userData.age_range] || 0) + 1;
         }
-        
+
         if (userData.onboarding_completed_at) {
-          let completedAt = userData.onboarding_completed_at;
-          if (completedAt && completedAt.toDate) {
-            completedAt = completedAt.toDate();
-          } else if (completedAt) {
-            completedAt = new Date(completedAt);
-          }
-          
           recent.push({
             nickname: userData.nickname || 'Anonymous',
-            heardFrom: userData.heardFrom,
-            studyStage: userData.studyStage,
+            heardFrom: userData.heard_from,
+            studyStage: userData.study_stage,
             hasTimetable: hasLectures,
             hasGPA: hasGPA,
-            completedAt: completedAt,
+            completedAt: new Date(userData.onboarding_completed_at),
           });
         }
       }
-      
+
       recent.sort((a, b) => b.completedAt - a.completedAt);
-      
+
       setStats({
         totalUsers,
         onboardingCompleted,
@@ -145,7 +135,7 @@ export default function StatisticsDashboard({ navigation }) {
         ageRange: ageRangeCount,
       });
       setRecentUsers(recent.slice(0, 5));
-      
+
     } catch (error) {
       console.error('Error loading statistics:', error);
     } finally {
@@ -337,13 +327,7 @@ export default function StatisticsDashboard({ navigation }) {
   if (!isAuthorized) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <SvgIcon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Statistics</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <ScreenHeader title="Statistics" onBackPress={() => navigation.goBack()} />
         <View style={styles.unauthorizedContainer}>
           <SvgIcon name="lock" size={48} color={theme.colors.danger} />
           <Text style={[styles.unauthorizedTitle, { color: theme.colors.textPrimary }]}>
@@ -361,17 +345,8 @@ export default function StatisticsDashboard({ navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <SvgIcon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Statistics</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loadingText}>Loading statistics...</Text>
-        </View>
+        <ScreenHeader title="Statistics" onBackPress={() => navigation.goBack()} />
+        <DashboardSkeleton />
         <NavigationBar />
       </View>
     );
@@ -388,13 +363,7 @@ export default function StatisticsDashboard({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <SvgIcon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Statistics Dashboard</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Statistics Dashboard" onBackPress={() => navigation.goBack()} />
 
       <ScrollView 
         style={styles.scrollView}

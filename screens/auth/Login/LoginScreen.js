@@ -11,11 +11,9 @@ import {
   Alert,
   ActivityIndicator
 } from "react-native";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "../../../firebase";
-import { doc, getDoc, query, collection, where, getDocs } from "firebase/firestore";
 import { Svg, Path } from "react-native-svg";
 import SvgIcon from "../../../components/SvgIcon";
+import { supabase } from "../../../supabase";
 import { usernameToEmail, validateUsernameFormat } from "../../../utils/usernameHelper";
 import { signInWithGoogle } from "../../../utils/googleAuth";
 import { styles } from './LoginScreen.styles';
@@ -28,19 +26,6 @@ export default function LoginScreen({ navigation }) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  const getFirebaseEmail = async (input) => {
-    const usernameValidation = validateUsernameFormat(input);
-    
-    if (usernameValidation.valid) {
-      return usernameToEmail(input);
-    } else {
-      if (input.includes('@')) {
-        return input;
-      }
-      return usernameToEmail(input);
-    }
-  };
 
   const validateForm = () => {
     if (!username.trim()) {
@@ -60,32 +45,6 @@ export default function LoginScreen({ navigation }) {
 
     setError("");
     return true;
-  };
-
-  const checkOnboardingStatus = async (userId) => {
-    try {
-      const userDocRef = doc(db, "users", userId);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        return userData.onboarding_completed === true;
-      }
-      return false;
-    } catch (error) {
-      return false;
-    }
-  };
-
-  const findUserByUsername = async (usernameInput) => {
-    try {
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("username", "==", usernameInput.trim().toLowerCase()));
-      const querySnapshot = await getDocs(q);
-      return !querySnapshot.empty;
-    } catch (error) {
-      return false;
-    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -115,64 +74,25 @@ export default function LoginScreen({ navigation }) {
     setIsLoading(true);
 
     try {
-      const firebaseEmail = await getFirebaseEmail(username);
-      const cleanUsername = username.trim().toLowerCase();
-      
-      const userCredential = await signInWithEmailAndPassword(auth, firebaseEmail, password);
-      const user = userCredential.user;
-      
-      const isOnboardingCompleted = await checkOnboardingStatus(user.uid);
-      
-      if (isOnboardingCompleted) {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Home' }],
-        });
-      } else {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'SplashIntro' }],
-        });
+      const email = usernameToEmail(username.trim().toLowerCase());
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        if (error.message.includes('Invalid login')) {
+          setError("Incorrect username or password.");
+        } else if (error.message.includes('Email not confirmed')) {
+          setError("Please confirm your email before signing in.");
+        } else {
+          setError(error.message);
+        }
+        setIsLoading(false);
+        return;
       }
-      
-    } catch (error) {
-      const userExists = await findUserByUsername(username);
-      
-      switch (error.code) {
-        case 'auth/invalid-email':
-          setError("Invalid username format");
-          break;
-        case 'auth/user-disabled':
-          setError("This account has been disabled");
-          break;
-        case 'auth/user-not-found':
-          if (userExists) {
-            setError("Incorrect password for this username");
-          } else {
-            setError("No account found with this username");
-          }
-          break;
-        case 'auth/wrong-password':
-          setError("Incorrect password. Please try again.");
-          break;
-        case 'auth/network-request-failed':
-          setError("Network error. Please check your connection.");
-          break;
-        case 'auth/too-many-requests':
-          setError("Too many failed attempts. Please try again later.");
-          break;
-        case 'auth/invalid-credential':
-          setError("Invalid login credentials. Please try again.");
-          break;
-        default:
-          setError("Login failed. Please check your credentials and try again.");
-      }
-      
+      // App.js onAuthStateChange handles navigation automatically
+    } catch (err) {
+      setError("Login failed. Please check your connection and try again.");
       setIsLoading(false);
-      return;
     }
-    
-    setIsLoading(false);
   };
 
   return (

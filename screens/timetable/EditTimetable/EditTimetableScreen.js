@@ -12,20 +12,21 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import { auth, db } from "../../../firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { getUserData, updateUserData } from "../../../services/userDataService";
 import NavigationBar from "../../../components/NavigationBar";
 import SvgIcon from "../../../components/SvgIcon";
 import { useTheme } from '../../../contexts/ThemeContext';
+import ScreenHeader from "../../../components/ScreenHeader";
 import { useNotifications } from '../../../hooks/useNotifications';
 import { getStyles } from "./EditTimetableScreen.styles";
+import { FormSkeleton } from "../../../components/SkeletonLoader";
 import TimePicker from "../components/TimePicker";
 import ActivityTypeSelector from "../components/ActivityTypeSelector";
 
 const capitalize = (s) => s && s[0].toUpperCase() + s.slice(1);
 
 const hours = Array.from({ length: 12 }, (_, i) => i + 1);
-const minutes = ["00", "15", "30", "45"];
+const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
 const periods = ["AM", "PM"];
 
 const activityTypes = [
@@ -38,8 +39,6 @@ const activityTypes = [
 ];
 
 export default function EditTimetableScreen({ navigation, route }) {
-  if (!auth.currentUser) return null;
-
   // Get params - using the names from TimetableScreen
   const { initialDay, initialLectureIndex, lecture } = route.params;
   
@@ -150,12 +149,11 @@ export default function EditTimetableScreen({ navigation, route }) {
     }
     
     setSaving(true);
-    
+
     try {
       const startTime = formatTimeForStorage(startHour, startMinute, startPeriod);
       const endTime = formatTimeForStorage(endHour, endMinute, endPeriod);
-      
-      // Create updated lecture object
+
       const updatedLecture = {
         ...lecture,
         name: activityName.trim(),
@@ -167,53 +165,38 @@ export default function EditTimetableScreen({ navigation, route }) {
         room: location.trim(),
         notes: notes.trim(),
       };
-      
-      console.log("Saving updated lecture:", updatedLecture);
-      console.log("Day key:", dayKey);
-      console.log("Lecture index:", lectureIndex);
-      
-      // Get current user's document
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        let timetableData = userData.timetable || {};
-        
-        // Get the current day's lectures
-        let dayLectures = [...(timetableData[dayKey] || [])];
-        
-        // Update the specific lecture at the given index
-        if (lectureIndex !== undefined && dayLectures[lectureIndex]) {
-          dayLectures[lectureIndex] = updatedLecture;
-        } else {
-          // Try to find by id if index doesn't work
-          const foundIndex = dayLectures.findIndex(l => l.id === lecture.id);
-          if (foundIndex !== -1) {
-            dayLectures[foundIndex] = updatedLecture;
-          } else {
-            Alert.alert("Error", "Could not find the lecture to update");
-            return;
-          }
-        }
-        
-        // Update the timetable
-        timetableData[dayKey] = dayLectures;
-        
-        // Save back to Firestore
-        await setDoc(userDocRef, { timetable: timetableData }, { merge: true });
-        
-        // Update notifications
-        if (lecture.id) {
-          await cancelLectureNotificationsById(lecture.id);
-          await scheduleLectureNotifications(userData);
-        }
-        
-        Alert.alert("Success", "Activity updated successfully");
-        navigation.goBack();
-      } else {
-        Alert.alert("Error", "User document not found");
+
+      const userData = await getUserData();
+      if (!userData) {
+        Alert.alert("Error", "User data not found");
+        return;
       }
+
+      let timetableData = userData.timetable || {};
+      let dayLectures = [...(timetableData[dayKey] || [])];
+
+      if (lectureIndex !== undefined && dayLectures[lectureIndex]) {
+        dayLectures[lectureIndex] = updatedLecture;
+      } else {
+        const foundIndex = dayLectures.findIndex(l => l.id === lecture.id);
+        if (foundIndex !== -1) {
+          dayLectures[foundIndex] = updatedLecture;
+        } else {
+          Alert.alert("Error", "Could not find the lecture to update");
+          return;
+        }
+      }
+
+      timetableData[dayKey] = dayLectures;
+      await updateUserData({ timetable: timetableData });
+
+      if (lecture.id) {
+        await cancelLectureNotificationsById(lecture.id);
+        await scheduleLectureNotifications(userData);
+      }
+
+      Alert.alert("Success", "Activity updated successfully");
+      navigation.goBack();
     } catch (error) {
       console.error("Save error:", error);
       Alert.alert("Error", "Could not update activity: " + error.message);
@@ -225,21 +208,8 @@ export default function EditTimetableScreen({ navigation, route }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>EDIT ACTIVITY</Text>
-            <View style={styles.headerSpacer} />
-          </View>
-        </View>
-        <View style={styles.content}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={styles.loadingText}>Loading...</Text>
-          </View>
-        </View>
+        <ScreenHeader title="EDIT ACTIVITY" onBackPress={() => navigation.goBack()} />
+        <FormSkeleton />
         <NavigationBar />
       </View>
     );
@@ -251,15 +221,7 @@ export default function EditTimetableScreen({ navigation, route }) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={0}
     >
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>EDIT ACTIVITY</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      </View>
+      <ScreenHeader title="EDIT ACTIVITY" onBackPress={() => navigation.goBack()} />
 
       <ScrollView 
         style={styles.scrollView} 

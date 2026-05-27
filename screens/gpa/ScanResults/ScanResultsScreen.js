@@ -12,14 +12,15 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
-import { auth, db } from '../../../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { getUserData, updateUserData } from '../../../services/userDataService';
 import { useTheme } from '../../../contexts/ThemeContext';
 import SvgIcon from '../../../components/SvgIcon';
 import NavigationBar from '../../../components/NavigationBar';
+import ScreenHeader from '../../../components/ScreenHeader';
 import { pickAndScanResultsWithUri, takePhotoAndScanResultsWithUri } from '../../../utils/smartResultsScanner';
 import { getAllCountries, GRADING_SCALES } from '../../../utils/gradingScales';
 import { getStyles } from './ScanResultsScreen.styles';
+import { ListSkeleton } from '../../../components/SkeletonLoader';
 import { trackFeatureUsage, shouldShowRateReview } from '../../../utils/rateReviewTracker';
 
 const { width, height } = Dimensions.get('window');
@@ -127,26 +128,20 @@ export default function ScanResultsScreen({ navigation }) {
 
   const loadUserData = async () => {
     try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        if (data.selected_curriculum) {
-          setSelectedCurriculum(data.selected_curriculum);
+      const data = await getUserData();
+      if (data) {
+        if (data.selectedCurriculum) {
+          setSelectedCurriculum(data.selectedCurriculum);
         }
-        
+
         const units = data.units || {};
         const semesters = Object.keys(units).sort((a, b) => parseInt(a) - parseInt(b));
         setUserSemesters(semesters);
-        
+
         const allCourses = [];
         Object.keys(units).forEach(sem => {
           units[sem].forEach(course => {
-            allCourses.push({
-              name: course,
-              semester: sem
-            });
+            allCourses.push({ name: course, semester: sem });
           });
         });
         setUserCourses(allCourses);
@@ -199,7 +194,12 @@ export default function ScanResultsScreen({ navigation }) {
       
       // Wait for animation to complete, then show results
       setTimeout(() => {
-        if (pendingScanResult.current && pendingScanResult.current.success && 
+        // Stop all running animations before transitioning away from scanning view
+        scanLineY.stopAnimation();
+        pulseAnim.stopAnimation();
+        progressAnim.stopAnimation();
+
+        if (pendingScanResult.current && pendingScanResult.current.success &&
             pendingScanResult.current.results && pendingScanResult.current.results.length > 0) {
           setScannedData(pendingScanResult.current);
           setScanStage('confirming');
@@ -222,44 +222,39 @@ export default function ScanResultsScreen({ navigation }) {
     }
   };
 
-    const handleSave = async () => {
+  const handleSave = async () => {
     if (!selectedSemester) {
-        Alert.alert('Select Semester', 'Please select which semester these results belong to.');
-        setShowSemesterModal(true);
-        return;
+      Alert.alert('Select Semester', 'Please select which semester these results belong to.');
+      setShowSemesterModal(true);
+      return;
     }
-    
+
     setSaving(true);
     try {
-        const userDocRef = doc(db, "users", auth.currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        
-        let existingGpaData = {};
-        if (userDoc.exists && userDoc.data().gpa_data) {
-        existingGpaData = userDoc.data().gpa_data;
-        }
-        
-        const semesterKey = `semester${selectedSemester}`;
-        const scale = GRADING_SCALES[selectedCurriculum];
-        
-        const coursesData = scannedData.results.map(course => {
+      const userData = await getUserData();
+      let existingGpaData = userData?.gpaData || {};
+
+      const semesterKey = `semester${selectedSemester}`;
+      const scale = GRADING_SCALES[selectedCurriculum];
+
+      const coursesData = scannedData.results.map(course => {
         const marks = course.percentage || course.marks || 0;
         const credits = course.credits || 3;
         const gradePoint = course.gradePoint || scale.getGradePoint(marks);
         const gradeLetter = course.gradeLetter || scale.getGradeLetter(marks);
         const qualityPoints = credits * gradePoint;
-        
+
         return {
-            name: course.name || "Unknown Course",
-            marks: parseFloat(marks),
-            grade: gradeLetter,
-            creditUnits: parseFloat(credits),
-            gradePoints: parseFloat(gradePoint),
-            qualityPoints: parseFloat(qualityPoints)
+          name: course.name || "Unknown Course",
+          marks: parseFloat(marks),
+          grade: gradeLetter,
+          creditUnits: parseFloat(credits),
+          gradePoints: parseFloat(gradePoint),
+          qualityPoints: parseFloat(qualityPoints),
         };
-        });
-        
-        const gpaData = {
+      });
+
+      existingGpaData[semesterKey] = {
         semester: semesterKey,
         semesterNumber: parseInt(selectedSemester),
         gpa: scannedData.gpa,
@@ -267,39 +262,30 @@ export default function ScanResultsScreen({ navigation }) {
         totalQualityPoints: scannedData.totalQualityPoints,
         courses: coursesData,
         scannedAt: new Date().toISOString(),
-        scannedVia: "ocr_ai"
-        };
-        
-        existingGpaData[semesterKey] = gpaData;
-        
-        await setDoc(userDocRef, { gpa_data: existingGpaData }, { merge: true });
-        
-        // ========== ADD THIS TRACKING CODE ==========
-        await trackFeatureUsage();
-        const showRateReview = await shouldShowRateReview();
-        if (showRateReview) {
+        scannedVia: "ocr_ai",
+      };
+
+      await updateUserData({ gpaData: existingGpaData });
+
+      await trackFeatureUsage();
+      const showRateReview = await shouldShowRateReview();
+      if (showRateReview) {
         navigation.replace('RateReviewModal');
         return;
-        }
-        // ========== END TRACKING CODE ==========
-        
-        Alert.alert(
-        'Success!', 
+      }
+
+      Alert.alert(
+        'Success!',
         `GPA ${scannedData.gpa} saved for Semester ${selectedSemester}\n\nClassification: ${scannedData.classification}`,
-        [
-            { 
-            text: 'View GPA', 
-            onPress: () => navigation.replace('GPA') 
-            }
-        ]
-        );
+        [{ text: 'View GPA', onPress: () => navigation.replace('GPA') }]
+      );
     } catch (error) {
-        console.error('Save error:', error);
-        Alert.alert('Error', 'Failed to save results: ' + error.message);
+      console.error('Save error:', error);
+      Alert.alert('Error', 'Failed to save results: ' + error.message);
     } finally {
-        setSaving(false);
+      setSaving(false);
     }
-    };
+  };
 
   const handleRescan = () => {
     setScanStage('idle');
@@ -337,10 +323,10 @@ export default function ScanResultsScreen({ navigation }) {
   // LOADING STATE - Show while waiting for image picker result
   if (scanStage === 'loading') {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingTitle}>Wait a moment</Text>
-        <Text style={styles.loadingSubtitle}>Processing your selection...</Text>
+      <View style={styles.container}>
+        <ScreenHeader title="Scan Results" onBackPress={() => navigation.goBack()} />
+        <ListSkeleton />
+        <NavigationBar />
       </View>
     );
   }
@@ -419,13 +405,7 @@ export default function ScanResultsScreen({ navigation }) {
     
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleRescan} style={styles.backBtn}>
-            <SvgIcon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Scan Results</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <ScreenHeader title="Scan Results" onBackPress={handleRescan} />
         
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* GPA Summary Card */}
@@ -545,6 +525,7 @@ export default function ScanResultsScreen({ navigation }) {
           visible={showSemesterModal}
           transparent={true}
           animationType="slide"
+          statusBarTranslucent={true}
           onRequestClose={() => setShowSemesterModal(false)}
         >
           <View style={styles.modalOverlay}>
@@ -592,13 +573,7 @@ export default function ScanResultsScreen({ navigation }) {
   // INITIAL SCREEN - Show grading system selector and scan buttons
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <SvgIcon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Scan Results</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Scan Results" onBackPress={() => navigation.goBack()} />
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.introCard}>
@@ -658,6 +633,7 @@ export default function ScanResultsScreen({ navigation }) {
         visible={showCurriculumModal}
         transparent={true}
         animationType="slide"
+        statusBarTranslucent={true}
         onRequestClose={() => setShowCurriculumModal(false)}
       >
         <View style={styles.modalOverlay}>

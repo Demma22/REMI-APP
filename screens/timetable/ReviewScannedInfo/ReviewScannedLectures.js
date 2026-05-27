@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { useTheme } from '../../../contexts/ThemeContext';
 import SvgIcon from '../../../components/SvgIcon';
-import { auth, db } from '../../../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import ScreenHeader from '../../../components/ScreenHeader';
+import { getUserData, updateUserData } from '../../../services/userDataService';
 import { useNotifications } from '../../../hooks/useNotifications';
 
 export default function ReviewScannedLectures({ navigation, route }) {
@@ -25,24 +25,15 @@ export default function ReviewScannedLectures({ navigation, route }) {
   const saveLectures = async () => {
     setSaving(true);
     try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      let timetableData = {};
-      if (userDoc.exists() && userDoc.data().timetable) {
-        timetableData = userDoc.data().timetable;
-      }
-      
-      // Get current semester
-      const currentSemester = userDoc.data()?.current_semester || 1;
-      
-      // Add each lecture to the appropriate day
+      const userData = await getUserData();
+      let timetableData = userData?.timetable || {};
+      const currentSemester = userData?.currentSemester || 1;
+
       lectures.forEach(lecture => {
         const dayKey = lecture.day.toLowerCase();
         if (!timetableData[dayKey]) {
           timetableData[dayKey] = [];
         }
-        
         timetableData[dayKey].push({
           name: lecture.name,
           start: lecture.start,
@@ -55,18 +46,15 @@ export default function ReviewScannedLectures({ navigation, route }) {
           createdAt: new Date().toISOString()
         });
       });
-      
-      await setDoc(userDocRef, { timetable: timetableData }, { merge: true });
-      
-      // ========== SCHEDULE NOTIFICATIONS FOR SCANNED LECTURES ==========
+
+      await updateUserData({ timetable: timetableData });
+
       try {
         await scheduleScannedLecturesNotifications(lectures);
-        console.log(`✅ Scheduled notifications for ${lectures.length} scanned lectures`);
       } catch (notifError) {
         console.error("Notification scheduling error:", notifError);
-        // Continue even if notification scheduling fails
       }
-      
+
       Alert.alert('Success', `${lectures.length} lectures added successfully!`);
       navigation.navigate('Timetable');
     } catch (error) {
@@ -79,13 +67,7 @@ export default function ReviewScannedLectures({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <SvgIcon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Review Lectures</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Review Lectures" onBackPress={() => navigation.goBack()} />
 
       <ScrollView style={styles.content}>
         <Text style={[styles.countText, { color: theme.colors.textSecondary }]}>

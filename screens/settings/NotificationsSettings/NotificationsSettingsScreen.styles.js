@@ -1,6 +1,5 @@
-import { StyleSheet, Dimensions, Platform } from 'react-native';
-
-const { width, height } = Dimensions.get('window');
+// screens/settings/NotificationsSettings/NotificationsSettingsScreen.styles.js
+import { StyleSheet } from 'react-native';
 
 export const getStyles = (theme) => StyleSheet.create({
   container: {
@@ -10,6 +9,16 @@ export const getStyles = (theme) => StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+  },
   header: {
     backgroundColor: theme.colors.backgroundSecondary,
     paddingTop: 60,
@@ -17,11 +26,6 @@ export const getStyles = (theme) => StyleSheet.create({
     paddingBottom: 20,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
   },
   headerTop: {
     flexDirection: "row",
@@ -38,56 +42,30 @@ export const getStyles = (theme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
-  },
   headerSpacer: {
     width: 40,
   },
-  content: {
-    padding: 24,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
   },
+  content: {
+    padding: 20,
+  },
+  
+  // Section
   section: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  settingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  settingText: {
-    gap: 2,
-  },
-  settingTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '700',
     color: theme.colors.textPrimary,
+    marginBottom: 12,
   },
-  settingSubtitle: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-  },
+  
+  // Setting Cards
   settingCard: {
     backgroundColor: theme.colors.card,
     borderRadius: 16,
@@ -96,95 +74,69 @@ export const getStyles = (theme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  settingDescription: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginTop: 8,
-    lineHeight: 20,
-  },
-  notificationsList: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  notificationItem: {
+  settingRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  notificationIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.backgroundTertiary,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: 12,
   },
-  notificationContent: {
+  settingInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     flex: 1,
   },
-  notificationTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginBottom: 4,
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  notificationBody: {
+  settingText: {
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  settingSubtitle: {
     fontSize: 13,
     color: theme.colors.textSecondary,
-    marginBottom: 4,
-    lineHeight: 18,
+    marginTop: 2,
   },
-  notificationTime: {
+  settingDescription: {
     fontSize: 12,
-    color: theme.colors.textPlaceholder,
+    color: theme.colors.textTertiary,
   },
-  moreText: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
+  reminderDetail: {
     marginTop: 12,
-    fontStyle: 'italic',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
   },
-  emptyState: {
-    alignItems: 'center',
-    padding: 40,
+  reminderDetailText: {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
   },
-  emptyText: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  actionsSection: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  actionButton: {
-    flex: 1,
+  
+  // Info Note
+  infoNote: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
     gap: 8,
+    backgroundColor: theme.colors.primaryLight,
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 16,
   },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  notificationCount: {
-    fontSize: 14,
+  infoNoteText: {
+    flex: 1,
+    fontSize: 12,
     color: theme.colors.textSecondary,
-    fontWeight: "600",
+    lineHeight: 16,
   },
+  
   bottomSpacing: {
     height: 80,
   },

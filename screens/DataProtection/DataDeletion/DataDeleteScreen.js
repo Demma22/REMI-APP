@@ -6,6 +6,7 @@ import {  View,
   ScrollView,
   Linking,
 } from "react-native";
+import ScreenHeader from "../../../components/ScreenHeader";
 
 export default function DataDeleteScreen({ navigation }) {
   const email = "denisssendagire22@gmail.com";
@@ -31,19 +32,7 @@ export default function DataDeleteScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backText}>‹</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Data Deletion</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      </View>
+      <ScreenHeader title="Data Deletion" onBackPress={() => navigation.goBack()} />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>

@@ -8,21 +8,12 @@ import {
   StyleSheet,
   SafeAreaView,
 } from "react-native";
+import ScreenHeader from "../../components/ScreenHeader";
 
 export default function TermsConditionsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>‹</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Terms & Conditions</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Terms & Conditions" onBackPress={() => navigation.goBack()} />
 
       {/* Content */}
       <ScrollView 

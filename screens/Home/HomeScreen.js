@@ -1,4 +1,4 @@
-// screens/HomeScreen.js
+// screens/Home/HomeScreen.js
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
@@ -8,223 +8,450 @@ import {
   Image,
   ScrollView,
   Dimensions,
-  FlatList,
+  Animated,
 } from "react-native";
-import { auth, db } from "../../firebase";
-import { doc, getDoc } from "firebase/firestore";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Svg, Circle } from "react-native-svg";
+import { getUserData, getCurrentUserInfo } from "../../services/userDataService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import SvgIcon from "../../components/SvgIcon";
-import { useTheme } from '../../contexts/ThemeContext';
-import { ImageBackground } from 'react-native';
-import {
-  getStyles,
-  getMenuItemStyles,
-  getStatItemStyles,
-  getSummaryCardStyles,
-  getSettingsMenuItemStyles
-} from './HomeScreen.styles';
+import NavigationBar from "../../components/NavigationBar";
+import ScreenHeader from "../../components/ScreenHeader";
+import { useTheme } from "../../contexts/ThemeContext";
+import { getStyles } from "./HomeScreen.styles";
 
 const { width } = Dimensions.get("window");
 
-/* Menu Item Component - For main 3 colored menu items */
-function MenuItem({ label, color, iconName, subtitle, action, theme }) {
-  const menuItemStyles = getMenuItemStyles(theme, color);
-  
+// ── Skeleton ──────────────────────────────────────────────────────
+function SkeletonBone({ style }) {
+  const anim = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
   return (
-    <TouchableOpacity 
-      style={menuItemStyles.menuItem}
-      onPress={action}
-      activeOpacity={0.7}
-    >
-      <View style={menuItemStyles.menuIconContainer}>
-        <SvgIcon name={iconName} size={50} color={color} />
-      </View>
-      <Text style={menuItemStyles.menuText}>{label}</Text>
-      <Text style={menuItemStyles.menuSubtitle}>{subtitle}</Text>
-    </TouchableOpacity>
+    <Animated.View
+      style={[{ backgroundColor: "#E2E8F0", borderRadius: 12, opacity: anim }, style]}
+    />
   );
 }
 
-/* Settings Menu Item Component */
-function SettingsMenuItem({ label, iconName, action, theme }) {
-  const settingsStyles = getSettingsMenuItemStyles(theme);
-  
+function HomeSkeletonLoader() {
   return (
-    <TouchableOpacity 
-      style={settingsStyles.settingsItem}
-      onPress={action}
-      activeOpacity={0.7}
+    <ScrollView
+      style={{ flex: 1 }}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: 120 }}
     >
-      <View style={settingsStyles.settingsIconContainer}>
-        <SvgIcon name={iconName} size={20} color={theme.colors.textSecondary} />
+      {/* Today card skeleton */}
+      <SkeletonBone style={{ height: 160, marginHorizontal: 20, marginTop: 20, borderRadius: 24 }} />
+      {/* Circles skeleton */}
+      <View style={{ flexDirection: "row", paddingHorizontal: 20, marginTop: 24, gap: 14 }}>
+        {[0, 1, 2, 3].map((i) => (
+          <SkeletonBone key={i} style={{ width: 64, height: 64, borderRadius: 32 }} />
+        ))}
       </View>
-      <Text style={settingsStyles.settingsText}>{label}</Text>
-      <SvgIcon name="chevron-right" size={16} color={theme.colors.textSecondary} />
-    </TouchableOpacity>
+      {/* Action cards skeleton */}
+      <View style={{ flexDirection: "row", paddingHorizontal: 20, marginTop: 28, gap: 12 }}>
+        <SkeletonBone style={{ flex: 1, height: 160, borderRadius: 20 }} />
+        <SkeletonBone style={{ flex: 1, height: 160, borderRadius: 20 }} />
+      </View>
+    </ScrollView>
   );
 }
 
-/* Stat Item Component */
-function StatItem({ number, label, iconName, theme }) {
-  const statItemStyles = getStatItemStyles(theme);
-  
+// ── Activity Progress Circle ──────────────────────────────────────
+const RING_SIZE = 100;
+const RING_STROKE = 12;
+const RING_RADIUS = RING_SIZE / 2 - RING_STROKE / 2;
+const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+function parseStoredTime(t) {
+  // Format: "H:MM AM/PM" where H is already 0-23
+  if (!t) return 0;
+  const m = /^(\d+):(\d+)/.exec(t.trim());
+  if (!m) return 0;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+function formatShortTime(t) {
+  if (!t) return "";
+  const mins = parseStoredTime(t);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const period = h < 12 ? "AM" : "PM";
+  const display = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${display}${period}` : `${display}:${String(m).padStart(2, "0")}${period}`;
+}
+
+function ActivityCircle({ activity, theme }) {
+  const [progress, setProgress] = useState(0);
+
+  const calcProgress = () => {
+    const now = new Date();
+    const cur = now.getHours() * 60 + now.getMinutes();
+    const s = parseStoredTime(activity.start);
+    const e = parseStoredTime(activity.end);
+    if (e <= s || cur < s) return 0;
+    if (cur >= e) return 1;
+    return (cur - s) / (e - s);
+  };
+
+  useEffect(() => {
+    const update = () => setProgress(calcProgress());
+    update();
+    const id = setInterval(update, 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  const offset = CIRCUMFERENCE * (1 - progress);
+  const isDone = progress >= 1;
+  const isLive = progress > 0 && progress < 1;
+
+  const DONE_COLOR = "#fdac1b";
+  const ringColor = isDone ? DONE_COLOR : theme.colors.primary;
+  const textColor = theme.colors.textPrimary;
+
   return (
-    <View style={statItemStyles.statItem}>
-      <View style={statItemStyles.statIconContainer}>
-        <SvgIcon name={iconName} size={18} color={theme.colors.primary} />
+    <View style={{ alignItems: "center", marginHorizontal: 10 }}>
+      {/* Wheel */}
+      <View style={{ width: RING_SIZE, height: RING_SIZE }}>
+        <Svg
+          width={RING_SIZE}
+          height={RING_SIZE}
+          style={{ position: "absolute", top: 0, left: 0 }}
+        >
+          {/* Track */}
+          <Circle
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={RING_RADIUS}
+            stroke={theme.colors.border}
+            strokeWidth={RING_STROKE}
+            fill="none"
+          />
+          {/* Progress arc — only render if > 0 */}
+          {progress > 0 && (
+            <Circle
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
+              r={RING_RADIUS}
+              stroke={ringColor}
+              strokeWidth={RING_STROKE}
+              fill="none"
+              strokeDasharray={CIRCUMFERENCE}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+              rotation="-90"
+              origin={`${RING_SIZE / 2},${RING_SIZE / 2}`}
+            />
+          )}
+        </Svg>
+        {/* Inner content — course name centered */}
+        <View
+          style={{
+            position: "absolute",
+            top: RING_STROKE,
+            left: RING_STROKE,
+            right: RING_STROKE,
+            bottom: RING_STROKE,
+            borderRadius: (RING_SIZE - RING_STROKE * 2) / 2,
+            backgroundColor: theme.colors.background,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 8,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 9,
+              fontWeight: "700",
+              color: textColor,
+              textAlign: "center",
+              maxWidth: 64,
+            }}
+            numberOfLines={3}
+          >
+            {activity.course}
+          </Text>
+        </View>
       </View>
-      <Text style={statItemStyles.statNumber}>{number}</Text>
-      <Text style={statItemStyles.statLabel}>{label}</Text>
+
+      {/* Status below the wheel */}
+      <Text
+        style={{
+          fontSize: 9,
+          marginTop: 6,
+          color: isLive
+            ? theme.colors.primary
+            : isDone
+            ? DONE_COLOR
+            : theme.colors.textSecondary,
+          fontWeight: isLive || isDone ? "600" : "400",
+        }}
+      >
+        {isLive ? "Live" : isDone ? "Done" : formatShortTime(activity.start)}
+      </Text>
     </View>
   );
 }
 
-/* Summary Card Component */
-function SummaryCard({ type, data, theme, navigation }) {
-  const isToday = type === 'today';
-  const isGPA = type === 'gpa';
-  
-  const cardColors = {
-    today: {
-      background: '#535FFD',
-      iconBackground: '#FFFFFF',
-      iconColor: '#535FFD',
-      textColor: '#FFFFFF',
-      accent: '#FFFFFF',
-    },
-    gpa: {
-      background: theme.mode === 'dark' ? '#92400E' : '#F59E0B',
-      iconBackground: theme.mode === 'dark' ? '#F59E0B' : '#FFFFFF',
-      iconColor: theme.mode === 'dark' ? '#FFFFFF' : '#F59E0B',
-      textColor: '#FFFFFF',
-      accent: '#FFFFFF',
-    }
-  };
-  
-  const colors = cardColors[type] || cardColors.today;
-  const styles = getSummaryCardStyles(theme, colors);
+// ── Today Banner ──────────────────────────────────────────────────
+function TodayBanner({ lectures, theme, navigation }) {
+  const today = new Date();
+  const dateStr = today.toLocaleDateString("en-US", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+  });
 
-  if (isToday) {
-    const todayLectures = data || [];
-    
-    return (
-      <View style={styles.summaryCard}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardIcon}>
-            <SvgIcon name="clock" size={20} color={colors.iconColor} />
-          </View>
-          <View style={styles.cardTitleContainer}>
-            <Text style={styles.cardTitle}>Today's Schedule</Text>
-          </View>
+  return (
+    <View
+      style={{
+        backgroundColor: theme.colors.primary,
+        borderRadius: 24,
+        padding: 20,
+        marginHorizontal: 20,
+        marginTop: 20,
+        ...Platform.select({
+          ios: {
+            shadowColor: theme.colors.primary,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.35,
+            shadowRadius: 16,
+          },
+          android: { elevation: 0 },
+        }),
+      }}
+    >
+      {/* Header row */}
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 14,
+        }}
+      >
+        <Text
+          style={{
+            color: "#FFFFFF",
+            fontSize: 11,
+            fontWeight: "700",
+            letterSpacing: 1.2,
+            opacity: 0.75,
+          }}
+        >
+          TODAY
+        </Text>
+        <Text style={{ color: "#FFFFFF", fontSize: 12, opacity: 0.65 }}>
+          {dateStr}
+        </Text>
+      </View>
+
+      {lectures.length === 0 ? (
+        <View style={{ paddingVertical: 10, alignItems: "center" }}>
+          <Text style={{ color: "#FFFFFF", opacity: 0.7, fontSize: 14, fontWeight: "500" }}>
+            No activities scheduled
+          </Text>
         </View>
-        
-        <View style={styles.cardContent}>
-          {todayLectures.length === 0 ? (
-            <View style={styles.emptyState}>
-              <SvgIcon name="coffee" size={28} color={colors.textColor} opacity={0.8} />
-              <Text style={styles.summaryEmpty}>Nothing Scheduled for today</Text>
-              <Text style={styles.emptySubtitle}>Enjoy your free time!</Text>
-            </View>
-          ) : (
-            todayLectures.slice(0, 3).map((lec, idx) => (
-              <View key={idx} style={styles.lectureItem}>
-                <View style={styles.lectureDot}></View>
-                <View style={styles.lectureInfo}>
-                  <Text style={styles.lectureCourse}>{lec.course}</Text>
-                  <Text style={styles.lectureTime}>{lec.time}</Text>
-                </View>
-              </View>
-            ))
-          )}
-          {todayLectures.length > 3 && (
-            <TouchableOpacity 
-              style={styles.moreContainer}
-              onPress={() => navigation.navigate("Timetable")}
+      ) : (
+        <>
+          {lectures.slice(0, 3).map((lec, i) => (
+            <View
+              key={i}
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: i < Math.min(lectures.length, 3) - 1 ? 10 : 0,
+              }}
             >
-              <Text style={styles.moreText}>View {todayLectures.length - 3} more</Text>
-              <SvgIcon name="chevron-right" size={12} color={colors.accent} />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                <View
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: "rgba(255,255,255,0.6)",
+                  }}
+                />
+                <Text
+                  style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600", flex: 1 }}
+                  numberOfLines={1}
+                >
+                  {lec.course}
+                </Text>
+              </View>
+              <Text style={{ color: "#FFFFFF", opacity: 0.75, fontSize: 13, marginLeft: 8 }}>
+                {formatShortTime(lec.start)}
+              </Text>
+            </View>
+          ))}
+          {lectures.length > 3 && (
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Timetable")}
+              style={{ marginTop: 12 }}
+            >
+              <Text style={{ color: "#FFFFFF", opacity: 0.65, fontSize: 12, textAlign: "right" }}>
+                +{lectures.length - 3} more
+              </Text>
             </TouchableOpacity>
           )}
-        </View>
-      </View>
-    );
-  }
-  
-  if (isGPA) {
-    const gpaSummary = data || [];
-    const overallGPA = gpaSummary.length > 0 
-      ? (gpaSummary.reduce((sum, item) => sum + parseFloat(item.gpa), 0) / gpaSummary.length).toFixed(2)
-      : null;
-    
-    return (
-      <View style={styles.summaryCard}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardIcon}>
-            <SvgIcon name="chart-line" size={20} color={colors.iconColor} />
-          </View>
-          <View style={styles.cardTitleContainer}>
-            <Text style={styles.cardTitle}>Academic Progress</Text>
-          </View>
-        </View>
-        
-        <View style={styles.cardContent}>
-          {gpaSummary.length === 0 ? (
-            <View style={styles.emptyState}>
-              <SvgIcon name="chart-line" size={28} color={colors.textColor} opacity={0.8} />
-              <Text style={styles.summaryEmpty}>No GPA data</Text>
-              <Text style={styles.emptySubtitle}>Calculate your first GPA</Text>
-            </View>
-          ) : (
-            <>
-              {overallGPA && (
-                <View style={styles.overallGpaItem}>
-                  <Text style={styles.overallGpaLabel}>CGPA</Text>
-                  <Text style={styles.overallGpaValue}>{overallGPA}</Text>
-                </View>
-              )}
-              {gpaSummary.slice(0, 2).map((item, idx) => (
-                <View key={idx} style={styles.gpaItem}>
-                  <Text style={styles.gpaSemester}>{item.semester}</Text>
-                  <Text style={styles.gpaValue}>{item.gpa}</Text>
-                </View>
-              ))}
-              {gpaSummary.length > 2 && (
-                <TouchableOpacity 
-                  style={styles.moreContainer}
-                  onPress={() => navigation.navigate("GPA")}
-                >
-                  <Text style={styles.moreText}>View {gpaSummary.length - 2} more</Text>
-                  <SvgIcon name="chevron-right" size={12} color={colors.accent} />
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
-      </View>
-    );
-  }
-  
-  return null;
+        </>
+      )}
+    </View>
+  );
 }
 
+// ── Action Card ───────────────────────────────────────────────────
+function ActionCard({ label, subtitle, iconName, onPress, theme }) {
+  return (
+    <TouchableOpacity
+      style={{
+        flex: 1,
+        backgroundColor: theme.colors.card,
+        borderRadius: 20,
+        padding: 18,
+        minHeight: 156,
+        justifyContent: "space-between",
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        ...Platform.select({
+          ios: {
+            shadowColor: theme.colors.shadow,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.06,
+            shadowRadius: 8,
+          },
+          android: { elevation: 0 },
+        }),
+      }}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 14,
+          backgroundColor: theme.colors.primaryLight,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <SvgIcon name={iconName} size={26} color={theme.colors.primary} />
+      </View>
+      <View>
+        <Text
+          style={{
+            fontSize: 14,
+            fontWeight: "800",
+            color: theme.colors.textPrimary,
+            marginBottom: 4,
+            lineHeight: 20,
+          }}
+        >
+          {label}
+        </Text>
+        {subtitle ? (
+          <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ── GPA Results Card ──────────────────────────────────────────────
+function GPAResultsCard({ gpaSummary, theme, onPress }) {
+  if (!gpaSummary || gpaSummary.length === 0) return null;
+
+  const cgpa = (
+    gpaSummary.reduce((sum, s) => sum + parseFloat(s.gpa), 0) / gpaSummary.length
+  ).toFixed(2);
+
+  return (
+    <TouchableOpacity
+      style={{
+        marginHorizontal: 20,
+        backgroundColor: theme.colors.card,
+        borderRadius: 20,
+        padding: 18,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        ...Platform.select({
+          ios: {
+            shadowColor: theme.colors.shadow,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.06,
+            shadowRadius: 8,
+          },
+          android: { elevation: 0 },
+        }),
+      }}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      {/* Header row */}
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <Text style={{ fontSize: 15, fontWeight: "800", color: theme.colors.textPrimary }}>
+          GPA Results
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>CGPA</Text>
+          <Text style={{ fontSize: 22, fontWeight: "800", color: theme.colors.primary }}>
+            {cgpa}
+          </Text>
+        </View>
+      </View>
+
+      {/* Divider */}
+      <View style={{ height: 1, backgroundColor: theme.colors.border, marginBottom: 12 }} />
+
+      {/* Semester rows */}
+      {gpaSummary.map((item, i) => (
+        <View
+          key={i}
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            paddingVertical: 6,
+            borderBottomWidth: i < gpaSummary.length - 1 ? 1 : 0,
+            borderBottomColor: theme.colors.borderLight,
+          }}
+        >
+          <Text style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+            {item.semester}
+          </Text>
+          <Text style={{ fontSize: 14, fontWeight: "700", color: theme.colors.textPrimary }}>
+            {item.gpa}
+          </Text>
+        </View>
+      ))}
+    </TouchableOpacity>
+  );
+}
+
+// ── Main Screen ───────────────────────────────────────────────────
 export default function HomeScreen({ navigation }) {
   const [todayLectures, setTodayLectures] = useState([]);
   const [gpaSummary, setGpaSummary] = useState([]);
   const [upcomingExam, setUpcomingExam] = useState(null);
-  const [upcomingExamsCount, setUpcomingExamsCount] = useState(0);
   const [userName, setUserName] = useState("");
   const [userNickname, setUserNickname] = useState("");
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const flatListRef = useRef(null);
-  
+
   const { theme } = useTheme();
   const styles = getStyles(theme);
-
-  const PROFILE_IMAGE_KEY = '@profile_image';
+  const PROFILE_IMAGE_KEY = "@profile_image";
 
   useEffect(() => {
     loadUserData();
@@ -233,52 +460,32 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
+    const unsubscribe = navigation.addListener("focus", () => {
       loadUserData();
       loadHomeData();
       checkOnboardingStatus();
     });
-
     return unsubscribe;
   }, [navigation]);
 
   const checkOnboardingStatus = async () => {
     try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        // Check if user has completed the new onboarding
-        const hasNewOnboarding = userData.heardFrom && 
-                                  userData.purpose && 
-                                  userData.purpose.length > 0 && 
-                                  userData.studyStage &&
-                                  userData.nickname;
-        
-        setNeedsOnboarding(!hasNewOnboarding);
+      const ud = await getUserData();
+      if (ud) {
+        const hasNew = ud.heardFrom && ud.purpose?.length > 0 && ud.studyStage && ud.nickname;
+        setNeedsOnboarding(!hasNew);
       }
-    } catch (error) {
-      console.error("Error checking onboarding status:", error);
-    }
-  };
-
-  const handleCompleteOnboarding = () => {
-    navigation.navigate("Onboarding");
+    } catch {}
   };
 
   const loadHomeData = async () => {
     try {
       setLoading(true);
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        
-        loadTodaysLectures(userData);
-        loadGPASummary(userData);
-        loadUpcomingExam(userData);
+      const ud = await getUserData();
+      if (ud) {
+        loadTodaysLectures(ud);
+        loadGPASummary(ud);
+        loadUpcomingExam(ud);
       }
     } catch (err) {
       console.error("Error loading home data:", err);
@@ -289,25 +496,23 @@ export default function HomeScreen({ navigation }) {
 
   const loadTodaysLectures = (userData) => {
     try {
-      const day = new Date().toLocaleString("en-US", { weekday: "long" }).toLowerCase();
+      const day = new Date()
+        .toLocaleString("en-US", { weekday: "long" })
+        .toLowerCase();
       const timetable = userData.timetable || {};
-      
       const currentSemester = userData.current_semester || 1;
-      const todaysLectures = timetable[day]?.filter(lecture => 
-        lecture.semester === currentSemester
-      ) || [];
-      
-      const formattedLectures = todaysLectures.map(lecture => ({
-        course: lecture.name,
-        time: `${lecture.start} - ${lecture.end}`,
-        room: lecture.room,
-        lecturer: lecture.lecturer,
-        start: lecture.start,
-        end: lecture.end
-      }));
-      
-      setTodayLectures(formattedLectures);
-    } catch (err) {
+      const todaysLectures =
+        timetable[day]?.filter((l) => l.semester === currentSemester) || [];
+      setTodayLectures(
+        todaysLectures.map((l) => ({
+          course: l.name,
+          time: `${l.start} - ${l.end}`,
+          start: l.start,
+          end: l.end,
+          room: l.room,
+        }))
+      );
+    } catch {
       setTodayLectures([]);
     }
   };
@@ -315,212 +520,111 @@ export default function HomeScreen({ navigation }) {
   const loadGPASummary = (userData) => {
     try {
       const gpaData = userData.gpa_data || {};
-      const gpaSummary = [];
-      
-      Object.keys(gpaData).forEach(semesterKey => {
-        if (gpaData[semesterKey] && gpaData[semesterKey].gpa) {
-          const semesterNumber = semesterKey.replace('semester', '');
-          gpaSummary.push({
-            semester: `Sem ${semesterNumber}`,
-            gpa: gpaData[semesterKey].gpa.toFixed(2)
-          });
-        }
-      });
-      
-      gpaSummary.sort((a, b) => {
-        const numA = parseInt(a.semester.replace('Sem ', ''));
-        const numB = parseInt(b.semester.replace('Sem ', ''));
-        return numA - numB;
-      });
-      
-      setGpaSummary(gpaSummary);
-    } catch (err) {
+      const summary = Object.keys(gpaData)
+        .filter((k) => gpaData[k]?.gpa)
+        .map((k) => ({
+          semester: `Sem ${k.replace("semester", "")}`,
+          gpa: parseFloat(gpaData[k].gpa).toFixed(2),
+        }))
+        .sort((a, b) => {
+          const n = (s) => parseInt(s.semester.replace("Sem ", ""));
+          return n(a) - n(b);
+        });
+      setGpaSummary(summary);
+    } catch {
       setGpaSummary([]);
     }
   };
 
   const loadUpcomingExam = (userData) => {
     try {
-      const exams = userData.exams || [];
-      
-      if (!Array.isArray(exams)) {
-        setUpcomingExam(null);
-        setUpcomingExamsCount(0);
-        return;
-      }
-      
+      const exams = Array.isArray(userData.exams) ? userData.exams : [];
       const now = new Date();
-      
-      const upcomingExams = exams
-        .filter(exam => {
-          try {
-            const examDate = new Date(exam.date);
-            return examDate >= now;
-          } catch (err) {
-            return false;
-          }
+      const upcoming = exams
+        .filter((e) => {
+          try { return new Date(e.date) >= now; } catch { return false; }
         })
         .sort((a, b) => new Date(a.date) - new Date(b.date));
-      
-      setUpcomingExamsCount(upcomingExams.length);
-      
-      if (upcomingExams.length > 0) {
-        const exam = upcomingExams[0];
-        const examDate = new Date(exam.date);
-        
+      if (upcoming.length > 0) {
+        const ex = upcoming[0];
+        const d = new Date(ex.date);
         setUpcomingExam({
-          name: exam.name,
-          date: exam.date,
-          formattedDate: examDate.toLocaleDateString(),
-          start: exam.start || "TBD",
-          end: exam.end || "",
-          semester: exam.semester
+          name: ex.name,
+          formattedDate: d.toLocaleDateString(),
+          start: ex.start || "TBD",
+          semester: ex.semester,
         });
       } else {
         setUpcomingExam(null);
       }
-    } catch (err) {
-      console.error("Error loading upcoming exam:", err);
+    } catch {
       setUpcomingExam(null);
-      setUpcomingExamsCount(0);
     }
   };
 
   const loadUserData = async () => {
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-
-      const userDocRef = doc(db, "users", currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        
-        if (userData.nickname) {
-          setUserNickname(userData.nickname);
-        }
-        
-        if (!userData.nickname) {
-          setUserName(currentUser.email?.split('@')[0] || "User");
-        }
+      const userInfo = await getCurrentUserInfo();
+      if (!userInfo) return;
+      const ud = await getUserData();
+      if (ud?.nickname) {
+        setUserNickname(ud.nickname);
       } else {
-        setUserName(currentUser.email?.split('@')[0] || "User");
+        setUserName(userInfo.email?.split("@")[0] || "User");
       }
-
-      await loadProfileImage();
-      
-    } catch (err) {
+      const saved = await AsyncStorage.getItem(PROFILE_IMAGE_KEY);
+      if (saved) setProfileImage(saved);
+    } catch {
       setUserName("User");
     }
   };
 
-  const loadProfileImage = async () => {
-    try {
-      const savedImage = await AsyncStorage.getItem(PROFILE_IMAGE_KEY);
-      if (savedImage) {
-        setProfileImage(savedImage);
-      }
-    } catch (error) {
-      // Handle error silently
-    }
-  };
-
-  const navigateToProfile = () => {
-    navigation.navigate("Profile");
-  };
-
-  const getDisplayName = () => {
-    return userNickname || userName || "User";
-  };
+  const getDisplayName = () => userNickname || userName || "User";
 
   const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 18) return "Good afternoon";
     return "Good evening";
   };
-
-  const handleScroll = (event) => {
-    const scrollPosition = event.nativeEvent.contentOffset.x;
-    const index = Math.round(scrollPosition / width);
-    setCurrentCardIndex(index);
-  };
-
-  const scrollToIndex = (index) => {
-    if (flatListRef.current) {
-      flatListRef.current.scrollToIndex({
-        index,
-        animated: true,
-        viewPosition: 0.5,
-      });
-      setCurrentCardIndex(index);
-    }
-  };
-
-  const summaryCards = [
-    { id: 'today', type: 'today', data: todayLectures },
-    { id: 'gpa', type: 'gpa', data: gpaSummary },
-  ];
 
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View style={styles.headerLeft}>
-              <Text style={styles.welcome}>Loading...</Text>
-            </View>
-          </View>
-        </View>
+        <ScreenHeader
+          type="home"
+          greeting="Loading..."
+          userName=""
+          onProfilePress={() => navigation.navigate("Profile")}
+          onNotificationPress={() => navigation.navigate("NotificationsSettings")}
+        />
+        <HomeSkeletonLoader />
+        <NavigationBar />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.welcome}>{getGreeting()}</Text>
-            <View style={styles.userNameRow}>
-              <Text style={styles.userName}>{getDisplayName()}</Text>
-              <Text style={styles.waveEmoji}>👋</Text>
-            </View>
-          </View>
+      <ScreenHeader
+        type="home"
+        greeting={getGreeting()}
+        userName={getDisplayName()}
+        profileImage={profileImage}
+        onProfilePress={() => navigation.navigate("Profile")}
+        onNotificationPress={() => navigation.navigate("NotificationsSettings")}
+      />
 
-          <TouchableOpacity 
-            style={styles.profileSection} 
-            onPress={navigateToProfile}
-            activeOpacity={0.7}
-          >
-            {profileImage ? (
-              <Image 
-                source={{ uri: profileImage }} 
-                style={styles.profileImage}
-              />
-            ) : (
-              <View style={[styles.profileIcon, { backgroundColor: theme.colors.primary }]}>
-                <SvgIcon name="user" size={24} color="white" />
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Onboarding Banner - Only show if user hasn't completed onboarding */}
+        {/* Onboarding nudge */}
         {needsOnboarding && (
           <View style={[styles.onboardingBanner, { backgroundColor: theme.colors.primaryLight }]}>
             <View style={styles.onboardingBannerContent}>
-              <View style={[styles.onboardingBannerIcon]}>
-                <SvgIcon name="complete" size={60} color={theme.colors.primary} />
-              </View>
+              <SvgIcon name="complete" size={48} color={theme.colors.primary} />
               <View style={styles.onboardingBannerText}>
                 <Text style={[styles.onboardingBannerTitle, { color: theme.colors.textPrimary }]}>
                   Complete Your Profile
@@ -529,165 +633,110 @@ export default function HomeScreen({ navigation }) {
                   Tell us a bit about yourself
                 </Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.onboardingBannerButton, { backgroundColor: theme.colors.primary }]}
-                onPress={handleCompleteOnboarding}
+                onPress={() => navigation.navigate("Onboarding")}
               >
-                <Text style={styles.onboardingBannerButtonText}>Click Here</Text>
+                <Text style={styles.onboardingBannerButtonText}>Go</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
 
-        {/* Horizontal Scroll Cards */}
-        <View style={styles.section}>
-          <FlatList
-            ref={flatListRef}
-            data={summaryCards}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            pagingEnabled
-            snapToInterval={width}
-            snapToAlignment="center"
-            decelerationRate="fast"
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <SummaryCard 
-                type={item.type}
-                data={item.data}
-                theme={theme}
-                navigation={navigation}
-              />
-            )}
-            contentContainerStyle={styles.cardsContainer}
-            getItemLayout={(data, index) => ({
-              length: width,
-              offset: width * index,
-              index,
-            })}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            onMomentumScrollEnd={(event) => {
-              const scrollPosition = event.nativeEvent.contentOffset.x;
-              const index = Math.round(scrollPosition / width);
-              setCurrentCardIndex(index);
-            }}
-          />
-          {/* Pagination Dots */}
-          <View style={styles.paginationContainer}>
-            {summaryCards.map((_, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => scrollToIndex(index)}
-                activeOpacity={0.7}
-              >
-                <View 
-                  style={[
-                    styles.paginationDot, 
-                    { 
-                      backgroundColor: index === currentCardIndex 
-                        ? theme.colors.primary 
-                        : theme.colors.border,
-                      width: index === currentCardIndex ? 12 : 8,
-                      height: index === currentCardIndex ? 12 : 8,
-                      borderRadius: index === currentCardIndex ? 6 : 4,
-                    }
-                  ]} 
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        {/* Today banner */}
+        <TodayBanner
+          lectures={todayLectures}
+          theme={theme}
+          navigation={navigation}
+        />
 
-        {/* Main Quick Actions - 3 colored items */}
+        {/* Activity circles — only when today has activities */}
+        {todayLectures.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Activities</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                flexGrow: 1,
+                justifyContent: "center",
+                paddingHorizontal: 12,
+                paddingBottom: 4,
+              }}
+            >
+              {todayLectures.map((lec, i) => (
+                <ActivityCircle key={i} activity={lec} theme={theme} />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Action cards */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Access</Text>
-          <View style={styles.grid}>
-            <MenuItem
-              label="Timetable"
-              color={theme.colors.primary}
+          <View style={styles.actionCardsRow}>
+            <ActionCard
+              label="Manage Schedule"
+              subtitle="View & edit timetable"
               iconName="timetable"
-              subtitle="View schedule"
-              action={() => navigation.navigate("Timetable")}
+              onPress={() => navigation.navigate("Timetable")}
               theme={theme}
             />
-
-            <MenuItem
-              label="AI Assistant"
-              color={theme.colors.primary}
-              iconName="ai-home"
-              subtitle="Chat with Remi"
-              action={() => navigation.navigate("Chat")}
-              theme={theme}
-            />
-
-            <MenuItem
-              label="GPA"
-              color={theme.colors.primary}
+            <ActionCard
+              label="Calculate & Track Results"
+              subtitle="GPA calculator"
               iconName="gpa"
-              subtitle="Track grades"
-              action={() => navigation.navigate("GPA")}
+              onPress={() => navigation.navigate("GPA")}
               theme={theme}
             />
           </View>
         </View>
 
-        {/* Settings Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          <SettingsMenuItem
-            label="Settings"
-            iconName="cog"
-            action={() => navigation.navigate("Settings")}
-            theme={theme}
-          />
-        </View>
+        {/* GPA Results */}
+        {gpaSummary.length > 0 && (
+          <View style={styles.section}>
+            <GPAResultsCard
+              gpaSummary={gpaSummary}
+              theme={theme}
+              onPress={() => navigation.navigate("GPA")}
+            />
+          </View>
+        )}
 
-        {/* Upcoming Exam Card */}
+        {/* Upcoming exam */}
         {upcomingExam && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Upcoming Exam</Text>
-            <View style={[styles.examCard, { 
-              backgroundColor: theme.mode === 'dark' ? '#DC2626' : '#EF4444'
-            }]}>
+            <Text style={styles.sectionTitle}>Upcoming Deadline</Text>
+            <View style={[styles.examCard, { backgroundColor: "#EF4444" }]}>
               <View style={styles.examHeader}>
-                <View style={[styles.examIcon, { backgroundColor: '#FFFFFF20' }]}>
+                <View style={[styles.examIcon, { backgroundColor: "#FFFFFF20" }]}>
                   <SvgIcon name="bell" size={20} color="#FFFFFF" />
                 </View>
                 <View style={styles.examTitleContainer}>
-                  <Text style={[styles.examCourse, { color: '#FFFFFF' }]}>{upcomingExam.name}</Text>
+                  <Text style={[styles.examCourse, { color: "#FFFFFF" }]}>
+                    {upcomingExam.name}
+                  </Text>
                   <View style={styles.examDetailsRow}>
                     <View style={styles.examDetail}>
-                      <SvgIcon name="calendar" size={14} color="#FFFFFF" opacity={0.9} />
-                      <Text style={[styles.examDetailText, { color: '#FFFFFF' }]}> {upcomingExam.formattedDate}</Text>
+                      <SvgIcon name="calendar" size={13} color="#FFFFFF" />
+                      <Text style={[styles.examDetailText, { color: "#FFFFFF" }]}>
+                        {" "}{upcomingExam.formattedDate}
+                      </Text>
                     </View>
                     <View style={styles.examDetail}>
-                      <SvgIcon name="clock" size={14} color="#FFFFFF" opacity={0.9} />
-                      <Text style={[styles.examDetailText, { color: '#FFFFFF' }]}> {upcomingExam.start}</Text>
+                      <SvgIcon name="clock" size={13} color="#FFFFFF" />
+                      <Text style={[styles.examDetailText, { color: "#FFFFFF" }]}>
+                        {" "}{upcomingExam.start}
+                      </Text>
                     </View>
                   </View>
                 </View>
               </View>
-              <View style={styles.examFooter}>
-                {upcomingExam.semester && (
-                  <View style={[styles.semesterBadge, { backgroundColor: '#FFFFFF30' }]}>
-                    <SvgIcon name="graduation-cap" size={12} color="#FFFFFF" />
-                    <Text style={[styles.semesterText, { color: '#FFFFFF' }]}> Semester {upcomingExam.semester}</Text>
-                  </View>
-                )}
-                <TouchableOpacity 
-                  style={styles.viewDetailsButton}
-                  onPress={() => navigation.navigate("ExamTimetable")}
-                >
-                  <Text style={[styles.viewDetailsText, { color: '#FFFFFF' }]}>View Details</Text>
-                  <SvgIcon name="chevron-right" size={14} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
         )}
-
       </ScrollView>
+
+      <NavigationBar />
     </View>
   );
 }

@@ -12,6 +12,7 @@ import {
 import { useTheme } from '../../../contexts/ThemeContext';
 import SvgIcon from '../../../components/SvgIcon';
 import { getStyles } from './AboutUsScreen.styles';
+import ScreenHeader from '../../../components/ScreenHeader';
 
 export default function AboutUs({ navigation }) {
   const { theme } = useTheme();
@@ -103,17 +104,7 @@ export default function AboutUs({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backBtn} 
-          onPress={() => navigation.goBack()}
-        >
-          <SvgIcon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>About Us</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="About Us" onBackPress={() => navigation.goBack()} />
 
       <ScrollView 
         style={styles.content}

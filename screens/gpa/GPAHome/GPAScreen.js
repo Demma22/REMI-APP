@@ -7,20 +7,17 @@ import {
   Dimensions 
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
-import { auth, db } from "../../../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { getUserData } from "../../../services/userDataService";
 import NavigationBar from "../../../components/NavigationBar";
 import SvgIcon from "../../../components/SvgIcon";
+import ScreenHeader from "../../../components/ScreenHeader";
 import { useTheme } from '../../../contexts/ThemeContext';
 import { getStyles } from './GPAScreen.styles';
+import { GPASkeleton } from '../../../components/SkeletonLoader';
 
 const { width } = Dimensions.get("window");
 
 export default function GPAScreen({ navigation }) {
-  if (!auth.currentUser) {
-    return <Text style={styles.center}>Not logged in</Text>;
-  }
-
   const [gpas, setGpas] = useState({});
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,30 +34,23 @@ export default function GPAScreen({ navigation }) {
   const loadData = async () => {
     try {
       setLoading(true);
-      
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const data = userDoc.data();
+
+      const data = await getUserData();
+      if (data) {
         setUserData(data);
-        
-        // Load selected curriculum
-        if (data.selected_curriculum) {
-          setSelectedCurriculum(data.selected_curriculum);
+
+        if (data.selectedCurriculum) {
+          setSelectedCurriculum(data.selectedCurriculum);
         }
-        
-        // Get GPA data from gpa_data object
-        const gpaData = data.gpa_data || {};
-        
-        // Convert to the format expected by the chart
+
+        const gpaData = data.gpaData || {};
         const formattedGpas = {};
         Object.keys(gpaData).forEach(semesterKey => {
           if (gpaData[semesterKey] && gpaData[semesterKey].gpa) {
             formattedGpas[semesterKey] = gpaData[semesterKey].gpa.toString();
           }
         });
-        
+
         setGpas(formattedGpas);
       }
     } catch (error) {
@@ -105,23 +95,8 @@ export default function GPAScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity 
-              style={styles.backBtn} 
-              onPress={() => navigation.goBack()}
-            >
-              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>GPA OVERVIEW</Text>
-            <View style={styles.headerSpacer} />
-          </View>
-        </View>
-        <View style={styles.content}>
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptySub}>Loading your GPA data...</Text>
-          </View>
-        </View>
+        <ScreenHeader title="GPA OVERVIEW" onBackPress={() => navigation.goBack()} />
+        <GPASkeleton />
         <NavigationBar />
       </View>
     );
@@ -131,18 +106,7 @@ export default function GPAScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={() => navigation.goBack()}
-          >
-            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>GPA OVERVIEW</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      </View>
+      <ScreenHeader title="GPA OVERVIEW" onBackPress={() => navigation.goBack()} />
 
       <ScrollView 
         style={styles.scrollView}

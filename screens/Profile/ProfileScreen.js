@@ -7,20 +7,24 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Image,
 } from "react-native";
-import { auth, db } from "../../firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { signOut } from "firebase/auth";
+import * as ImagePicker from "expo-image-picker";
+import { supabase } from "../../supabase";
+import { getUserData, signOutUser } from "../../services/userDataService";
 import NavigationBar from "../../components/NavigationBar";
 import SvgIcon from "../../components/SvgIcon";
+import ScreenHeader from "../../components/ScreenHeader";
 import { useTheme } from '../../contexts/ThemeContext';
 import { getStyles } from "./ProfileScreen.styles";
+import { ProfileSkeleton } from "../../components/SkeletonLoader";
 
 export default function ProfileScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [userEmail, setUserEmail] = useState("");
+  const [supabaseUser, setSupabaseUser] = useState(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   
   const { theme } = useTheme();
   const styles = getStyles(theme);
@@ -34,24 +38,14 @@ export default function ProfileScreen({ navigation }) {
   const loadUserProfile = async () => {
     try {
       setLoading(true);
-      
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        Alert.alert("Error", "No user logged in");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         navigation.navigate("Login");
         return;
       }
-
-      setUserEmail(currentUser.email || "");
-
-      const userDocRef = doc(db, "users", currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        setUserData(data);
-      }
-      
+      setSupabaseUser(session.user);
+      const data = await getUserData();
+      if (data) setUserData(data);
     } catch (error) {
       console.error("Error loading profile:", error);
       Alert.alert("Error", "Failed to load profile data");
@@ -78,14 +72,82 @@ export default function ProfileScreen({ navigation }) {
   const performLogout = async () => {
     setSigningOut(true);
     try {
-      await signOut(auth);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'SplashIntro' }],
-      });
+      await signOutUser();
+      // App.js onAuthStateChange handles navigation automatically
     } catch (error) {
       Alert.alert("Logout Error", "Failed to logout. Please try again.");
       setSigningOut(false);
+    }
+  };
+
+  const handleEditPhoto = () => {
+    Alert.alert("Profile Photo", "Choose an option", [
+      { text: "Take Photo", onPress: () => pickImage("camera") },
+      { text: "Choose from Library", onPress: () => pickImage("library") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const pickImage = async (source) => {
+    let result;
+    if (source === "camera") {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission needed", "Camera permission is required.");
+        return;
+      }
+      result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission needed", "Gallery permission is required.");
+        return;
+      }
+      result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+    }
+    if (!result.canceled && result.assets[0]) {
+      await uploadAvatar(result.assets[0].uri);
+    }
+  };
+
+  const uploadAvatar = async (uri) => {
+    setUploadingPhoto(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+
+      const fileExt = uri.split(".").pop()?.toLowerCase() || "jpg";
+      const fileName = `${session.user.id}.${fileExt}`;
+
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, blob, { upsert: true, contentType: `image/${fileExt}` });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
+
+      await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", session.user.id);
+
+      setUserData(prev => ({ ...prev, avatar_url: publicUrl }));
+      Alert.alert("Success", "Profile photo updated!");
+    } catch (error) {
+      Alert.alert("Error", "Failed to upload photo. Please try again.");
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -148,24 +210,8 @@ export default function ProfileScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity 
-              style={styles.backBtn} 
-              onPress={() => navigation.goBack()}
-            >
-              <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>PROFILE</Text>
-            <View style={styles.headerSpacer} />
-          </View>
-        </View>
-        <View style={styles.content}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={styles.loadingText}>Loading your profile...</Text>
-          </View>
-        </View>
+        <ScreenHeader title="PROFILE" onBackPress={() => navigation.goBack()} />
+        <ProfileSkeleton />
         <NavigationBar />
       </View>
     );
@@ -175,18 +221,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={() => navigation.goBack()}
-          >
-            <SvgIcon name="arrow-back" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>PROFILE</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      </View>
+      <ScreenHeader title="PROFILE" onBackPress={() => navigation.goBack()} />
 
       <ScrollView 
         style={styles.scrollView}
@@ -197,16 +232,37 @@ export default function ProfileScreen({ navigation }) {
           {/* Profile Header Card */}
           <View style={styles.profileHeaderCard}>
             <View style={styles.profileImageContainer}>
-              <View style={[styles.profileImage, { backgroundColor: theme.colors.primary }]}>
-                <SvgIcon name="user" size={32} color="white" />
-              </View>
+              <TouchableOpacity onPress={handleEditPhoto} disabled={uploadingPhoto}>
+                {userData?.avatar_url ? (
+                  <Image
+                    source={{ uri: userData.avatar_url }}
+                    style={styles.profileImage}
+                  />
+                ) : (
+                  <View style={[styles.profileImage, { backgroundColor: theme.colors.primary }]}>
+                    <SvgIcon name="user" size={32} color="white" />
+                  </View>
+                )}
+                <View style={{
+                  position: 'absolute', bottom: 0, right: 0,
+                  width: 24, height: 24, borderRadius: 12,
+                  backgroundColor: theme.colors.primary,
+                  alignItems: 'center', justifyContent: 'center',
+                  borderWidth: 2, borderColor: theme.colors.card,
+                }}>
+                  {uploadingPhoto
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <SvgIcon name="edit" size={11} color="#fff" />
+                  }
+                </View>
+              </TouchableOpacity>
             </View>
-            
+
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>
-                {userData?.nickname || "User"}
+                {userData?.nickname || userData?.username || "User"}
               </Text>
-              <Text style={styles.profileEmail}>{userEmail}</Text>
+              <Text style={styles.profileEmail}>@{userData?.username || ""}</Text>
               {userData?.course && (
                 <Text style={[styles.profileCourse, { color: theme.colors.primary }]}>
                   {getCourseName()}
@@ -218,8 +274,8 @@ export default function ProfileScreen({ navigation }) {
           {/* Quick Actions */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Quick Actions</Text>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.actionButton}
               onPress={() => navigation.navigate("EditNickname")}
             >
@@ -233,6 +289,20 @@ export default function ProfileScreen({ navigation }) {
               <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("Settings")}
+            >
+              <View style={[styles.actionIconContainer, { backgroundColor: theme.colors.backgroundTertiary }]}>
+                <SvgIcon name="cog" size={20} color={theme.colors.textSecondary} />
+              </View>
+              <View style={styles.actionTextContainer}>
+                <Text style={styles.actionTitle}>Settings</Text>
+                <Text style={styles.actionSubtitle}>Manage your preferences</Text>
+              </View>
+              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+
           </View>
 
           {/* Account Info */}
@@ -242,14 +312,14 @@ export default function ProfileScreen({ navigation }) {
               <View style={styles.accountRow}>
                 <Text style={styles.accountLabel}>User ID</Text>
                 <Text style={styles.accountValue}>
-                  {auth.currentUser?.uid?.substring(0, 8)}...
+                  {supabaseUser?.id?.substring(0, 8)}...
                 </Text>
               </View>
               <View style={styles.accountRow}>
                 <Text style={styles.accountLabel}>Account Created</Text>
                 <Text style={styles.accountValue}>
-                  {auth.currentUser?.metadata?.creationTime 
-                    ? new Date(auth.currentUser.metadata.creationTime).toLocaleDateString()
+                  {supabaseUser?.created_at
+                    ? new Date(supabaseUser.created_at).toLocaleDateString()
                     : "Unknown"
                   }
                 </Text>
@@ -257,8 +327,8 @@ export default function ProfileScreen({ navigation }) {
               <View style={styles.accountRow}>
                 <Text style={styles.accountLabel}>Last Sign In</Text>
                 <Text style={styles.accountValue}>
-                  {auth.currentUser?.metadata?.lastSignInTime
-                    ? new Date(auth.currentUser.metadata.lastSignInTime).toLocaleDateString()
+                  {supabaseUser?.last_sign_in_at
+                    ? new Date(supabaseUser.last_sign_in_at).toLocaleDateString()
                     : "Unknown"
                   }
                 </Text>

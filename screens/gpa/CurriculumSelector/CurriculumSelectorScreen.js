@@ -9,13 +9,14 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { auth, db } from "../../../firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { getUserData, updateUserData } from "../../../services/userDataService";
 import NavigationBar from "../../../components/NavigationBar";
 import SvgIcon from "../../../components/SvgIcon";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { getStyles } from "./CurriculumSelectorScreen.styles";
+import ScreenHeader from "../../../components/ScreenHeader";
 import { getAllCountries, GRADING_SCALES } from "../../../utils/gradingScales";
+import { ListSkeleton } from "../../../components/SkeletonLoader";
 
 export default function CurriculumSelectorScreen({ navigation }) {
   const { theme } = useTheme();
@@ -35,14 +36,9 @@ export default function CurriculumSelectorScreen({ navigation }) {
 
   const loadUserCurriculum = async () => {
     try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        if (data.selected_curriculum) {
-          setSelectedCurriculum(data.selected_curriculum);
-        }
+      const data = await getUserData();
+      if (data?.selectedCurriculum) {
+        setSelectedCurriculum(data.selectedCurriculum);
       }
     } catch (error) {
       console.error("Error loading curriculum:", error);
@@ -54,14 +50,13 @@ export default function CurriculumSelectorScreen({ navigation }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      await setDoc(userDocRef, { 
-        selected_curriculum: selectedCurriculum,
-        grading_scale: GRADING_SCALES[selectedCurriculum]
-      }, { merge: true });
-      
+      await updateUserData({
+        selectedCurriculum,
+        gradingScale: GRADING_SCALES[selectedCurriculum],
+      });
+
       Alert.alert(
-        "Success", 
+        "Success",
         `Grading system updated to ${GRADING_SCALES[selectedCurriculum].name}`,
         [{ text: "OK", onPress: () => navigation.goBack() }]
       );
@@ -80,17 +75,8 @@ export default function CurriculumSelectorScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <SvgIcon name="arrow-back" size={24} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Select Curriculum</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loadingText}>Loading...</Text>
-        </View>
+        <ScreenHeader title="Select Curriculum" onBackPress={() => navigation.goBack()} />
+        <ListSkeleton />
         <NavigationBar />
       </View>
     );
@@ -98,13 +84,7 @@ export default function CurriculumSelectorScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <SvgIcon name="arrow-back" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Select Curriculum</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="Select Curriculum" onBackPress={() => navigation.goBack()} />
 
       <ScrollView style={styles.content}>
         <View style={styles.introCard}>

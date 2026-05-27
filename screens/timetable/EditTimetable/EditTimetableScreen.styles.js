@@ -11,7 +11,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   scrollViewContent: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: 100, // Increased for bottom spacing
   },
   header: {
     backgroundColor: theme.colors.backgroundSecondary,
@@ -150,7 +150,6 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-  // Add to your styles
   saveButtonDisabled: {
     opacity: 0.7,
   },
@@ -161,6 +160,30 @@ export const getStyles = (theme) => StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
+  
+  // ========== ACTIVITY TYPE SELECTOR STYLES ==========
+  typeContainer: {
+    flexDirection: 'row',
+    marginVertical: 8,
+  },
+  typeButton: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 24,
+    marginRight: 10,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
+  typeButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.9)",
+  },
+  typeButtonTextSelected: {
+    color: "#FFFFFF",
+  },
+  
   // Modal styles for TimePicker
   modalOverlay: {
     flex: 1,
