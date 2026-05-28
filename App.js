@@ -87,27 +87,37 @@ function AppContent() {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        setOnboardingCompleted(await checkOnboarding(session.user.id));
-      }
-      setCheckingAuth(false);
-    });
-
+    // Let onAuthStateChange be the single source of truth.
+    // INITIAL_SESSION fires immediately with the cached session (or null),
+    // so we use it to set checkingAuth=false instead of a separate getSession() call.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
-          setUser(session.user);
-          setOnboardingCompleted(await checkOnboarding(session.user.id));
-        } else {
+        try {
+          if (session?.user) {
+            setUser(session.user);
+            setOnboardingCompleted(await checkOnboarding(session.user.id));
+          } else {
+            setUser(null);
+            setOnboardingCompleted(false);
+          }
+        } catch {
           setUser(null);
           setOnboardingCompleted(false);
+        } finally {
+          if (event === 'INITIAL_SESSION') {
+            setCheckingAuth(false);
+          }
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    // Fallback: if INITIAL_SESSION never fires (network/error), unblock after 5s
+    const timeout = setTimeout(() => setCheckingAuth(false), 5000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   if (checkingAuth) {
