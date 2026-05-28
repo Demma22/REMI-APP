@@ -83,7 +83,7 @@ export default function SettingsScreen({ navigation }) {
     setSigningOut(true);
     try {
       await signOutUser();
-      // App.js onAuthStateChange handles navigation automatically
+      navigation.reset({ index: 0, routes: [{ name: 'SplashIntro' }] });
     } catch (error) {
       Alert.alert("Logout Error", "Failed to logout. Please try again.");
       setSigningOut(false);

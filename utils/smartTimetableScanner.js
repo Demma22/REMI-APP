@@ -1,7 +1,7 @@
 // utils/smartTimetableScanner.js
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import { auth } from '../firebase';
+import { supabase } from '../supabase';
 
 const BACKEND_URL = 'https://ai-backend-yl4w.onrender.com';
 
@@ -19,7 +19,9 @@ const convertImageToBase64 = async (uri) => {
 
 const sendToBackend = async (base64Image, mode) => {
   const endpoint = mode === 'lectures' ? '/scan-timetable' : '/scan-exam-timetable';
-  const token = await auth.currentUser.getIdToken();
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error('Not authenticated');
   
   const response = await fetch(`${BACKEND_URL}${endpoint}`, {
     method: 'POST',

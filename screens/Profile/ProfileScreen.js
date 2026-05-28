@@ -25,6 +25,7 @@ export default function ProfileScreen({ navigation }) {
   const [supabaseUser, setSupabaseUser] = useState(null);
   const [signingOut, setSigningOut] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [localAvatarUri, setLocalAvatarUri] = useState(null);
   
   const { theme } = useTheme();
   const styles = getStyles(theme);
@@ -73,7 +74,7 @@ export default function ProfileScreen({ navigation }) {
     setSigningOut(true);
     try {
       await signOutUser();
-      // App.js onAuthStateChange handles navigation automatically
+      navigation.reset({ index: 0, routes: [{ name: 'SplashIntro' }] });
     } catch (error) {
       Alert.alert("Logout Error", "Failed to logout. Please try again.");
       setSigningOut(false);
@@ -116,7 +117,9 @@ export default function ProfileScreen({ navigation }) {
       });
     }
     if (!result.canceled && result.assets[0]) {
-      await uploadAvatar(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setLocalAvatarUri(uri);
+      await uploadAvatar(uri);
     }
   };
 
@@ -126,26 +129,33 @@ export default function ProfileScreen({ navigation }) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
 
-      const fileExt = uri.split(".").pop()?.toLowerCase() || "jpg";
+      const fileExt = uri.split(".").pop()?.split("?")[0]?.toLowerCase() || "jpg";
+      const mimeType = fileExt === "png" ? "image/png" : "image/jpeg";
       const fileName = `${session.user.id}.${fileExt}`;
 
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      const formData = new FormData();
+      formData.append("file", { uri, name: fileName, type: mimeType });
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(fileName, blob, { upsert: true, contentType: `image/${fileExt}` });
+        .upload(fileName, formData, { upsert: true, contentType: mimeType });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(fileName);
 
-      await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", session.user.id);
+      const { error: dbError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("id", session.user.id);
+      if (dbError) throw dbError;
 
       setUserData(prev => ({ ...prev, avatar_url: publicUrl }));
       Alert.alert("Success", "Profile photo updated!");
     } catch (error) {
+      console.error("Upload error:", error);
       Alert.alert("Error", "Failed to upload photo. Please try again.");
+      setLocalAvatarUri(null);
     } finally {
       setUploadingPhoto(false);
     }
@@ -233,10 +243,13 @@ export default function ProfileScreen({ navigation }) {
           <View style={styles.profileHeaderCard}>
             <View style={styles.profileImageContainer}>
               <TouchableOpacity onPress={handleEditPhoto} disabled={uploadingPhoto}>
-                {userData?.avatar_url ? (
+                {(localAvatarUri || userData?.avatar_url) ? (
                   <Image
-                    source={{ uri: userData.avatar_url }}
+                    source={{ uri: localAvatarUri || userData.avatar_url }}
                     style={styles.profileImage}
+                    onError={() => {
+                      if (!localAvatarUri) setUserData(prev => ({ ...prev, avatar_url: null }));
+                    }}
                   />
                 ) : (
                   <View style={[styles.profileImage, { backgroundColor: theme.colors.primary }]}>
