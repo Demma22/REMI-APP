@@ -36,6 +36,7 @@ import TermsConditionsScreen from "./screens/DataProtection/TermsConditionsScree
 import PrivacyPolicyScreen from "./screens/DataProtection/PrivacyPolicyScreen";
 import DataDeleteScreen from "./screens/DataProtection/DataDeletion/DataDeleteScreen";
 import AddExamScreen from "./screens/exam/AddExamScreen";
+import DeadlinesScreen from "./screens/deadlines/DeadlinesScreen";
 import RateReviewModal from "./components/RateReviewModal";
 import SettingsScreen from "./screens/settings/SettingsHome/SettingsScreen";
 import EditNickname from "./screens/settings/EditNickname/EditNickname";
@@ -169,6 +170,7 @@ function AppContent() {
             <Stack.Screen name="ReviewScannedLectures" component={ReviewScannedLectures} />
             <Stack.Screen name="ExportGPA" component={ExportGPAScreen} />
             <Stack.Screen name="AddExam" component={AddExamScreen} />
+            <Stack.Screen name="Deadlines" component={DeadlinesScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="AboutUs" component={AboutUsScreen} />
             <Stack.Screen name="NotificationsSettings" component={NotificationsSettingsScreen} />
@@ -203,6 +205,7 @@ function AppContent() {
             <Stack.Screen name="ReviewScannedResults" component={ReviewScannedResults} />
             <Stack.Screen name="ExportGPA" component={ExportGPAScreen} />
             <Stack.Screen name="AddExam" component={AddExamScreen} />
+            <Stack.Screen name="Deadlines" component={DeadlinesScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="NotificationsSettings" component={NotificationsSettingsScreen} />
             <Stack.Screen name="EditNickname" component={EditNickname} />
@@ -214,7 +217,7 @@ function AppContent() {
             <Stack.Screen name="EditUnits" component={EditUnits} />
             <Stack.Screen name="EditCourse" component={EditCourse} />
             <Stack.Screen name="StatisticsDashboard" component={StatisticsDashboard} />
-            <Stack.Screen name="SplashIntro" component={SplashIntro} />
+<Stack.Screen name="SplashIntro" component={SplashIntro} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />
           </>
@@ -248,8 +251,7 @@ function AppContent() {
             <Stack.Screen name="EditUnits" component={EditUnits} />
             <Stack.Screen name="EditCourse" component={EditCourse} />
             <Stack.Screen name="StatisticsDashboard" component={StatisticsDashboard} />
-
-            
+            <Stack.Screen name="Deadlines" component={DeadlinesScreen} />
             <Stack.Screen name="SplashIntro" component={SplashIntro} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />

@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { label: 'Schedule', svgName: 'calendar', screen: 'Timetable' },
   { label: 'GPA', svgName: 'chart-line', screen: 'GPA' },
   { label: 'Home', svgName: 'home', screen: 'Home' },
-  { label: 'Alerts', svgName: 'bell', screen: 'NotificationsSettings' },
+  { label: 'Deadlines', svgName: 'clock', screen: 'Deadlines' },
   { label: 'Profile', svgName: 'user', screen: 'Profile' },
 ];
 

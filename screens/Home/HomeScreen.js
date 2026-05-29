@@ -106,8 +106,8 @@ function ActivityCircle({ activity }) {
   const isDone = progress >= 1;
   const isLive = progress > 0 && progress < 1;
   const offset = CIRC * (1 - progress);
-  const innerBg = isDone ? "#535FFD" : theme.colors.background;
-  const innerText = isDone ? "#FFFFFF" : theme.colors.textPrimary;
+  const innerBg = theme.colors.background;
+  const innerText = theme.colors.textPrimary;
   const trackColor = isDone ? "#535FFD" : "#E2E8F0";
 
   return (
