@@ -1,229 +1,267 @@
-// styles/ProfileScreen.styles.js
-import { StyleSheet } from "react-native";
+import { StyleSheet, Dimensions } from "react-native";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+
+  // Header — matches HomeScreen formula: insets.top + 12, paddingBottom: 14
+  profileHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    backgroundColor: theme.colors.background,
+  },
+  profileBackBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.backgroundTertiary,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+
   scrollView: {
     flex: 1,
   },
   scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 100,
   },
-  header: {
-    backgroundColor: theme.colors.backgroundSecondary,
-    paddingTop: 60,
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  headerTop: {
+
+  // Profile Card
+  profileCard: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    marginBottom: 16,
+    paddingVertical: 8,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  content: {
-    padding: 24,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  loadingText: {
-    marginTop: 16,
-    color: theme.colors.textSecondary,
-    fontSize: 16,
-  },
-  profileHeaderCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 24,
-    padding: 24,
-    flexDirection: "row",
-    alignItems: "center",
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
-    marginBottom: 24,
-  },
-  profileImageContainer: {
-    position: 'relative',
-    marginRight: 16,
+  avatarWrapper: {
+    position: "relative",
+    marginRight: 18,
   },
   profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+  },
+  onlineDot: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#22C55E",
+    borderWidth: 2,
+    borderColor: theme.colors.background,
+  },
+  uploadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 38,
+    backgroundColor: "rgba(0,0,0,0.45)",
     alignItems: "center",
+    justifyContent: "center",
   },
   profileInfo: {
     flex: 1,
   },
+  profileNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
   profileName: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-    marginBottom: 4,
-  },
-  profileEmail: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginBottom: 4,
-  },
-  profileCourse: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: "700",
     color: theme.colors.textPrimary,
-    marginBottom: 16,
+    marginRight: 8,
   },
-  infoCard: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+  editNameBtn: {
+    padding: 2,
   },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  infoLabel: {
+  profileEmail: {
     fontSize: 13,
-    fontWeight: "600",
     color: theme.colors.textSecondary,
   },
-  infoValue: {
+
+  // Quote
+  quoteSection: {
+    marginBottom: 20,
+    position: "relative",
+  },
+  quoteDecorIcon: {
+    position: "absolute",
+    top: -20,
+    right: -20,
+    zIndex: 10,
+  },
+  quoteHeader: {
+    backgroundColor: "#111111",
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderRadius: 20,
+  },
+  quoteHeaderText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  quoteBody: {
+    backgroundColor: "#111111",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  quoteText: {
+    flex: 1,
     fontSize: 14,
-    fontWeight: "500",
-    color: theme.colors.textPrimary,
-    marginTop: 4,
+    color: "#CCCCCC",
     lineHeight: 20,
   },
-  actionButton: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+
+  // Account Information
+  accountSection: {
+    marginBottom: 20,
   },
-  actionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  actionTextContainer: {
-    flex: 1,
-  },
-  actionTitle: {
-    fontSize: 16,
+  sectionTitle: {
+    fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
-    marginBottom: 2,
-  },
-  actionSubtitle: {
-    fontSize: 12,
     color: theme.colors.textSecondary,
+    marginBottom: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
   },
   accountCard: {
-    backgroundColor: theme.colors.card,
+    backgroundColor: theme.colors.primary,
     borderRadius: 20,
-    padding: 20,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
+    paddingHorizontal: 20,
+    paddingVertical: 4,
   },
   accountRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: "rgba(255,255,255,0.15)",
   },
   accountLabel: {
     fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: "rgba(255,255,255,0.7)",
   },
   accountValue: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.textPrimary,
+    color: "#FFFFFF",
   },
+
+  // Logout
   logoutButton: {
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: "row",
+    borderRadius: 50,
+    paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
-    shadowColor: theme.colors.danger,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    borderWidth: 1.5,
+    borderColor: theme.colors.danger,
+    backgroundColor: "transparent",
   },
   logoutButtonText: {
-    color: "#FFFFFF",
+    color: theme.colors.danger,
     fontSize: 16,
     fontWeight: "700",
   },
-  bottomSpacing: {
-    height: 20,
+
+  // View Photo Modal
+  photoModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  
+  photoModalClose: {
+    position: "absolute",
+    top: 56,
+    right: 20,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoModalImage: {
+    width: SCREEN_WIDTH - 40,
+    height: SCREEN_WIDTH - 40,
+    borderRadius: 20,
+  },
+
+  // Edit Quote Modal
+  quoteModalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  quoteModalSheet: {
+    backgroundColor: theme.colors.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  quoteModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+    marginBottom: 16,
+  },
+  quoteInput: {
+    backgroundColor: theme.colors.background,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    color: theme.colors.textPrimary,
+    minHeight: 100,
+    textAlignVertical: "top",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  quoteCharCount: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    textAlign: "right",
+    marginTop: 6,
+    marginBottom: 20,
+  },
+  quoteModalActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  quoteModalBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 50,
+    alignItems: "center",
+  },
+  quoteModalCancelBtn: {
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  quoteModalSaveBtn: {},
+  quoteModalBtnText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
 });

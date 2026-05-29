@@ -57,12 +57,14 @@ import highschoolIcon from '../assets/icons/highschool.svg';
 import lockIcon from '../assets/icons/lock.svg';
 import calenderIcon from '../assets/icons/calender.svg';
 import starIcon from '../assets/icons/star.svg';
+import quoteIcon from '../assets/icons/quote.svg';
 
 const iconComponents = {
   'home': HomeIcon,
   'eye': EyeIcon,
   'instagram':InstagramIcon,
   'star': starIcon,
+  'quote': quoteIcon,
   'lock': lockIcon,
   'calender': calenderIcon,
   'x': XIcon,

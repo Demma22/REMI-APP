@@ -8,16 +8,26 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Dimensions,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../../supabase";
 import { getUserData, signOutUser } from "../../services/userDataService";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import NavigationBar from "../../components/NavigationBar";
 import SvgIcon from "../../components/SvgIcon";
-import ScreenHeader from "../../components/ScreenHeader";
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from "../../contexts/ThemeContext";
 import { getStyles } from "./ProfileScreen.styles";
 import { ProfileSkeleton } from "../../components/SkeletonLoader";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+
+const DEFAULT_QUOTE = "We suffer more often in imagination than in reality.";
 
 export default function ProfileScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
@@ -26,9 +36,15 @@ export default function ProfileScreen({ navigation }) {
   const [signingOut, setSigningOut] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [localAvatarUri, setLocalAvatarUri] = useState(null);
-  
+
+  const [viewPhotoVisible, setViewPhotoVisible] = useState(false);
+  const [quoteModalVisible, setQuoteModalVisible] = useState(false);
+  const [quoteInput, setQuoteInput] = useState("");
+  const [savingQuote, setSavingQuote] = useState(false);
+
   const { theme } = useTheme();
   const styles = getStyles(theme);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     loadUserProfile();
@@ -55,38 +71,36 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  const handleLogout = async () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
-          style: "destructive",
-          onPress: performLogout
-        }
-      ]
-    );
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Logout", style: "destructive", onPress: performLogout },
+    ]);
   };
 
   const performLogout = async () => {
     setSigningOut(true);
     try {
       await signOutUser();
-      navigation.reset({ index: 0, routes: [{ name: 'SplashIntro' }] });
-    } catch (error) {
+      navigation.reset({ index: 0, routes: [{ name: "SplashIntro" }] });
+    } catch {
       Alert.alert("Logout Error", "Failed to logout. Please try again.");
       setSigningOut(false);
     }
   };
 
   const handleEditPhoto = () => {
-    Alert.alert("Profile Photo", "Choose an option", [
+    const hasPhoto = !!(localAvatarUri || userData?.avatar_url);
+    const options = [];
+    if (hasPhoto) {
+      options.push({ text: "View", onPress: () => setViewPhotoVisible(true) });
+    }
+    options.push(
       { text: "Take Photo", onPress: () => pickImage("camera") },
       { text: "Choose from Library", onPress: () => pickImage("library") },
-      { text: "Cancel", style: "cancel" },
-    ]);
+      { text: "Cancel", style: "cancel" }
+    );
+    Alert.alert("Profile Photo", "Choose an option", options);
   };
 
   const pickImage = async (source) => {
@@ -150,7 +164,7 @@ export default function ProfileScreen({ navigation }) {
         .eq("id", session.user.id);
       if (dbError) throw dbError;
 
-      setUserData(prev => ({ ...prev, avatar_url: publicUrl }));
+      setUserData((prev) => ({ ...prev, avatar_url: publicUrl }));
       Alert.alert("Success", "Profile photo updated!");
     } catch (error) {
       console.error("Upload error:", error);
@@ -161,211 +175,228 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  const getCourseName = () => {
-    if (!userData?.course) return "Not set";
-    return userData.course
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, str => str.toUpperCase())
-      .trim();
+  const openQuoteEditor = () => {
+    setQuoteInput(userData?.favorite_quote || "");
+    setQuoteModalVisible(true);
   };
 
-  const getOnboardingAnswers = () => {
-    return {
-      heardFrom: userData?.heardFrom || "Not answered",
-      purpose: userData?.purpose || [],
-      studyStage: userData?.studyStage || "Not answered",
-      ageRange: userData?.ageRange || "Not answered",
-    };
+  const saveQuote = async () => {
+    setSavingQuote(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { error } = await supabase
+        .from("profiles")
+        .update({ favorite_quote: quoteInput.trim() || null })
+        .eq("id", session.user.id);
+      if (error) throw error;
+      setUserData((prev) => ({ ...prev, favorite_quote: quoteInput.trim() || null }));
+      setQuoteModalVisible(false);
+    } catch (error) {
+      console.error("Save quote error:", error);
+      Alert.alert("Error", "Failed to save quote. Please try again.");
+    } finally {
+      setSavingQuote(false);
+    }
   };
 
-  const getPurposeDisplay = () => {
-    const purposes = userData?.purpose || [];
-    if (purposes.length === 0) return "Not answered";
-    return purposes.map(p => p.replace('_', ' ').toUpperCase()).join(", ");
-  };
+  const currentAvatarUri = localAvatarUri || userData?.avatar_url || null;
+  const displayQuote = userData?.favorite_quote || DEFAULT_QUOTE;
+  const displayName = userData?.nickname || userData?.username || "User";
+  const displayEmail = supabaseUser?.email || "";
 
-  const getHeardFromDisplay = () => {
-    const heardMap = {
-      'family_friend': 'Friends & Family',
-      'social_media': 'Social Media',
-      'snd_studio': 'SND Studio Website',
-      'app_store': 'App Store',
-      'other': 'Other'
-    };
-    return heardMap[userData?.heardFrom] || userData?.heardFrom || "Not answered";
-  };
-
-  const getStudyStageDisplay = () => {
-    const stageMap = {
-      'high_school': 'High School',
-      'undergraduate': 'Undergraduate',
-      'graduate': 'Graduate',
-      'professional': 'Professional',
-      'not_studying': 'Not studying'
-    };
-    return stageMap[userData?.studyStage] || userData?.studyStage || "Not answered";
-  };
-
-  const getAgeRangeDisplay = () => {
-    const ageMap = {
-      'under_18': 'Under 18',
-      '18_24': '18-24',
-      '25_34': '25-34',
-      '35_44': '35-44',
-      '45_plus': '45+'
-    };
-    return ageMap[userData?.ageRange] || userData?.ageRange || "Not answered";
-  };
+  const profileHeader = (
+    <View style={[styles.profileHeader, { paddingTop: insets.top + 12 }]}>
+      <TouchableOpacity style={styles.profileBackBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+        <SvgIcon name="arrow-back" size={20} color={theme.colors.textPrimary} />
+      </TouchableOpacity>
+      <View style={{ flex: 1 }} />
+      <TouchableOpacity
+        onPress={() => navigation.navigate("Settings")}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={{ width: 44, alignItems: "flex-end" }}
+      >
+        <SvgIcon name="cog" size={24} color={theme.colors.textSecondary} />
+      </TouchableOpacity>
+    </View>
+  );
 
   if (loading) {
     return (
       <View style={styles.container}>
-        <ScreenHeader title="PROFILE" onBackPress={() => navigation.goBack()} />
+        {profileHeader}
         <ProfileSkeleton />
         <NavigationBar />
       </View>
     );
   }
 
-  const onboarding = getOnboardingAnswers();
-
   return (
     <View style={styles.container}>
-      <ScreenHeader title="PROFILE" onBackPress={() => navigation.goBack()} />
+      {profileHeader}
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.content}>
-          {/* Profile Header Card */}
-          <View style={styles.profileHeaderCard}>
-            <View style={styles.profileImageContainer}>
-              <TouchableOpacity onPress={handleEditPhoto} disabled={uploadingPhoto}>
-                {(localAvatarUri || userData?.avatar_url) ? (
-                  <Image
-                    source={{ uri: localAvatarUri || userData.avatar_url }}
-                    style={styles.profileImage}
-                    onError={() => {
-                      if (!localAvatarUri) setUserData(prev => ({ ...prev, avatar_url: null }));
-                    }}
-                  />
-                ) : (
-                  <View style={[styles.profileImage, { backgroundColor: theme.colors.primary }]}>
-                    <SvgIcon name="user" size={32} color="white" />
-                  </View>
-                )}
-                <View style={{
-                  position: 'absolute', bottom: 0, right: 0,
-                  width: 24, height: 24, borderRadius: 12,
-                  backgroundColor: theme.colors.primary,
-                  alignItems: 'center', justifyContent: 'center',
-                  borderWidth: 2, borderColor: theme.colors.card,
-                }}>
-                  {uploadingPhoto
-                    ? <ActivityIndicator size="small" color="#fff" />
-                    : <SvgIcon name="edit" size={11} color="#fff" />
-                  }
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>
-                {userData?.nickname || userData?.username || "User"}
-              </Text>
-              <Text style={styles.profileEmail}>@{userData?.username || ""}</Text>
-              {userData?.course && (
-                <Text style={[styles.profileCourse, { color: theme.colors.primary }]}>
-                  {getCourseName()}
-                </Text>
-              )}
-            </View>
-          </View>
-
-          {/* Quick Actions */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("EditNickname")}
-            >
-              <View style={[styles.actionIconContainer, { backgroundColor: theme.colors.primaryLight }]}>
-                <SvgIcon name="edit" size={20} color={theme.colors.primary} />
-              </View>
-              <View style={styles.actionTextContainer}>
-                <Text style={styles.actionTitle}>Edit Nickname</Text>
-                <Text style={styles.actionSubtitle}>Change how you appear in the app</Text>
-              </View>
-              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("Settings")}
-            >
-              <View style={[styles.actionIconContainer, { backgroundColor: theme.colors.backgroundTertiary }]}>
-                <SvgIcon name="cog" size={20} color={theme.colors.textSecondary} />
-              </View>
-              <View style={styles.actionTextContainer}>
-                <Text style={styles.actionTitle}>Settings</Text>
-                <Text style={styles.actionSubtitle}>Manage your preferences</Text>
-              </View>
-              <SvgIcon name="chevron-right" size={20} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-
-          </View>
-
-          {/* Account Info */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Account Information</Text>
-            <View style={styles.accountCard}>
-              <View style={styles.accountRow}>
-                <Text style={styles.accountLabel}>User ID</Text>
-                <Text style={styles.accountValue}>
-                  {supabaseUser?.id?.substring(0, 8)}...
-                </Text>
-              </View>
-              <View style={styles.accountRow}>
-                <Text style={styles.accountLabel}>Account Created</Text>
-                <Text style={styles.accountValue}>
-                  {supabaseUser?.created_at
-                    ? new Date(supabaseUser.created_at).toLocaleDateString()
-                    : "Unknown"
-                  }
-                </Text>
-              </View>
-              <View style={styles.accountRow}>
-                <Text style={styles.accountLabel}>Last Sign In</Text>
-                <Text style={styles.accountValue}>
-                  {supabaseUser?.last_sign_in_at
-                    ? new Date(supabaseUser.last_sign_in_at).toLocaleDateString()
-                    : "Unknown"
-                  }
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <TouchableOpacity 
-            style={[styles.logoutButton, { backgroundColor: theme.colors.danger }]}
-            onPress={handleLogout}
-            disabled={signingOut}
+        {/* Profile Card */}
+        <View style={styles.profileCard}>
+          {/* Avatar */}
+          <TouchableOpacity
+            onPress={handleEditPhoto}
+            disabled={uploadingPhoto}
+            style={styles.avatarWrapper}
+            activeOpacity={0.85}
           >
-            {signingOut ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+            {currentAvatarUri ? (
+              <Image source={{ uri: currentAvatarUri }} style={styles.profileImage} />
             ) : (
-              <Text style={styles.logoutButtonText}>Logout</Text>
+              <View style={[styles.profileImage, { backgroundColor: theme.colors.primary, alignItems: "center", justifyContent: "center" }]}>
+                <SvgIcon name="user" size={32} color="#FFFFFF" />
+              </View>
             )}
+            {uploadingPhoto && (
+              <View style={styles.uploadingOverlay}>
+                <ActivityIndicator size="small" color="#fff" />
+              </View>
+            )}
+            <View style={styles.onlineDot} />
           </TouchableOpacity>
 
-          <View style={styles.bottomSpacing} />
+          {/* Info */}
+          <View style={styles.profileInfo}>
+            <View style={styles.profileNameRow}>
+              <Text style={styles.profileName}>{displayName}</Text>
+              <TouchableOpacity onPress={() => navigation.navigate("EditNickname")} style={styles.editNameBtn}>
+                <SvgIcon name="edit" size={15} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.profileEmail}>{displayEmail}</Text>
+          </View>
         </View>
+
+        {/* Favorite Quote */}
+        <View style={styles.quoteSection}>
+          <SvgIcon name="quote" size={130} color="#535FFD" style={styles.quoteDecorIcon} />
+
+          <View style={styles.quoteHeader}>
+            <Text style={styles.quoteHeaderText}>Favorite Quote</Text>
+          </View>
+
+          <View style={{ height: 8 }} />
+
+          <TouchableOpacity style={styles.quoteBody} onPress={openQuoteEditor} activeOpacity={0.8}>
+            <Text style={styles.quoteText} numberOfLines={3}>{displayQuote}</Text>
+            <SvgIcon name="edit" size={16} color="#AAAAAA" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Account Information */}
+        <View style={styles.accountSection}>
+          <Text style={styles.sectionTitle}>Account Information</Text>
+          <View style={styles.accountCard}>
+            <View style={styles.accountRow}>
+              <Text style={styles.accountLabel}>User ID</Text>
+              <Text style={styles.accountValue}>{supabaseUser?.id?.substring(0, 8)}...</Text>
+            </View>
+            <View style={styles.accountRow}>
+              <Text style={styles.accountLabel}>Account Created</Text>
+              <Text style={styles.accountValue}>
+                {supabaseUser?.created_at
+                  ? new Date(supabaseUser.created_at).toLocaleDateString()
+                  : "Unknown"}
+              </Text>
+            </View>
+            <View style={[styles.accountRow, { borderBottomWidth: 0 }]}>
+              <Text style={styles.accountLabel}>Last Sign In</Text>
+              <Text style={styles.accountValue}>
+                {supabaseUser?.last_sign_in_at
+                  ? new Date(supabaseUser.last_sign_in_at).toLocaleDateString()
+                  : "Unknown"}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Logout */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          disabled={signingOut}
+          activeOpacity={0.85}
+        >
+          {signingOut ? (
+            <ActivityIndicator size="small" color={theme.colors.danger} />
+          ) : (
+            <Text style={styles.logoutButtonText}>Log Out</Text>
+          )}
+        </TouchableOpacity>
+
+        <View style={{ height: 20 }} />
       </ScrollView>
 
       <NavigationBar />
+
+      {/* View Full Photo Modal */}
+      <Modal visible={viewPhotoVisible} transparent animationType="fade" onRequestClose={() => setViewPhotoVisible(false)}>
+        <View style={styles.photoModalOverlay}>
+          <TouchableOpacity style={styles.photoModalClose} onPress={() => setViewPhotoVisible(false)}>
+            <SvgIcon name="close" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          {currentAvatarUri ? (
+            <Image
+              source={{ uri: currentAvatarUri }}
+              style={styles.photoModalImage}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={[styles.photoModalImage, { backgroundColor: theme.colors.primary, alignItems: "center", justifyContent: "center" }]}>
+              <SvgIcon name="user" size={80} color="#FFFFFF" />
+            </View>
+          )}
+        </View>
+      </Modal>
+
+      {/* Edit Quote Modal */}
+      <Modal visible={quoteModalVisible} transparent animationType="slide" onRequestClose={() => setQuoteModalVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+          <View style={styles.quoteModalOverlay}>
+            <View style={styles.quoteModalSheet}>
+              <Text style={styles.quoteModalTitle}>Edit Favorite Quote</Text>
+              <TextInput
+                style={styles.quoteInput}
+                value={quoteInput}
+                onChangeText={setQuoteInput}
+                placeholder="Enter your favorite quote..."
+                placeholderTextColor={theme.colors.textSecondary}
+                multiline
+                maxLength={200}
+                autoFocus
+              />
+              <Text style={styles.quoteCharCount}>{quoteInput.length}/200</Text>
+              <View style={styles.quoteModalActions}>
+                <TouchableOpacity
+                  style={[styles.quoteModalBtn, styles.quoteModalCancelBtn]}
+                  onPress={() => setQuoteModalVisible(false)}
+                >
+                  <Text style={[styles.quoteModalBtnText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quoteModalBtn, styles.quoteModalSaveBtn, { backgroundColor: theme.colors.primary }]}
+                  onPress={saveQuote}
+                  disabled={savingQuote}
+                >
+                  {savingQuote
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Text style={[styles.quoteModalBtnText, { color: "#fff" }]}>Save</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
