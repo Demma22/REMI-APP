@@ -1,4 +1,3 @@
-// screens/TimetableScreen.js
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -8,6 +7,7 @@ import {
   Alert,
   RefreshControl,
   Modal,
+  Image,
 } from "react-native";
 import { getUserData, updateUserData } from "../../../services/userDataService";
 import NavigationBar from "../../../components/NavigationBar";
@@ -18,29 +18,38 @@ import { useNotifications } from '../../../hooks/useNotifications';
 import { getStyles } from "./TimetableScreen.styles";
 import { TimetableSkeleton } from "../../../components/SkeletonLoader";
 
-// Helper function to capitalize first letter
-const capitalize = (s) => s && s[0].toUpperCase() + s.slice(1);
+const PURPLE = '#535FFD';
 
-// Days of the week
 const daysOrder = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
-// Tab options
-const tabs = [
-  { id: "timetable", name: "Timetable", icon: "calendar" },
-  { id: "exams", name: "Deadlines", icon: "book" },
-];
+const DAY_ABBR = {
+  monday: 'MON', tuesday: 'TUES', wednesday: 'WED',
+  thursday: 'THURS', friday: 'FRI', saturday: 'SAT', sunday: 'SUN',
+};
+
+const capitalize = (s) => s && s[0].toUpperCase() + s.slice(1);
+
+const formatTime = (t) => {
+  if (!t || t === 'TBD') return t || '';
+  const m = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!m) return t;
+  return m[2] === '00' ? `${m[1]}${m[3].toLowerCase()}` : `${m[1]}:${m[2]}${m[3].toLowerCase()}`;
+};
 
 export default function TimetableScreen({ navigation }) {
   const { theme } = useTheme();
-  const { cancelLectureNotifications, cancelExamNotifications } = useNotifications();
+  const { cancelLectureNotifications } = useNotifications();
   const styles = getStyles(theme);
 
-  const [activeTab, setActiveTab] = useState("timetable");
   const [timetable, setTimetable] = useState({});
-  const [exams, setExams] = useState([]);
+  const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showAddMenu, setShowAddMenu] = useState(false);
+
+  // Modal state
+  const [selectedActivity, setSelectedActivity] = useState(null); // { lecture, dayKey, index }
+  const [editSheetDay, setEditSheetDay] = useState(null);         // dayKey string
+  const [showAddSheet, setShowAddSheet] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -51,30 +60,10 @@ export default function TimetableScreen({ navigation }) {
   const loadData = async () => {
     try {
       setLoading(true);
-
       const userData = await getUserData();
       if (userData) {
         setTimetable(userData.timetable || {});
-
-        let allExams = userData.exams;
-        if (!allExams || !Array.isArray(allExams)) {
-          allExams = [];
-        }
-
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-        const filteredExams = allExams.filter(exam => {
-          if (!exam.date) return true;
-          return new Date(exam.date) >= oneWeekAgo;
-        });
-
-        if (filteredExams.length !== allExams.length) {
-          await updateUserData({ exams: filteredExams });
-          setExams(filteredExams);
-        } else {
-          setExams(allExams);
-        }
+        if (userData.avatar_url) setProfileImage(userData.avatar_url);
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -84,142 +73,52 @@ export default function TimetableScreen({ navigation }) {
     }
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadData();
-  };
+  const onRefresh = () => { setRefreshing(true); loadData(); };
 
   const handleDeleteLecture = async (dayKey, lectureIndex, lecture) => {
-    Alert.alert(
-      "Delete Activity",
-      `Are you sure you want to delete "${lecture.name}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              if (lecture.id) {
-                await cancelLectureNotifications([lecture.id]);
-              }
-
-              const dayLectures = [...(timetable[dayKey] || [])];
-              dayLectures.splice(lectureIndex, 1);
-
-              const updatedTimetable = { ...timetable, [dayKey]: dayLectures };
-              await updateUserData({ timetable: updatedTimetable });
-
-              setTimetable(updatedTimetable);
-              Alert.alert("Success", "Activity deleted successfully");
-            } catch (error) {
-              Alert.alert("Error", "Failed to delete activity");
-            }
-          }
+    Alert.alert("Delete Activity", `Are you sure you want to delete "${lecture.name}"?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete", style: "destructive",
+        onPress: async () => {
+          try {
+            if (lecture.id) await cancelLectureNotifications([lecture.id]);
+            const dayLectures = [...(timetable[dayKey] || [])];
+            dayLectures.splice(lectureIndex, 1);
+            const updated = { ...timetable, [dayKey]: dayLectures };
+            await updateUserData({ timetable: updated });
+            setTimetable(updated);
+          } catch { Alert.alert("Error", "Failed to delete activity"); }
         }
-      ]
-    );
-  };
-
-  const handleDeleteExam = async (examIndex, exam) => {
-    Alert.alert(
-      "Delete Deadline",
-      `Are you sure you want to delete "${exam.name}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              if (exam.id && cancelExamNotifications) {
-                await cancelExamNotifications([exam.id]);
-              }
-
-              const updatedExams = exams.filter((_, i) => i !== examIndex);
-              await updateUserData({ exams: updatedExams });
-
-              setExams(updatedExams);
-              Alert.alert("Success", "Deadline deleted successfully");
-            } catch (error) {
-              Alert.alert("Error", "Failed to delete deadline");
-            }
-          }
-        }
-      ]
-    );
+      }
+    ]);
   };
 
   const handleEditLecture = (dayKey, lectureIndex, lecture) => {
-    navigation.navigate("EditTimetable", {
-      initialDay: dayKey,
-      initialLectureIndex: lectureIndex,
-      lecture: lecture
-    });
+    setEditSheetDay(null);
+    setSelectedActivity(null);
+    navigation.navigate("EditTimetable", { initialDay: dayKey, initialLectureIndex: lectureIndex, lecture });
   };
 
-  const handleEditExam = (examIndex, exam) => {
-    navigation.navigate("AddExam", { exam, isEditing: true });
-  };
+  const handleScanTimetable = () => { setShowAddSheet(false); navigation.navigate("AITimetableScanner", { mode: "lectures" }); };
+  const handleAddManually = () => { setShowAddSheet(false); navigation.navigate("AddActivity"); };
 
-  const handleAddTimetable = () => {
-    setShowAddMenu(false);
-    navigation.navigate("AddActivity");
-  };
-
-  const handleScanTimetable = () => {
-    setShowAddMenu(false);
-    navigation.navigate("AITimetableScanner", { mode: "lectures" });
-  };
-
-  const handleAddExam = () => {
-    setShowAddMenu(false);
-    navigation.navigate("AddExam");
-  };
-
-  const handleScanExamTimetable = () => {
-    setShowAddMenu(false);
-    navigation.navigate("AITimetableScanner", { mode: "exams" });
-  };
-
-  const handleAddButtonPress = () => {
-    setShowAddMenu(true);
-  };
-
-  const getFilteredTimetable = () => {
-    return timetable;
-  };
-
-  const filteredTimetable = getFilteredTimetable();
-  const hasAnyLecture = daysOrder.some(d => (filteredTimetable[d] && filteredTimetable[d].length > 0));
-  const hasAnyExam = exams.length > 0;
-
-  const formatExamDate = (date) => {
-    if (!date) return "TBD";
-    return new Date(date).toLocaleDateString();
-  };
-
-  const getUpcomingExams = () => {
-    const now = new Date();
-    return exams
-      .filter(exam => exam.date && new Date(exam.date) >= now)
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
-  };
-
-  const getPastExams = () => {
-    const now = new Date();
-    return exams
-      .filter(exam => exam.date && new Date(exam.date) < now)
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
-  };
-
-  const upcomingExams = getUpcomingExams();
-  const pastExams = getPastExams();
+  const profileAvatar = (
+    <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.8}>
+      {profileImage ? (
+        <Image source={{ uri: profileImage }} style={styles.headerAvatar} />
+      ) : (
+        <View style={[styles.headerAvatarPlaceholder, { backgroundColor: PURPLE }]}>
+          <SvgIcon name="user" size={16} color="#FFFFFF" />
+        </View>
+      )}
+    </TouchableOpacity>
+  );
 
   if (loading) {
     return (
       <View style={styles.container}>
-        <ScreenHeader title="MY SCHEDULE" onBackPress={() => navigation.goBack()} />
+        <ScreenHeader title="Weekly Schedule" onBackPress={() => navigation.goBack()} rightElement={profileAvatar} />
         <TimetableSkeleton />
         <NavigationBar />
       </View>
@@ -228,295 +127,193 @@ export default function TimetableScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="MY SCHEDULE" onBackPress={() => navigation.goBack()} />
-
-      {/* Tab Navigation */}
-      <View style={styles.tabBar}>
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.id}
-            style={[styles.tab, activeTab === tab.id && styles.tabActive]}
-            onPress={() => setActiveTab(tab.id)}
-          >
-            <SvgIcon
-              name={tab.icon}
-              size={18}
-              color={activeTab === tab.id ? theme.colors.primary : theme.colors.textSecondary}
-            />
-            <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>
-              {tab.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <ScreenHeader title="Weekly Schedule" onBackPress={() => navigation.goBack()} rightElement={profileAvatar} />
 
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[PURPLE]} />}
       >
         <View style={styles.content}>
-          {activeTab === "timetable" ? (
-            <>
-              {!hasAnyLecture ? (
-                <View style={styles.emptyCard}>
-                  <View style={[styles.emptyIcon, { backgroundColor: theme.colors.primaryLight }]}>
-                    <SvgIcon name="calender" size={110} color={theme.colors.secondary} />
-                  </View>
-                  <Text style={styles.emptyTitle}>No activities scheduled yet</Text>
-                  <Text style={styles.emptySub}>
-                    Add your weekly activities (study time, lectures, etc.) to stay organized.
-                  </Text>
+          <View style={styles.timetableContainer}>
+            {daysOrder.map((dayKey) => {
+              const list = timetable[dayKey] || [];
+              const hasActivities = list.length > 0;
+              const abbr = DAY_ABBR[dayKey];
 
-                  <TouchableOpacity
-                    style={[styles.primaryButton, { backgroundColor: theme.colors.primary }]}
-                    onPress={handleAddButtonPress}
-                  >
-                    <SvgIcon name="plus" size={18} color="white" />
-                    <Text style={styles.primaryButtonText}>Add Activity</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.timetableContainer}>
-                  {daysOrder.map((dayKey) => {
-                    const list = filteredTimetable[dayKey] || [];
-                    if (!list.length) return null;
+              return (
+                <View key={dayKey} style={[styles.weekDayCard, hasActivities ? styles.weekDayCardPurple : styles.weekDayCardBlack]}>
+                  <View style={styles.weekDayCardContent}>
 
-                    return (
-                      <View key={dayKey} style={styles.dayCard}>
-                        <View style={styles.dayHeader}>
-                          <Text style={styles.dayTitle}>{capitalize(dayKey)}</Text>
-                          <View style={styles.lectureCount}>
-                            <SvgIcon name="book" size={12} color="#FFFFFF" />
-                            <Text style={styles.lectureCountText}> {list.length}</Text>
-                          </View>
-                        </View>
+                    {/* Left: activity rows or empty state */}
+                    <View style={styles.weekDayLeft}>
+                      {hasActivities ? (
+                        list.map((lecture, i) => (
+                          <TouchableOpacity
+                            key={i}
+                            style={styles.activityRow}
+                            onPress={() => setSelectedActivity({ lecture, dayKey, index: i })}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={styles.activityTime}>{formatTime(lecture.start)}</Text>
+                            <Text style={styles.activityName} numberOfLines={1}>{lecture.name}</Text>
+                          </TouchableOpacity>
+                        ))
+                      ) : (
+                        <Text style={styles.noActivityText}>No activities yet</Text>
+                      )}
+                    </View>
 
-                        {list.map((lecture, i) => (
-                          <View key={`${dayKey}-${i}`} style={styles.lectureCard}>
-                            <View style={styles.lectureColorBar} />
-                            <View style={styles.lectureContent}>
-                              <Text style={styles.lectureName}>{lecture.name}</Text>
-                              <View style={styles.lectureDetails}>
-                                <View style={styles.lectureTimeRow}>
-                                  <SvgIcon name="clock" size={14} color="rgba(255,255,255,0.9)" />
-                                  <Text style={styles.lectureTime}> {lecture.start} - {lecture.end}</Text>
-                                </View>
-                                {lecture.location && (
-                                  <View style={styles.lectureMetaRow}>
-                                    <SvgIcon name="location" size={14} color="rgba(255,255,255,0.75)" />
-                                    <Text style={styles.lectureMeta}> {lecture.location}</Text>
-                                  </View>
-                                )}
-                                {lecture.lecturer && (
-                                  <View style={styles.lectureMetaRow}>
-                                    <SvgIcon name="user" size={14} color="rgba(255,255,255,0.75)" />
-                                    <Text style={styles.lectureMeta}> {lecture.lecturer}</Text>
-                                  </View>
-                                )}
-                                {lecture.type && (
-                                  <View style={styles.lectureMetaRow}>
-                                    <SvgIcon name="tag" size={14} color="rgba(255,255,255,0.75)" />
-                                    <Text style={styles.lectureMeta}> {capitalize(lecture.type)}</Text>
-                                  </View>
-                                )}
-                              </View>
-                            </View>
-
-                            <View style={styles.lectureActions}>
-                              <TouchableOpacity
-                                style={[styles.actionButton, styles.editButton]}
-                                onPress={() => handleEditLecture(dayKey, i, lecture)}
-                              >
-                                <SvgIcon name="pencil" size={18} color="#FFFFFF" />
-                              </TouchableOpacity>
-
-                              <TouchableOpacity
-                                style={[styles.actionButton, styles.deleteButton]}
-                                onPress={() => handleDeleteLecture(dayKey, i, lecture)}
-                              >
-                                <SvgIcon name="trash" size={18} color="#FFFFFF" />
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        ))}
+                    {/* Right: day label + action button */}
+                    <View style={styles.weekDayRight}>
+                      <View style={styles.dayLabelContainer}>
+                        <Text style={styles.dayAbbrText}>{abbr}</Text>
+                        <Text style={styles.dayWordText}>day</Text>
                       </View>
-                    );
-                  })}
-                </View>
-              )}
-            </>
-          ) : (
-            // Deadlines Tab
-            <View>
-              {!hasAnyExam ? (
-                <View style={styles.emptyCard}>
-                  <View style={[styles.emptyIcon, { backgroundColor: theme.colors.dangerLight }]}>
-                    <SvgIcon name="book" size={32} color={theme.colors.danger} />
+                      <TouchableOpacity
+                        style={hasActivities ? styles.editDayBtn : styles.addDayBtn}
+                        onPress={() => hasActivities ? setEditSheetDay(dayKey) : setShowAddSheet(true)}
+                      >
+                        <Text style={hasActivities ? styles.editDayBtnText : styles.addDayBtnText}>
+                          {hasActivities ? 'EDIT' : 'ADD'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
                   </View>
-                  <Text style={styles.emptyTitle}>No deadlines scheduled</Text>
-                  <Text style={styles.emptySub}>
-                    Add your tests and deadlines to get reminders and stay prepared.
-                  </Text>
-
-                  <TouchableOpacity
-                    style={[styles.primaryButton, { backgroundColor: theme.colors.danger }]}
-                    onPress={handleAddButtonPress}
-                  >
-                    <SvgIcon name="plus" size={18} color="white" />
-                    <Text style={styles.primaryButtonText}>Add Deadline</Text>
-                  </TouchableOpacity>
                 </View>
-              ) : (
-                <>
-                  {/* Upcoming Deadlines */}
-                  {upcomingExams.length > 0 && (
-                    <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>Upcoming Deadlines</Text>
-                      {upcomingExams.map((exam, idx) => (
-                        <View key={idx} style={styles.examCard}>
-                          <View style={styles.examHeader}>
-                            <Text style={styles.examName}>{exam.name}</Text>
-                            <View style={styles.examActions}>
-                              <TouchableOpacity onPress={() => handleDeleteExam(idx, exam)}>
-                                <SvgIcon name="trash" size={18} color="#FDAC1B" />
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                          <View style={styles.examDetails}>
-                            <View style={styles.examInfoRow}>
-                              <SvgIcon name="calendar" size={14} color="#FFFFFF" />
-                              <Text style={styles.examInfoText}>{formatExamDate(exam.date)}</Text>
-                            </View>
-                            <View style={styles.examInfoRow}>
-                              <SvgIcon name="clock" size={14} color="#FFFFFF" />
-                              <Text style={styles.examInfoText}>{exam.start || "TBD"}</Text>
-                            </View>
-                            {exam.room && (
-                              <View style={styles.examInfoRow}>
-                                <SvgIcon name="location" size={14} color="#FFFFFF" />
-                                <Text style={styles.examInfoText}>Room {exam.room}</Text>
-                              </View>
-                            )}
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  {/* Past Deadlines */}
-                  {pastExams.length > 0 && (
-                    <View style={styles.section}>
-                      <Text style={[styles.sectionTitle, { color: theme.colors.textTertiary }]}>Past Deadlines</Text>
-                      {pastExams.map((exam, idx) => (
-                        <View key={idx} style={styles.pastExamCard}>
-                          <Text style={styles.pastExamName}>{exam.name}</Text>
-                          <View style={styles.examDetails}>
-                            <View style={styles.examInfoRow}>
-                              <SvgIcon name="calendar" size={14} color={theme.colors.textTertiary} />
-                              <Text style={styles.pastExamInfoText}>{formatExamDate(exam.date)}</Text>
-                            </View>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </>
-              )}
-            </View>
-          )}
+              );
+            })}
+          </View>
         </View>
-
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      {/* Floating Action Button */}
-      <View style={styles.floatingActions}>
-        <TouchableOpacity
-          style={[styles.floatingBtn, { backgroundColor: activeTab === "timetable" ? theme.colors.secondary : theme.colors.danger }]}
-          onPress={handleAddButtonPress}
-        >
-          <SvgIcon name="plus" size={20} color="white" />
-        </TouchableOpacity>
-      </View>
+      {/* ── Activity Detail Popup ── */}
+      <Modal visible={!!selectedActivity} transparent animationType="fade" onRequestClose={() => setSelectedActivity(null)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSelectedActivity(null)}>
+          <View style={styles.activityDetailCard}>
+            <View style={styles.activityDetailHeader}>
+              <Text style={styles.activityDetailName}>{selectedActivity?.lecture?.name}</Text>
+              <TouchableOpacity onPress={() => setSelectedActivity(null)}>
+                <Text style={styles.closeX}>✕</Text>
+              </TouchableOpacity>
+            </View>
 
-      {/* Add Menu Modal */}
-      <Modal
-        visible={showAddMenu}
-        transparent={true}
-        animationType="fade"
-        statusBarTranslucent={true}
-        onRequestClose={() => setShowAddMenu(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowAddMenu(false)}
-        >
-          <View style={[styles.menuModal, { backgroundColor: theme.colors.card }]}>
-            {activeTab === "timetable" ? (
-              <>
-                <TouchableOpacity style={styles.menuItem} onPress={handleScanTimetable}>
-                  <View style={[styles.menuIconBg, { backgroundColor: theme.colors.primaryLight }]}>
-                    <SvgIcon name="scan" size={20} color={theme.colors.primary} />
-                  </View>
-                  <View style={styles.menuTextContainer}>
-                    <Text style={[styles.menuItemTitle, { color: theme.colors.textPrimary }]}>
-                      Scan with AI
-                    </Text>
-                    <Text style={[styles.menuItemDesc, { color: theme.colors.textSecondary }]}>
-                      Use screenshots to extract timetable from image
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-                <View style={[styles.menuDivider, { backgroundColor: theme.colors.border }]} />
-                <TouchableOpacity style={styles.menuItem} onPress={handleAddTimetable}>
-                  <View style={[styles.menuIconBg, { backgroundColor: theme.colors.secondaryLight }]}>
-                    <SvgIcon name="edit" size={20} color={theme.colors.secondary} />
-                  </View>
-                  <View style={styles.menuTextContainer}>
-                    <Text style={[styles.menuItemTitle, { color: theme.colors.textPrimary }]}>
-                      Add Manually
-                    </Text>
-                    <Text style={[styles.menuItemDesc, { color: theme.colors.textSecondary }]}>
-                      Enter lecture details manually
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <TouchableOpacity style={styles.menuItem} onPress={handleScanExamTimetable}>
-                  <View style={[styles.menuIconBg, { backgroundColor: theme.colors.dangerLight }]}>
-                    <SvgIcon name="scan" size={20} color={theme.colors.danger} />
-                  </View>
-                  <View style={styles.menuTextContainer}>
-                    <Text style={[styles.menuItemTitle, { color: theme.colors.textPrimary }]}>
-                      Scan with AI
-                    </Text>
-                    <Text style={[styles.menuItemDesc, { color: theme.colors.textSecondary }]}>
-                      Use screenshots to extract deadline timetable from image
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-                <View style={[styles.menuDivider, { backgroundColor: theme.colors.border }]} />
-                <TouchableOpacity style={styles.menuItem} onPress={handleAddExam}>
-                  <View style={[styles.menuIconBg, { backgroundColor: theme.colors.dangerLight }]}>
-                    <SvgIcon name="edit" size={20} color={theme.colors.danger} />
-                  </View>
-                  <View style={styles.menuTextContainer}>
-                    <Text style={[styles.menuItemTitle, { color: theme.colors.textPrimary }]}>
-                      Add Manually
-                    </Text>
-                    <Text style={[styles.menuItemDesc, { color: theme.colors.textSecondary }]}>
-                      Enter deadline details manually
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </>
-            )}
+            <View style={styles.activityDetailBody}>
+              {(selectedActivity?.lecture?.start) && (
+                <View style={styles.detailRow}>
+                  <SvgIcon name="clock" size={16} color="rgba(255,255,255,0.7)" />
+                  <Text style={styles.detailText}>
+                    {selectedActivity.lecture.start}
+                    {selectedActivity.lecture.end ? ` – ${selectedActivity.lecture.end}` : ''}
+                  </Text>
+                </View>
+              )}
+              {(selectedActivity?.lecture?.location || selectedActivity?.lecture?.room) && (
+                <View style={styles.detailRow}>
+                  <SvgIcon name="location" size={16} color="rgba(255,255,255,0.7)" />
+                  <Text style={styles.detailText}>{selectedActivity?.lecture?.location || selectedActivity?.lecture?.room}</Text>
+                </View>
+              )}
+              {selectedActivity?.lecture?.lecturer && (
+                <View style={styles.detailRow}>
+                  <SvgIcon name="user" size={16} color="rgba(255,255,255,0.7)" />
+                  <Text style={styles.detailText}>{selectedActivity.lecture.lecturer}</Text>
+                </View>
+              )}
+              {selectedActivity?.lecture?.type && (
+                <View style={styles.detailRow}>
+                  <SvgIcon name="tag" size={16} color="rgba(255,255,255,0.7)" />
+                  <Text style={styles.detailText}>{capitalize(selectedActivity.lecture.type)}</Text>
+                </View>
+              )}
+              {selectedActivity?.lecture?.notes && (
+                <View style={styles.detailRow}>
+                  <SvgIcon name="edit" size={16} color="rgba(255,255,255,0.7)" />
+                  <Text style={styles.detailText}>{selectedActivity.lecture.notes}</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.activityDetailActions}>
+              <TouchableOpacity
+                style={styles.detailDeleteBtn}
+                onPress={() => {
+                  const { dayKey, index, lecture } = selectedActivity;
+                  setSelectedActivity(null);
+                  handleDeleteLecture(dayKey, index, lecture);
+                }}
+              >
+                <Text style={styles.detailDeleteText}>Delete</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.detailEditBtn}
+                onPress={() => handleEditLecture(selectedActivity.dayKey, selectedActivity.index, selectedActivity.lecture)}
+              >
+                <Text style={styles.detailEditText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Edit Selection Bottom Sheet ── */}
+      <Modal visible={!!editSheetDay} transparent animationType="slide" onRequestClose={() => setEditSheetDay(null)}>
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setEditSheetDay(null)}>
+          <View style={styles.bottomSheet} onStartShouldSetResponder={() => true}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Select activity to edit</Text>
+            <Text style={styles.sheetSubtitle}>{editSheetDay ? capitalize(editSheetDay) : ''}</Text>
+            {editSheetDay && (timetable[editSheetDay] || []).map((lecture, i) => (
+              <TouchableOpacity
+                key={i}
+                style={styles.sheetItem}
+                onPress={() => handleEditLecture(editSheetDay, i, lecture)}
+              >
+                <View style={styles.sheetItemLeft}>
+                  <Text style={styles.sheetItemTime}>{formatTime(lecture.start)}</Text>
+                  <Text style={styles.sheetItemName}>{lecture.name}</Text>
+                </View>
+                <Text style={styles.sheetChevron}>›</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.sheetCancelBtn} onPress={() => setEditSheetDay(null)}>
+              <Text style={styles.sheetCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Add Menu Bottom Sheet ── */}
+      <Modal visible={showAddSheet} transparent animationType="slide" onRequestClose={() => setShowAddSheet(false)}>
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowAddSheet(false)}>
+          <View style={[styles.bottomSheet, styles.addSheetPurple]} onStartShouldSetResponder={() => true}>
+            <View style={[styles.sheetHandle, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
+            <Text style={[styles.sheetTitle, { color: '#FFFFFF' }]}>Add to Timetable</Text>
+
+            <TouchableOpacity style={styles.addSheetItem} onPress={handleScanTimetable}>
+              <View style={styles.addSheetIconBg}>
+                <SvgIcon name="scan" size={22} color={PURPLE} />
+              </View>
+              <View style={styles.addSheetTextContainer}>
+                <Text style={styles.addSheetItemTitle}>Scan with AI</Text>
+                <Text style={styles.addSheetItemDesc}>Extract timetable from a photo</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.addSheetItem} onPress={handleAddManually}>
+              <View style={styles.addSheetIconBg}>
+                <SvgIcon name="edit" size={22} color={PURPLE} />
+              </View>
+              <View style={styles.addSheetTextContainer}>
+                <Text style={styles.addSheetItemTitle}>Add Manually</Text>
+                <Text style={styles.addSheetItemDesc}>Enter lecture details by hand</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.sheetCancelBtn, styles.sheetCancelWhite]} onPress={() => setShowAddSheet(false)}>
+              <Text style={[styles.sheetCancelText, { color: '#FFFFFF' }]}>Cancel</Text>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>

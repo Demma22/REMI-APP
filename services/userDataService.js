@@ -18,10 +18,21 @@ const REVERSE_KEY_MAP = Object.fromEntries(
   Object.entries(KEY_MAP).map(([camel, snake]) => [snake, camel])
 );
 
+// Strict allowlist of writable columns — prevents mass-assignment
+const WRITABLE_COLUMNS = new Set([
+  'nickname', 'username', 'avatar_url', 'course', 'units', 'timetable', 'exams',
+  'heard_from', 'study_stage', 'age_range', 'current_semester', 'total_semesters',
+  'selected_curriculum', 'grading_scale', 'gpa_data',
+  'onboarding_completed', 'onboarding_completed_at', 'purpose', 'timeZone',
+]);
+
 export const toSupabase = (data) => {
   const out = {};
   for (const [k, v] of Object.entries(data)) {
-    out[KEY_MAP[k] || k] = v;
+    const col = KEY_MAP[k] || k;
+    if (WRITABLE_COLUMNS.has(col)) {
+      out[col] = v;
+    }
   }
   return out;
 };

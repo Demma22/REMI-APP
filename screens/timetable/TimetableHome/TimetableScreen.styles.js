@@ -1,5 +1,6 @@
-// screens/TimetableScreen.styles.js
 import { StyleSheet } from "react-native";
+
+const PURPLE = '#535FFD';
 
 export const getStyles = (theme) => StyleSheet.create({
   container: {
@@ -9,43 +10,11 @@ export const getStyles = (theme) => StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  header: {
-    backgroundColor: theme.colors.backgroundSecondary,
-    paddingTop: 60,
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+  content: {
+    padding: 16,
   },
-  headerTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
-  },
-  headerSpacer: {
-    width: 40,
-  },
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────
   tabBar: {
     flexDirection: "row",
     paddingHorizontal: 24,
@@ -74,42 +43,134 @@ export const getStyles = (theme) => StyleSheet.create({
   tabTextActive: {
     color: theme.colors.primary,
   },
-  content: {
-    padding: 20,
+
+  // ── Header avatar ─────────────────────────────────────────────────────────
+  headerAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 2,
+    borderColor: PURPLE,
   },
-  semesterInfo: {
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    flexDirection: "row",
-    alignItems: "center",
+  headerAvatarPlaceholder: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // ── Timetable: weekly day cards ───────────────────────────────────────────
+  timetableContainer: {
+    gap: 14,
+  },
+  weekDayCard: {
+    borderRadius: 22,
+    padding: 18,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  weekDayCardPurple: {
+    backgroundColor: PURPLE,
+    shadowColor: PURPLE,
+  },
+  weekDayCardBlack: {
+    backgroundColor: '#0D0D0D',
+    shadowColor: '#000',
+  },
+  weekDayCardContent: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+
+  // Left side: activities
+  weekDayLeft: {
+    flex: 1,
+    justifyContent: 'center',
     gap: 8,
-    backgroundColor: theme.colors.warningLight,
-    borderLeftColor: theme.colors.warning,
+    paddingRight: 12,
+    minHeight: 80,
   },
-  semesterIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  semesterText: {
+  activityTime: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.65)',
+    width: 38,
+  },
+  activityName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  noActivityText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: theme.colors.warning,
+    color: 'rgba(255,255,255,0.45)',
+    fontStyle: 'italic',
   },
+
+  // Right side: day label + button
+  weekDayRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    minWidth: 72,
+  },
+  dayLabelContainer: {
+    alignItems: 'flex-end',
+  },
+  dayAbbrText: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    lineHeight: 28,
+    letterSpacing: 0.5,
+  },
+  dayWordText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    lineHeight: 20,
+  },
+  editDayBtn: {
+    backgroundColor: '#0D0D0D',
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+    marginTop: 12,
+  },
+  editDayBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+  addDayBtn: {
+    backgroundColor: PURPLE,
+    paddingHorizontal: 18,
+    paddingVertical: 7,
+    borderRadius: 20,
+    marginTop: 12,
+  },
+  addDayBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+
+  // ── Empty state ───────────────────────────────────────────────────────────
   emptyCard: {
     backgroundColor: theme.colors.primary,
     padding: 32,
     borderRadius: 24,
     alignItems: "center",
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
     marginTop: 20,
   },
   emptyIcon: {
@@ -141,154 +202,14 @@ export const getStyles = (theme) => StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
-    marginBottom: 12,
   },
   primaryButtonText: {
     color: "#FFFFFF",
     fontWeight: "700",
     fontSize: 16,
   },
-  secondaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#FFFFFF",
-    backgroundColor: "transparent",
-  },
-  secondaryButtonText: {
-    fontWeight: "600",
-    fontSize: 14,
-    color: "#FFFFFF",
-  },
-  timetableContainer: {
-    marginTop: 8,
-  },
 
-  // ── Day card: solid brand blue ────────────────────────────────────────────
-  dayCard: {
-    backgroundColor: "#535FFD",
-    borderRadius: 20,
-    marginBottom: 20,
-    padding: 16,
-    shadowColor: "#535FFD",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  dayHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.2)",
-  },
-  dayTitle: {
-    fontWeight: "700",
-    fontSize: 18,
-    color: "#fdac1b",
-  },
-  lectureCount: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  lectureCountText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-
-  // ── Lecture card: frosted white pill, NO left colour bar ─────────────────
-  lectureCard: {
-    flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 14,
-    marginBottom: 10,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
-    alignItems: "center",
-  },
-  lectureColorBar: {
-    width: 0,
-  },
-  lectureContent: {
-    flex: 1,
-    padding: 12,
-  },
-  lectureName: {
-    fontWeight: "700",
-    fontSize: 15,
-    color: "#ffffff",
-    marginBottom: 6,
-  },
-  lectureDetails: {
-    gap: 4,
-  },
-  lectureTimeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  lectureTime: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.9)",
-  },
-  lectureMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  lectureMeta: {
-    color: "rgba(255,255,255,0.75)",
-    fontSize: 12,
-  },
-  lectureActions: {
-    flexDirection: "row",
-    paddingRight: 12,
-    gap: 8,
-  },
-  actionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  editButton: {},
-  deleteButton: {},
-
-  floatingActions: {
-    position: "absolute",
-    bottom: 100,
-    right: 20,
-    zIndex: 1000,
-  },
-  floatingBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
+  // ── Deadlines tab ─────────────────────────────────────────────────────────
   section: {
     marginBottom: 24,
   },
@@ -298,13 +219,12 @@ export const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.textPrimary,
     marginBottom: 12,
   },
-  // ── Exam Card: same brand blue design as day cards ───────────────────────
   examCard: {
-    backgroundColor: "#535FFD",
+    backgroundColor: PURPLE,
     borderRadius: 20,
     padding: 16,
     marginBottom: 12,
-    shadowColor: "#535FFD",
+    shadowColor: PURPLE,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -322,10 +242,6 @@ export const getStyles = (theme) => StyleSheet.create({
     color: "#FFFFFF",
     flex: 1,
   },
-  examActions: {
-    flexDirection: "row",
-    gap: 12,
-  },
   examDetails: {
     gap: 6,
   },
@@ -338,7 +254,6 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
     color: "rgba(255,255,255,0.85)",
   },
-  // Past deadline styles
   pastExamCard: {
     backgroundColor: theme.colors.backgroundTertiary,
     borderRadius: 16,
@@ -357,54 +272,218 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textTertiary,
   },
+  addDeadlineBtn: {
+    backgroundColor: theme.colors.danger,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  addDeadlineBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+
   bottomSpacing: {
     height: 100,
   },
 
+  // ── Modals / sheets shared ────────────────────────────────────────────────
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 24,
   },
-  menuModal: {
-    borderRadius: 20,
-    padding: 8,
-    width: 280,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
   },
-  menuItem: {
+  bottomSheet: {
+    backgroundColor: theme.colors.card,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    paddingBottom: 36,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.border,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginBottom: 4,
+  },
+  sheetSubtitle: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginBottom: 16,
+  },
+  sheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  sheetItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 16,
-    borderRadius: 12,
+    flex: 1,
   },
-  menuIconBg: {
+  sheetItemTime: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
     width: 40,
-    height: 40,
-    borderRadius: 20,
+  },
+  sheetItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    flex: 1,
+  },
+  sheetChevron: {
+    fontSize: 22,
+    color: theme.colors.textSecondary,
+    lineHeight: 24,
+  },
+  sheetCancelBtn: {
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: theme.colors.backgroundSecondary,
+    alignItems: 'center',
+  },
+  sheetCancelWhite: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  sheetCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+
+  // ── Add sheet (purple) ────────────────────────────────────────────────────
+  addSheetPurple: {
+    backgroundColor: PURPLE,
+  },
+  addSheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.15)',
+  },
+  addSheetIconBg: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  menuTextContainer: {
+  addSheetTextContainer: {
     flex: 1,
   },
-  menuItemTitle: {
+  addSheetItemTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: '#FFFFFF',
     marginBottom: 2,
   },
-  menuItemDesc: {
+  addSheetItemDesc: {
     fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
   },
-  menuDivider: {
-    height: 1,
-    marginVertical: 4,
-    marginHorizontal: 12,
+
+  // ── Activity detail popup ─────────────────────────────────────────────────
+  activityDetailCard: {
+    backgroundColor: PURPLE,
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    shadowColor: PURPLE,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  activityDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  activityDetailName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    flex: 1,
+    paddingRight: 12,
+  },
+  closeX: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '600',
+  },
+  activityDetailBody: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  detailText: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.9)',
+    flex: 1,
+  },
+  activityDetailActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  detailDeleteBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  detailDeleteText: {
+    color: '#FF6B6B',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  detailEditBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  detailEditText: {
+    color: PURPLE,
+    fontWeight: '700',
+    fontSize: 15,
   },
 });

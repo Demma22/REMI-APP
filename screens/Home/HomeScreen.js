@@ -1,27 +1,49 @@
-// screens/Home/HomeScreen.js
 import React, { useEffect, useState, useRef } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  Platform,
-  Image,
-  ScrollView,
-  Dimensions,
-  Animated,
+  View, Text, TouchableOpacity, Image, ScrollView,
+  Dimensions, Animated, StyleSheet, Platform,
 } from "react-native";
 import { Svg, Circle } from "react-native-svg";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getUserData, getCurrentUserInfo } from "../../services/userDataService";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import SvgIcon from "../../components/SvgIcon";
 import NavigationBar from "../../components/NavigationBar";
-import ScreenHeader from "../../components/ScreenHeader";
 import { useTheme } from "../../contexts/ThemeContext";
-import { getStyles } from "./HomeScreen.styles";
 
-const { width } = Dimensions.get("window");
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+const SHEET_H = SCREEN_H * 0.44;
 
-// ── Skeleton ──────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────
+function parseStoredTime(t) {
+  if (!t) return 0;
+  const m = /^(\d+):(\d+)/.exec(t.trim());
+  if (!m) return 0;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+function formatDisplayTime(t) {
+  if (!t) return "";
+  const mins = parseStoredTime(t);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const period = h < 12 ? "am" : "pm";
+  const display = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${display}${period}` : `${display}:${String(m).padStart(2, "0")}${period}`;
+}
+
+function getDayParts() {
+  const day = new Date().toLocaleString("en-US", { weekday: "long" });
+  return [day.slice(0, -3).toUpperCase(), "day"];
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good Morning";
+  if (h < 18) return "Good Afternoon";
+  return "Good Evening";
+}
+
+// ── Skeleton ─────────────────────────────────────────────────────
 function SkeletonBone({ style }) {
   const anim = useRef(new Animated.Value(0.4)).current;
   useEffect(() => {
@@ -32,65 +54,39 @@ function SkeletonBone({ style }) {
       ])
     ).start();
   }, []);
-  return (
-    <Animated.View
-      style={[{ backgroundColor: "#E2E8F0", borderRadius: 12, opacity: anim }, style]}
-    />
-  );
+  return <Animated.View style={[{ backgroundColor: "#E2E8F0", borderRadius: 12, opacity: anim }, style]} />;
 }
 
-function HomeSkeletonLoader() {
+function HomeSkeleton() {
   return (
-    <ScrollView
-      style={{ flex: 1 }}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 120 }}
-    >
-      {/* Today card skeleton */}
-      <SkeletonBone style={{ height: 160, marginHorizontal: 20, marginTop: 20, borderRadius: 24 }} />
-      {/* Circles skeleton */}
-      <View style={{ flexDirection: "row", paddingHorizontal: 20, marginTop: 24, gap: 14 }}>
-        {[0, 1, 2, 3].map((i) => (
-          <SkeletonBone key={i} style={{ width: 64, height: 64, borderRadius: 32 }} />
-        ))}
+    <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <SkeletonBone style={{ height: 150, marginHorizontal: 20, marginTop: 20, borderRadius: 24 }} />
+      <View style={{ flexDirection: "row", paddingHorizontal: 20, marginTop: 28, gap: 10 }}>
+        {[0, 1, 2].map(i => <SkeletonBone key={i} style={{ flex: 1, height: 88, borderRadius: 44 }} />)}
       </View>
-      {/* Action cards skeleton */}
-      <View style={{ flexDirection: "row", paddingHorizontal: 20, marginTop: 28, gap: 12 }}>
-        <SkeletonBone style={{ flex: 1, height: 160, borderRadius: 20 }} />
-        <SkeletonBone style={{ flex: 1, height: 160, borderRadius: 20 }} />
+      <View style={{ flexDirection: "row", paddingHorizontal: 20, marginTop: 24, gap: 12 }}>
+        <SkeletonBone style={{ flex: 1, height: 190, borderRadius: 20 }} />
+        <View style={{ flex: 1, gap: 12 }}>
+          <SkeletonBone style={{ height: 89, borderRadius: 20 }} />
+          <SkeletonBone style={{ height: 89, borderRadius: 20 }} />
+        </View>
       </View>
+      <SkeletonBone style={{ height: 72, marginHorizontal: 20, marginTop: 24, borderRadius: 20 }} />
     </ScrollView>
   );
 }
 
-// ── Activity Progress Circle ──────────────────────────────────────
-const RING_SIZE = 100;
-const RING_STROKE = 12;
-const RING_RADIUS = RING_SIZE / 2 - RING_STROKE / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+// ── Activity Circle ───────────────────────────────────────────────
+const RING = 88;
+const STROKE = 12;
+const RADIUS = RING / 2 - STROKE / 2;
+const CIRC = 2 * Math.PI * RADIUS;
 
-function parseStoredTime(t) {
-  // Format: "H:MM AM/PM" where H is already 0-23
-  if (!t) return 0;
-  const m = /^(\d+):(\d+)/.exec(t.trim());
-  if (!m) return 0;
-  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
-}
-
-function formatShortTime(t) {
-  if (!t) return "";
-  const mins = parseStoredTime(t);
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  const period = h < 12 ? "AM" : "PM";
-  const display = h % 12 === 0 ? 12 : h % 12;
-  return m === 0 ? `${display}${period}` : `${display}:${String(m).padStart(2, "0")}${period}`;
-}
-
-function ActivityCircle({ activity, theme }) {
+function ActivityCircle({ activity }) {
   const [progress, setProgress] = useState(0);
+  const { theme } = useTheme();
 
-  const calcProgress = () => {
+  const calc = () => {
     const now = new Date();
     const cur = now.getHours() * 60 + now.getMinutes();
     const s = parseStoredTime(activity.start);
@@ -101,339 +97,135 @@ function ActivityCircle({ activity, theme }) {
   };
 
   useEffect(() => {
-    const update = () => setProgress(calcProgress());
+    const update = () => setProgress(calc());
     update();
     const id = setInterval(update, 30000);
     return () => clearInterval(id);
   }, []);
 
-  const offset = CIRCUMFERENCE * (1 - progress);
   const isDone = progress >= 1;
   const isLive = progress > 0 && progress < 1;
-
-  const DONE_COLOR = "#fdac1b";
-  const ringColor = isDone ? DONE_COLOR : theme.colors.primary;
-  const textColor = theme.colors.textPrimary;
+  const offset = CIRC * (1 - progress);
+  const innerBg = isDone ? "#535FFD" : theme.colors.background;
+  const innerText = isDone ? "#FFFFFF" : theme.colors.textPrimary;
+  const trackColor = isDone ? "#535FFD" : "#E2E8F0";
 
   return (
-    <View style={{ alignItems: "center", marginHorizontal: 10 }}>
-      {/* Wheel */}
-      <View style={{ width: RING_SIZE, height: RING_SIZE }}>
-        <Svg
-          width={RING_SIZE}
-          height={RING_SIZE}
-          style={{ position: "absolute", top: 0, left: 0 }}
-        >
-          {/* Track */}
-          <Circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RING_RADIUS}
-            stroke={theme.colors.border}
-            strokeWidth={RING_STROKE}
-            fill="none"
-          />
-          {/* Progress arc — only render if > 0 */}
-          {progress > 0 && (
+    <View style={{ alignItems: "center", flex: 1 }}>
+      <View style={{ width: RING, height: RING }}>
+        <Svg width={RING} height={RING} style={{ position: "absolute" }}>
+          <Circle cx={RING / 2} cy={RING / 2} r={RADIUS} stroke={trackColor} strokeWidth={STROKE} fill="none" />
+          {isLive && (
             <Circle
-              cx={RING_SIZE / 2}
-              cy={RING_SIZE / 2}
-              r={RING_RADIUS}
-              stroke={ringColor}
-              strokeWidth={RING_STROKE}
-              fill="none"
-              strokeDasharray={CIRCUMFERENCE}
-              strokeDashoffset={offset}
-              strokeLinecap="round"
-              rotation="-90"
-              origin={`${RING_SIZE / 2},${RING_SIZE / 2}`}
+              cx={RING / 2} cy={RING / 2} r={RADIUS}
+              stroke="#535FFD" strokeWidth={STROKE} fill="none"
+              strokeDasharray={CIRC} strokeDashoffset={offset}
+              strokeLinecap="round" rotation="-90" origin={`${RING / 2},${RING / 2}`}
             />
           )}
         </Svg>
-        {/* Inner content — course name centered */}
-        <View
-          style={{
-            position: "absolute",
-            top: RING_STROKE,
-            left: RING_STROKE,
-            right: RING_STROKE,
-            bottom: RING_STROKE,
-            borderRadius: (RING_SIZE - RING_STROKE * 2) / 2,
-            backgroundColor: theme.colors.background,
-            justifyContent: "center",
-            alignItems: "center",
-            paddingHorizontal: 8,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 9,
-              fontWeight: "700",
-              color: textColor,
-              textAlign: "center",
-              maxWidth: 64,
-            }}
-            numberOfLines={3}
-          >
+        <View style={{
+          position: "absolute", top: STROKE, left: STROKE, right: STROKE, bottom: STROKE,
+          borderRadius: (RING - STROKE * 2) / 2,
+          backgroundColor: innerBg,
+          justifyContent: "center", alignItems: "center",
+        }}>
+          <Text style={{ fontSize: 9, fontWeight: "700", color: innerText, textAlign: "center", paddingHorizontal: 4 }} numberOfLines={2}>
             {activity.course}
           </Text>
         </View>
       </View>
-
-      {/* Status below the wheel */}
-      <Text
-        style={{
-          fontSize: 9,
-          marginTop: 6,
-          color: isLive
-            ? theme.colors.primary
-            : isDone
-            ? DONE_COLOR
-            : theme.colors.textSecondary,
-          fontWeight: isLive || isDone ? "600" : "400",
-        }}
-      >
-        {isLive ? "Live" : isDone ? "Done" : formatShortTime(activity.start)}
+      <Text style={{ fontSize: 10, marginTop: 7, fontWeight: isDone || isLive ? "600" : "400", color: isDone ? "#535FFD" : isLive ? "#535FFD" : "#AAAAAA" }}>
+        {isDone ? "Done" : isLive ? "Live" : formatDisplayTime(activity.start)}
       </Text>
     </View>
   );
 }
 
-// ── Today Banner ──────────────────────────────────────────────────
-function TodayBanner({ lectures, theme, navigation }) {
-  const today = new Date();
-  const dateStr = today.toLocaleDateString("en-US", {
-    weekday: "long",
-    day: "numeric",
-    month: "short",
-  });
+// ── Today Card ────────────────────────────────────────────────────
+function TodayCard({ lectures, navigation }) {
+  const [dayPart1, dayPart2] = getDayParts();
 
   return (
-    <View
-      style={{
-        backgroundColor: theme.colors.primary,
-        borderRadius: 24,
-        padding: 20,
-        marginHorizontal: 20,
-        marginTop: 20,
-        ...Platform.select({
-          ios: {
-            shadowColor: theme.colors.primary,
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.35,
-            shadowRadius: 16,
-          },
-          android: { elevation: 0 },
-        }),
-      }}
-    >
-      {/* Header row */}
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 14,
-        }}
-      >
-        <Text
-          style={{
-            color: "#FFFFFF",
-            fontSize: 11,
-            fontWeight: "700",
-            letterSpacing: 1.2,
-            opacity: 0.75,
-          }}
-        >
-          TODAY
-        </Text>
-        <Text style={{ color: "#FFFFFF", fontSize: 12, opacity: 0.65 }}>
-          {dateStr}
-        </Text>
-      </View>
-
-      {lectures.length === 0 ? (
-        <View style={{ paddingVertical: 10, alignItems: "center" }}>
-          <Text style={{ color: "#FFFFFF", opacity: 0.7, fontSize: 14, fontWeight: "500" }}>
-            No activities scheduled
-          </Text>
-        </View>
-      ) : (
-        <>
-          {lectures.slice(0, 3).map((lec, i) => (
-            <View
-              key={i}
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: i < Math.min(lectures.length, 3) - 1 ? 10 : 0,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-                <View
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: "rgba(255,255,255,0.6)",
-                  }}
-                />
-                <Text
-                  style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600", flex: 1 }}
-                  numberOfLines={1}
-                >
-                  {lec.course}
-                </Text>
-              </View>
-              <Text style={{ color: "#FFFFFF", opacity: 0.75, fontSize: 13, marginLeft: 8 }}>
-                {formatShortTime(lec.start)}
-              </Text>
+    <TouchableOpacity style={s.todayCard} onPress={() => navigation.navigate("Timetable")} activeOpacity={0.92}>
+      <View style={{ flex: 1, justifyContent: "center" }}>
+        {lectures.length === 0 ? (
+          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 14 }}>No activities today</Text>
+        ) : (
+          lectures.slice(0, 3).map((lec, i) => (
+            <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: i < 2 ? 11 : 0 }}>
+              <Text style={s.todayTime}>{formatDisplayTime(lec.start)}</Text>
+              <Text style={s.todayCourse} numberOfLines={1}>{lec.course}</Text>
             </View>
-          ))}
-          {lectures.length > 3 && (
-            <TouchableOpacity
-              onPress={() => navigation.navigate("Timetable")}
-              style={{ marginTop: 12 }}
-            >
-              <Text style={{ color: "#FFFFFF", opacity: 0.65, fontSize: 12, textAlign: "right" }}>
-                +{lectures.length - 3} more
-              </Text>
-            </TouchableOpacity>
-          )}
-        </>
-      )}
-    </View>
-  );
-}
-
-// ── Action Card ───────────────────────────────────────────────────
-function ActionCard({ label, subtitle, iconName, onPress, theme }) {
-  return (
-    <TouchableOpacity
-      style={{
-        flex: 1,
-        backgroundColor: theme.colors.card,
-        borderRadius: 20,
-        padding: 18,
-        minHeight: 156,
-        justifyContent: "space-between",
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        ...Platform.select({
-          ios: {
-            shadowColor: theme.colors.shadow,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.06,
-            shadowRadius: 8,
-          },
-          android: { elevation: 0 },
-        }),
-      }}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: 14,
-          backgroundColor: theme.colors.primaryLight,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <SvgIcon name={iconName} size={26} color={theme.colors.primary} />
+          ))
+        )}
+        {lectures.length > 3 && (
+          <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, marginTop: 8 }}>+{lectures.length - 3} more</Text>
+        )}
       </View>
-      <View>
-        <Text
-          style={{
-            fontSize: 14,
-            fontWeight: "800",
-            color: theme.colors.textPrimary,
-            marginBottom: 4,
-            lineHeight: 20,
-          }}
-        >
-          {label}
-        </Text>
-        {subtitle ? (
-          <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>
-            {subtitle}
-          </Text>
-        ) : null}
+      <View style={{ alignItems: "flex-end", justifyContent: "flex-end" }}>
+        <Text style={s.dayText}>{dayPart1}</Text>
+        <Text style={[s.dayText, { fontSize: 36, lineHeight: 42, marginTop: -4 }]}>{dayPart2}</Text>
       </View>
     </TouchableOpacity>
   );
 }
 
-// ── GPA Results Card ──────────────────────────────────────────────
-function GPAResultsCard({ gpaSummary, theme, onPress }) {
+// ── Action Cards ──────────────────────────────────────────────────
+function ActionCards({ navigation, onCreatePress }) {
+  return (
+    <View style={{ flexDirection: "row", gap: 12, paddingHorizontal: 20, marginTop: 24 }}>
+      <TouchableOpacity style={s.createCard} onPress={onCreatePress} activeOpacity={0.85}>
+        <View>
+          <Text style={s.createTitle}>CREATE</Text>
+          <Text style={s.createSubtitle}>Schedule</Text>
+          <Text style={s.createDesc}>Add your Timetable</Text>
+        </View>
+        <View style={s.createIconPill}>
+          <SvgIcon name="calendar" size={30} color="#FFFFFF" />
+        </View>
+      </TouchableOpacity>
+
+      <View style={{ flex: 1, gap: 12 }}>
+        <TouchableOpacity style={s.addCard} onPress={() => navigation.navigate("AddExam")} activeOpacity={0.85}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.addTitle}>ADD</Text>
+            <Text style={s.addSubtitle}>Deadlines</Text>
+          </View>
+          <SvgIcon name="bell" size={32} color="rgba(255,255,255,0.9)" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={s.addCard} onPress={() => navigation.navigate("GPA")} activeOpacity={0.85}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.addTitle}>ADD</Text>
+            <Text style={s.addSubtitle}>Results</Text>
+          </View>
+          <SvgIcon name="chart-line" size={32} color="rgba(255,255,255,0.9)" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// ── Academic Progress Card ────────────────────────────────────────
+function GPACard({ gpaSummary, onPress }) {
   if (!gpaSummary || gpaSummary.length === 0) return null;
 
-  const cgpa = (
-    gpaSummary.reduce((sum, s) => sum + parseFloat(s.gpa), 0) / gpaSummary.length
-  ).toFixed(2);
-
   return (
-    <TouchableOpacity
-      style={{
-        marginHorizontal: 20,
-        backgroundColor: theme.colors.card,
-        borderRadius: 20,
-        padding: 18,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        ...Platform.select({
-          ios: {
-            shadowColor: theme.colors.shadow,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.06,
-            shadowRadius: 8,
-          },
-          android: { elevation: 0 },
-        }),
-      }}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      {/* Header row */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <Text style={{ fontSize: 15, fontWeight: "800", color: theme.colors.textPrimary }}>
-          GPA Results
-        </Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Text style={{ fontSize: 11, color: theme.colors.textSecondary }}>CGPA</Text>
-          <Text style={{ fontSize: 22, fontWeight: "800", color: theme.colors.primary }}>
-            {cgpa}
-          </Text>
-        </View>
+    <TouchableOpacity style={s.gpaCard} onPress={onPress} activeOpacity={0.85}>
+      <View>
+        <Text style={s.gpaLabel}>Academic</Text>
+        <Text style={s.gpaLabel}>Progress</Text>
+        <Text style={[s.gpaLabel, { fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: "500" }]}>(GPA)</Text>
       </View>
-
-      {/* Divider */}
-      <View style={{ height: 1, backgroundColor: theme.colors.border, marginBottom: 12 }} />
-
-      {/* Semester rows */}
-      {gpaSummary.map((item, i) => (
-        <View
-          key={i}
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            paddingVertical: 6,
-            borderBottomWidth: i < gpaSummary.length - 1 ? 1 : 0,
-            borderBottomColor: theme.colors.borderLight,
-          }}
-        >
-          <Text style={{ fontSize: 13, color: theme.colors.textSecondary }}>
-            {item.semester}
-          </Text>
-          <Text style={{ fontSize: 14, fontWeight: "700", color: theme.colors.textPrimary }}>
-            {item.gpa}
-          </Text>
-        </View>
-      ))}
+      <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
+        {gpaSummary.slice(0, 4).map((item, i) => (
+          <View key={i} style={{ alignItems: "center" }}>
+            <Text style={s.gpaValue}>{item.gpa}</Text>
+            <Text style={s.gpaSem}>{item.semester}</Text>
+          </View>
+        ))}
+      </View>
     </TouchableOpacity>
   );
 }
@@ -448,10 +240,27 @@ export default function HomeScreen({ navigation }) {
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const sheetAnim = useRef(new Animated.Value(SHEET_H)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
 
   const { theme } = useTheme();
-  const styles = getStyles(theme);
-  const PROFILE_IMAGE_KEY = "@profile_image";
+  const insets = useSafeAreaInsets();
+
+  const openSheet = () => {
+    setSheetOpen(true);
+    Animated.parallel([
+      Animated.spring(sheetAnim, { toValue: 0, useNativeDriver: true, bounciness: 4 }),
+      Animated.timing(backdropAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const closeSheet = () => {
+    Animated.parallel([
+      Animated.timing(sheetAnim, { toValue: SHEET_H, duration: 280, useNativeDriver: true }),
+      Animated.timing(backdropAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+    ]).start(() => setSheetOpen(false));
+  };
 
   useEffect(() => {
     loadUserData();
@@ -496,25 +305,17 @@ export default function HomeScreen({ navigation }) {
 
   const loadTodaysLectures = (userData) => {
     try {
-      const day = new Date()
-        .toLocaleString("en-US", { weekday: "long" })
-        .toLowerCase();
+      const day = new Date().toLocaleString("en-US", { weekday: "long" }).toLowerCase();
       const timetable = userData.timetable || {};
       const currentSemester = userData.current_semester || 1;
-      const todaysLectures =
-        timetable[day]?.filter((l) => l.semester === currentSemester) || [];
+      const todaysLectures = timetable[day]?.filter((l) => l.semester === currentSemester) || [];
       setTodayLectures(
         todaysLectures.map((l) => ({
-          course: l.name,
-          time: `${l.start} - ${l.end}`,
-          start: l.start,
-          end: l.end,
-          room: l.room,
+          course: l.name, time: `${l.start} - ${l.end}`,
+          start: l.start, end: l.end, room: l.room,
         }))
       );
-    } catch {
-      setTodayLectures([]);
-    }
+    } catch { setTodayLectures([]); }
   };
 
   const loadGPASummary = (userData) => {
@@ -522,18 +323,10 @@ export default function HomeScreen({ navigation }) {
       const gpaData = userData.gpa_data || {};
       const summary = Object.keys(gpaData)
         .filter((k) => gpaData[k]?.gpa)
-        .map((k) => ({
-          semester: `Sem ${k.replace("semester", "")}`,
-          gpa: parseFloat(gpaData[k].gpa).toFixed(2),
-        }))
-        .sort((a, b) => {
-          const n = (s) => parseInt(s.semester.replace("Sem ", ""));
-          return n(a) - n(b);
-        });
+        .map((k) => ({ semester: `Sem ${k.replace("semester", "")}`, gpa: parseFloat(gpaData[k].gpa).toFixed(1) }))
+        .sort((a, b) => parseInt(a.semester.replace("Sem ", "")) - parseInt(b.semester.replace("Sem ", "")));
       setGpaSummary(summary);
-    } catch {
-      setGpaSummary([]);
-    }
+    } catch { setGpaSummary([]); }
   };
 
   const loadUpcomingExam = (userData) => {
@@ -541,25 +334,14 @@ export default function HomeScreen({ navigation }) {
       const exams = Array.isArray(userData.exams) ? userData.exams : [];
       const now = new Date();
       const upcoming = exams
-        .filter((e) => {
-          try { return new Date(e.date) >= now; } catch { return false; }
-        })
+        .filter((e) => { try { return new Date(e.date) >= now; } catch { return false; } })
         .sort((a, b) => new Date(a.date) - new Date(b.date));
-      if (upcoming.length > 0) {
-        const ex = upcoming[0];
-        const d = new Date(ex.date);
-        setUpcomingExam({
-          name: ex.name,
-          formattedDate: d.toLocaleDateString(),
-          start: ex.start || "TBD",
-          semester: ex.semester,
-        });
-      } else {
-        setUpcomingExam(null);
-      }
-    } catch {
-      setUpcomingExam(null);
-    }
+      setUpcomingExam(
+        upcoming.length > 0
+          ? { name: upcoming[0].name, formattedDate: new Date(upcoming[0].date).toLocaleDateString(), start: upcoming[0].start || "TBD", semester: upcoming[0].semester }
+          : null
+      );
+    } catch { setUpcomingExam(null); }
   };
 
   const loadUserData = async () => {
@@ -567,176 +349,317 @@ export default function HomeScreen({ navigation }) {
       const userInfo = await getCurrentUserInfo();
       if (!userInfo) return;
       const ud = await getUserData();
-      if (ud?.nickname) {
-        setUserNickname(ud.nickname);
-      } else {
-        setUserName(userInfo.email?.split("@")[0] || "User");
-      }
-      const saved = await AsyncStorage.getItem(PROFILE_IMAGE_KEY);
-      if (saved) setProfileImage(saved);
-    } catch {
-      setUserName("User");
-    }
+      if (ud?.nickname) setUserNickname(ud.nickname);
+      else setUserName(userInfo.email?.split("@")[0] || "User");
+      if (ud?.avatar_url) setProfileImage(ud.avatar_url);
+    } catch { setUserName("User"); }
   };
 
-  const getDisplayName = () => userNickname || userName || "User";
-
-  const getGreeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 18) return "Good afternoon";
-    return "Good evening";
-  };
+  const displayName = userNickname || userName || "User";
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ScreenHeader
-          type="home"
-          greeting="Loading..."
-          userName=""
-          onProfilePress={() => navigation.navigate("Profile")}
-          onNotificationPress={() => navigation.navigate("NotificationsSettings")}
-        />
-        <HomeSkeletonLoader />
+      <View style={[s.root, { backgroundColor: theme.colors.background }]}>
+        <View style={[s.header, { paddingTop: insets.top + 12, backgroundColor: theme.colors.background }]}>
+          <View style={[s.avatar, { backgroundColor: theme.colors.border }]} />
+          <View style={{ alignItems: "center", flex: 1, gap: 4 }}>
+            <View style={{ width: 90, height: 12, borderRadius: 6, backgroundColor: theme.colors.border }} />
+            <View style={{ width: 60, height: 16, borderRadius: 6, backgroundColor: theme.colors.border }} />
+          </View>
+          <View style={{ width: 32, height: 32 }} />
+        </View>
+        <HomeSkeleton />
         <NavigationBar />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <ScreenHeader
-        type="home"
-        greeting={getGreeting()}
-        userName={getDisplayName()}
-        profileImage={profileImage}
-        onProfilePress={() => navigation.navigate("Profile")}
-        onNotificationPress={() => navigation.navigate("NotificationsSettings")}
-      />
+    <View style={[s.root, { backgroundColor: theme.colors.background }]}>
+      {/* Header */}
+      <View style={[s.header, { paddingTop: insets.top + 12, backgroundColor: theme.colors.background }]}>
+        <TouchableOpacity onPress={() => navigation.navigate("Profile")} style={{ width: 44 }}>
+          {profileImage
+            ? <Image source={{ uri: profileImage }} style={s.avatar} />
+            : <View style={[s.avatar, { backgroundColor: "#535FFD", justifyContent: "center", alignItems: "center" }]}>
+                <SvgIcon name="user" size={20} color="#FFFFFF" />
+              </View>
+          }
+        </TouchableOpacity>
+        <View style={{ alignItems: "center", flex: 1 }}>
+          <Text style={[s.greeting, { color: theme.colors.textSecondary }]}>{getGreeting()}</Text>
+          <Text style={[s.userName, { color: theme.colors.textPrimary }]}>{displayName}</Text>
+        </View>
+        <TouchableOpacity onPress={() => navigation.navigate("Settings")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ width: 44, alignItems: "flex-end" }}>
+          <SvgIcon name="cog" size={24} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
 
       <ScrollView
-        style={styles.scrollView}
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={{ paddingBottom: 120, paddingTop: 8 }}
       >
         {/* Onboarding nudge */}
         {needsOnboarding && (
-          <View style={[styles.onboardingBanner, { backgroundColor: theme.colors.primaryLight }]}>
-            <View style={styles.onboardingBannerContent}>
-              <SvgIcon name="complete" size={48} color={theme.colors.primary} />
-              <View style={styles.onboardingBannerText}>
-                <Text style={[styles.onboardingBannerTitle, { color: theme.colors.textPrimary }]}>
-                  Complete Your Profile
-                </Text>
-                <Text style={[styles.onboardingBannerSubtitle, { color: theme.colors.textSecondary }]}>
-                  Tell us a bit about yourself
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={[styles.onboardingBannerButton, { backgroundColor: theme.colors.primary }]}
-                onPress={() => navigation.navigate("Onboarding")}
-              >
-                <Text style={styles.onboardingBannerButtonText}>Go</Text>
-              </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.onboardBanner, { backgroundColor: theme.colors.primaryLight }]}
+            onPress={() => navigation.navigate("Onboarding")}
+            activeOpacity={0.8}
+          >
+            <SvgIcon name="complete" size={36} color={theme.colors.primary} />
+            <View style={{ flex: 1, marginHorizontal: 12 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: theme.colors.textPrimary }}>Complete Your Profile</Text>
+              <Text style={{ fontSize: 11, color: theme.colors.textSecondary, marginTop: 2 }}>Tell us a bit about yourself</Text>
             </View>
-          </View>
+            <View style={{ backgroundColor: theme.colors.primary, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 }}>
+              <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "600" }}>Go</Text>
+            </View>
+          </TouchableOpacity>
         )}
 
-        {/* Today banner */}
-        <TodayBanner
-          lectures={todayLectures}
-          theme={theme}
-          navigation={navigation}
-        />
+        {/* Today card */}
+        <TodayCard lectures={todayLectures} navigation={navigation} />
 
-        {/* Activity circles — only when today has activities */}
+        {/* Your Activities */}
         {todayLectures.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Activities</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{
-                flexGrow: 1,
-                justifyContent: "center",
-                paddingHorizontal: 12,
-                paddingBottom: 4,
-              }}
-            >
-              {todayLectures.map((lec, i) => (
-                <ActivityCircle key={i} activity={lec} theme={theme} />
-              ))}
-            </ScrollView>
+          <View style={{ marginTop: 26, paddingHorizontal: 20 }}>
+            <Text style={[s.sectionTitle, { color: theme.colors.textPrimary }]}>Your Activities</Text>
+            <View style={{ flexDirection: "row", marginTop: 14 }}>
+              {todayLectures.map((lec, i) => <ActivityCircle key={i} activity={lec} />)}
+            </View>
           </View>
         )}
 
         {/* Action cards */}
-        <View style={styles.section}>
-          <View style={styles.actionCardsRow}>
-            <ActionCard
-              label="Manage Schedule"
-              subtitle="View & edit timetable"
-              iconName="timetable"
-              onPress={() => navigation.navigate("Timetable")}
-              theme={theme}
-            />
-            <ActionCard
-              label="Calculate & Track Results"
-              subtitle="GPA calculator"
-              iconName="gpa"
-              onPress={() => navigation.navigate("GPA")}
-              theme={theme}
-            />
-          </View>
+        <ActionCards navigation={navigation} onCreatePress={openSheet} />
+
+        {/* Academic Progress */}
+        <View style={{ paddingHorizontal: 20, marginTop: 24 }}>
+          <GPACard gpaSummary={gpaSummary} onPress={() => navigation.navigate("GPA")} />
         </View>
 
-        {/* GPA Results */}
-        {gpaSummary.length > 0 && (
-          <View style={styles.section}>
-            <GPAResultsCard
-              gpaSummary={gpaSummary}
-              theme={theme}
-              onPress={() => navigation.navigate("GPA")}
-            />
-          </View>
-        )}
-
-        {/* Upcoming exam */}
+        {/* Upcoming deadline */}
         {upcomingExam && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Upcoming Deadline</Text>
-            <View style={[styles.examCard, { backgroundColor: "#EF4444" }]}>
-              <View style={styles.examHeader}>
-                <View style={[styles.examIcon, { backgroundColor: "#FFFFFF20" }]}>
-                  <SvgIcon name="bell" size={20} color="#FFFFFF" />
-                </View>
-                <View style={styles.examTitleContainer}>
-                  <Text style={[styles.examCourse, { color: "#FFFFFF" }]}>
-                    {upcomingExam.name}
-                  </Text>
-                  <View style={styles.examDetailsRow}>
-                    <View style={styles.examDetail}>
-                      <SvgIcon name="calendar" size={13} color="#FFFFFF" />
-                      <Text style={[styles.examDetailText, { color: "#FFFFFF" }]}>
-                        {" "}{upcomingExam.formattedDate}
-                      </Text>
-                    </View>
-                    <View style={styles.examDetail}>
-                      <SvgIcon name="clock" size={13} color="#FFFFFF" />
-                      <Text style={[styles.examDetailText, { color: "#FFFFFF" }]}>
-                        {" "}{upcomingExam.start}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
+          <TouchableOpacity
+            style={[s.deadlineCard, { marginTop: 16, marginHorizontal: 20 }]}
+            onPress={() => navigation.navigate("AddExam")}
+            activeOpacity={0.85}
+          >
+            <View style={s.deadlineIcon}>
+              <SvgIcon name="bell" size={18} color="#FFFFFF" />
             </View>
-          </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "700" }}>{upcomingExam.name}</Text>
+              <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, marginTop: 3 }}>
+                {upcomingExam.formattedDate} · {upcomingExam.start}
+              </Text>
+            </View>
+          </TouchableOpacity>
         )}
       </ScrollView>
 
       <NavigationBar />
+
+      {/* Backdrop */}
+      <Animated.View
+        pointerEvents={sheetOpen ? "auto" : "none"}
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.45)", opacity: backdropAnim, zIndex: 10 }]}
+      >
+        <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={closeSheet} activeOpacity={1} />
+      </Animated.View>
+
+      {/* Schedule Options Sheet */}
+      <Animated.View
+        pointerEvents={sheetOpen ? "auto" : "none"}
+        style={[s.scheduleSheet, { transform: [{ translateY: sheetAnim }] }]}
+      >
+        <View style={{ alignItems: "flex-end", marginBottom: 20 }}>
+          <TouchableOpacity onPress={closeSheet} style={s.sheetCloseBtn}>
+            <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 18, fontWeight: "300", lineHeight: 20 }}>✕</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={s.sheetTitle}>Choose Option</Text>
+        <Text style={s.sheetSubtitle}>You can add your timetables and schedule{"\n"}through two main ways</Text>
+        <View style={s.sheetBtnRow}>
+          <TouchableOpacity
+            style={s.sheetBtn}
+            activeOpacity={0.85}
+            onPress={() => { closeSheet(); setTimeout(() => navigation.navigate("AddActivity"), 300); }}
+          >
+            <Text style={s.sheetBtnText}>Manually</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={s.sheetBtn}
+            activeOpacity={0.85}
+            onPress={() => { closeSheet(); setTimeout(() => navigation.navigate("AITimetableScanner"), 300); }}
+          >
+            <Text style={s.sheetBtnText}>AI Scan</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
     </View>
   );
 }
+
+const s = StyleSheet.create({
+  root: { flex: 1 },
+
+  // Header
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+  },
+  avatar: { width: 44, height: 44, borderRadius: 22 },
+  greeting: { fontSize: 13, fontWeight: "400" },
+  userName: { fontSize: 17, fontWeight: "700", marginTop: 1 },
+
+  // Onboarding banner
+  onboardBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 16,
+    padding: 14,
+  },
+
+  // Section
+  sectionTitle: { fontSize: 16, fontWeight: "800" },
+
+  // Today card
+  todayCard: {
+    backgroundColor: "#535FFD",
+    borderRadius: 24,
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 22,
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 140,
+    ...Platform.select({
+      ios: { shadowColor: "#535FFD", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16 },
+      android: { elevation: 0 },
+    }),
+  },
+  todayTime: { color: "rgba(255,255,255,0.65)", fontSize: 13, fontWeight: "500", width: 38 },
+  todayCourse: { color: "#FFFFFF", fontSize: 16, fontWeight: "700", flex: 1 },
+  dayText: { color: "#FFFFFF", fontSize: 58, fontWeight: "900", lineHeight: 62, letterSpacing: -1 },
+
+  // Action cards
+  createCard: {
+    flex: 1,
+    backgroundColor: "#111111",
+    borderRadius: 20,
+    padding: 18,
+    minHeight: 190,
+    justifyContent: "space-between",
+  },
+  createTitle: { color: "#FFFFFF", fontSize: 26, fontWeight: "900", letterSpacing: -0.5 },
+  createSubtitle: { color: "#FFFFFF", fontSize: 16, fontWeight: "700", marginTop: 2 },
+  createDesc: { color: "rgba(255,255,255,0.5)", fontSize: 11, marginTop: 4 },
+  createIconPill: {
+    width: 56, height: 56, borderRadius: 16,
+    backgroundColor: "#535FFD",
+    justifyContent: "center", alignItems: "center",
+  },
+  addCard: {
+    backgroundColor: "#535FFD",
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    ...Platform.select({
+      ios: { shadowColor: "#535FFD", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 10 },
+      android: { elevation: 0 },
+    }),
+  },
+  addTitle: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", letterSpacing: -0.5 },
+  addSubtitle: { color: "#FFFFFF", fontSize: 13, fontWeight: "600", marginTop: 1 },
+
+  // GPA card
+  gpaCard: {
+    backgroundColor: "#111111",
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  gpaLabel: { color: "#FFFFFF", fontSize: 14, fontWeight: "700", lineHeight: 20 },
+  gpaValue: { color: "#FFFFFF", fontSize: 18, fontWeight: "800", textAlign: "center" },
+  gpaSem: { color: "rgba(255,255,255,0.5)", fontSize: 10, fontWeight: "500", marginTop: 2 },
+
+  // Deadline card
+  deadlineCard: {
+    backgroundColor: "#EF4444",
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  deadlineIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center", alignItems: "center",
+  },
+
+  // Schedule options sheet
+  scheduleSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: SHEET_H,
+    backgroundColor: "#535FFD",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 28,
+    paddingTop: 24,
+    paddingBottom: 40,
+    zIndex: 20,
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.15, shadowRadius: 20 },
+      android: { elevation: 20 },
+    }),
+  },
+  sheetCloseBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center", alignItems: "center",
+  },
+  sheetTitle: {
+    color: "#FFFFFF",
+    fontSize: 30,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+    marginBottom: 10,
+  },
+  sheetSubtitle: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 36,
+  },
+  sheetBtnRow: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  sheetBtn: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 50,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  sheetBtnText: {
+    color: "#535FFD",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+});

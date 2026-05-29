@@ -220,6 +220,7 @@ export default function AddExamScreen({ navigation }) {
                 onChangeText={setExamName}
                 placeholder="e.g., Final Exam, Midterm Test"
                 placeholderTextColor={theme.colors.textTertiary}
+                maxLength={100}
               />
             </View>
 
@@ -268,6 +269,7 @@ export default function AddExamScreen({ navigation }) {
                 onChangeText={setRoom}
                 placeholder="e.g., Room 304, Online"
                 placeholderTextColor={theme.colors.textTertiary}
+                maxLength={80}
               />
             </View>
 

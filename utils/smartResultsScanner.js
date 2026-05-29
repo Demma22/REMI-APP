@@ -1,9 +1,19 @@
 // utils/smartResultsScanner.js
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase } from '../supabase';
 
 const BACKEND_URL = 'https://ai-backend-yl4w.onrender.com';
+
+const compressImage = async (uri) => {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: 1024 } }],
+    { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+  );
+  return result.uri;
+};
 
 const convertImageToBase64 = async (uri) => {
   try {
@@ -17,20 +27,37 @@ const convertImageToBase64 = async (uri) => {
   }
 };
 
-const sendToBackend = async (base64Image, curriculumId) => {
+const getValidToken = async () => {
   const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) throw new Error('Not authenticated');
-  
+  if (session) {
+    const now = Math.floor(Date.now() / 1000);
+    if (session.expires_at - now > 60) {
+      return session.access_token;
+    }
+  }
+  try {
+    const { data, error } = await Promise.race([
+      supabase.auth.refreshSession(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('refresh_timeout')), 8000)),
+    ]);
+    if (!error && data?.session) return data.session.access_token;
+  } catch (_) {}
+  if (!session) throw new Error('Not authenticated. Please log in again.');
+  return session.access_token;
+};
+
+const sendToBackend = async (base64Image, curriculumId) => {
+  const token = await getValidToken();
+
   const response = await fetch(`${BACKEND_URL}/scan-results`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ 
+    body: JSON.stringify({
       image: base64Image,
-      curriculum: curriculumId 
+      curriculum: curriculumId,
     }),
   });
   
@@ -48,7 +75,8 @@ const sendToBackend = async (base64Image, curriculumId) => {
 };
 
 export const scanResultsFromImage = async (imageUri, curriculumId = 'uganda') => {
-  const base64Image = await convertImageToBase64(imageUri);
+  const compressed = await compressImage(imageUri);
+  const base64Image = await convertImageToBase64(compressed);
   return await sendToBackend(base64Image, curriculumId);
 };
 

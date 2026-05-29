@@ -19,7 +19,7 @@ import { DashboardSkeleton } from '../../../components/SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 
-const ADMIN_EMAIL = 'denis@gmail.com';
+const ADMIN_EMAIL = process.env.EXPO_PUBLIC_ADMIN_EMAIL || 'denisssendagire22@gmail.com';
 
 // Pie chart colors
 const PIE_COLORS = [

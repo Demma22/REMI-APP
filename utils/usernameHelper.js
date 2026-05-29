@@ -34,8 +34,3 @@ export const validateUsernameFormat = (username) => {
   return { valid: true, error: "" };
 };
 
-// Check if username is available
-export const checkUsernameAvailability = async (username, firestore) => {
-  // We'll implement this later when we add Firestore queries
-  return true;
-};

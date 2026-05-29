@@ -15,6 +15,7 @@ import { getUserData, saveUserData, getCurrentUserInfo } from '../../services/us
 import { useTheme } from '../../contexts/ThemeContext';
 import SvgIcon from '../../components/SvgIcon';
 import { getStyles } from './OnboardingScreen.styles';
+import { OnboardingSkeleton } from '../../components/SkeletonLoader';
 
 // Question configurations with custom icons
 const questions = [
@@ -429,9 +430,8 @@ export default function OnboardingScreen({ navigation }) {
 
   if (loadingUserData) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Loading your profile...</Text>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <OnboardingSkeleton />
       </View>
     );
   }

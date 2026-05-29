@@ -241,7 +241,7 @@ export default function AddActivityScreen({ navigation }) {
                 onChangeText={setActivityName}
                 placeholder="e.g., Study Session, Lecture, Meeting"
                 placeholderTextColor={theme.colors.textTertiary}
-                placeholderTextColor={theme.colors.textTertiary}
+                maxLength={100}
               />
             </View>
 
@@ -307,6 +307,7 @@ export default function AddActivityScreen({ navigation }) {
                 onChangeText={setLecturer}
                 placeholder="Enter lecturer name"
                 placeholderTextColor={theme.colors.textTertiary}
+                maxLength={80}
               />
             </View>
 
@@ -319,6 +320,7 @@ export default function AddActivityScreen({ navigation }) {
                 onChangeText={setLocation}
                 placeholder="e.g., Library, Room 304, Home"
                 placeholderTextColor={theme.colors.textTertiary}
+                maxLength={100}
               />
             </View>
 
@@ -333,6 +335,7 @@ export default function AddActivityScreen({ navigation }) {
                 placeholderTextColor={theme.colors.textTertiary}
                 multiline
                 numberOfLines={3}
+                maxLength={500}
               />
             </View>
 

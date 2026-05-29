@@ -17,7 +17,8 @@ import { getUserData, updateUserData } from '../../../services/userDataService';
 import { useTheme } from '../../../contexts/ThemeContext';
 import SvgIcon from '../../../components/SvgIcon';
 import ScreenHeader from '../../../components/ScreenHeader';
-import { pickAndScanTimetableWithUri, takePhotoAndScanWithUri } from '../../../utils/smartTimetableScanner';
+import * as ImagePicker from 'expo-image-picker';
+import { scanTimetableFromImage } from '../../../utils/smartTimetableScanner';
 import TimePicker from '../components/TimePicker';
 import { trackFeatureUsage, shouldShowRateReview } from '../../../utils/rateReviewTracker';
 import { getStyles } from './AITimetableScanner.styles';
@@ -37,6 +38,7 @@ export default function AITimetableScanner({ navigation, route }) {
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [capturedImageUri, setCapturedImageUri] = useState(null);
+  const [waitingForBackend, setWaitingForBackend] = useState(false);
   
   // Time picker state
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -54,6 +56,8 @@ export default function AITimetableScanner({ navigation, route }) {
   
   // Store the scan result before showing animation
   const pendingScanResult = useRef(null);
+  const animationCompleted = useRef(false);
+  const resultProcessed = useRef(false);
   
   const scanningMessages = [
     { text: "Analyzing document layout...", duration: 1500 },
@@ -169,66 +173,110 @@ export default function AITimetableScanner({ navigation, route }) {
     setTimeField(null);
   };
 
+  const processResult = (result) => {
+    if (resultProcessed.current) return;
+    resultProcessed.current = true;
+    pendingScanResult.current = null;
+    if (mode === 'lectures' && result?.lectures?.length > 0) {
+      setRawText(result.rawText);
+      setLectures(result.lectures);
+      setScanStage('confirming');
+    } else if (mode === 'exams' && result?.exams?.length > 0) {
+      setRawText(result.rawText);
+      setExams(result.exams);
+      setScanStage('confirming');
+    } else {
+      setScanStage('idle');
+      setCapturedImageUri(null);
+      Alert.alert('No Items Found', 'No items could be detected. Please try with a clearer image.');
+    }
+  };
+
   const handleScan = async (isCamera = false) => {
     setErrorMessage('');
+    pendingScanResult.current = null;
+    animationCompleted.current = false;
+    resultProcessed.current = false;
     setScanStage('loading');
-    
+
     try {
-      let result;
+      // Step 1: Pick image only
       let imageUri;
-      
       if (isCamera) {
-        const response = await takePhotoAndScanWithUri(mode);
-        imageUri = response.uri;
-        result = response.scanResult;
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') throw new Error('Camera permission required');
+        const picked = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.9 });
+        if (picked.canceled) { setScanStage('idle'); return; }
+        imageUri = picked.assets[0].uri;
       } else {
-        const response = await pickAndScanTimetableWithUri(mode);
-        imageUri = response.uri;
-        result = response.scanResult;
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') throw new Error('Gallery permission required');
+        const picked = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.9,
+        });
+        if (picked.canceled) { setScanStage('idle'); return; }
+        imageUri = picked.assets[0].uri;
       }
-      
-      if (!imageUri) {
-        setScanStage('idle');
-        return;
-      }
-      
-      pendingScanResult.current = result;
+
+      // Step 2: Show scanning animation immediately after image is picked
+      setWaitingForBackend(false);
       setCapturedImageUri(imageUri);
       setScanStage('scanning');
       startScanningAnimations();
-      
+
+      // Step 3: After animation completes, show result if ready, else show waiting state
       setTimeout(() => {
+        animationCompleted.current = true;
         if (pendingScanResult.current) {
-          if (mode === 'lectures' && pendingScanResult.current.lectures && pendingScanResult.current.lectures.length > 0) {
-            setRawText(pendingScanResult.current.rawText);
-            setLectures(pendingScanResult.current.lectures);
-            setScanStage('confirming');
-            pendingScanResult.current = null;
-          } else if (mode === 'exams' && pendingScanResult.current.exams && pendingScanResult.current.exams.length > 0) {
-            setRawText(pendingScanResult.current.rawText);
-            setExams(pendingScanResult.current.exams);
-            setScanStage('confirming');
-            pendingScanResult.current = null;
-          } else {
-            setScanStage('idle');
-            setCapturedImageUri(null);
-            Alert.alert('No Items Found', 'No items could be detected. Please try with a clearer image.');
-            pendingScanResult.current = null;
-          }
+          processResult(pendingScanResult.current);
         } else {
-          setScanStage('idle');
-          setCapturedImageUri(null);
-          Alert.alert('No Items Found', 'No items could be detected. Please try with a clearer image.');
+          setWaitingForBackend(true);
         }
       }, 10500);
-      
+
+      // 120-second hard timeout in case backend never responds
+      setTimeout(() => {
+        if (!resultProcessed.current) {
+          resultProcessed.current = true;
+          Alert.alert(
+            'Scan Timed Out',
+            'The server took too long to respond. This usually happens on the first scan of the day — please try again.',
+          );
+          setScanStage('idle');
+          setCapturedImageUri(null);
+          setWaitingForBackend(false);
+        }
+      }, 120000);
+
+      // Step 4: Backend call runs concurrently with animation
+      scanTimetableFromImage(imageUri, mode)
+        .then(result => {
+          pendingScanResult.current = result;
+          if (animationCompleted.current) {
+            setWaitingForBackend(false);
+            processResult(result);
+          }
+        })
+        .catch(err => {
+          if (!resultProcessed.current) {
+            resultProcessed.current = true;
+            console.error('Scan error:', err);
+            Alert.alert('Scan Failed', err.message || 'Failed to scan. Please try again.');
+            setErrorMessage(err.message);
+            setScanStage('idle');
+            setCapturedImageUri(null);
+            setWaitingForBackend(false);
+          }
+        });
+
     } catch (error) {
       console.error('Scan error:', error);
       Alert.alert('Scan Failed', error.message || 'Failed to scan. Please try again.');
       setErrorMessage(error.message);
       setScanStage('idle');
       setCapturedImageUri(null);
-      pendingScanResult.current = null;
     }
   };
 
@@ -503,14 +551,19 @@ export default function AITimetableScanner({ navigation, route }) {
             </View>
             
             <View style={styles.scanStatusContainer}>
+              {waitingForBackend ? (
+                <ActivityIndicator color="#FFFFFF" style={{ marginBottom: 8 }} />
+              ) : null}
               <Text style={[styles.scanStatusText, { color: '#FFFFFF' }]}>
-                {currentMsg.text}
+                {waitingForBackend ? 'AI is still processing...' : currentMsg.text}
               </Text>
             </View>
-            
+
             <View style={styles.scanWaitContainer}>
               <Text style={styles.scanWaitText}>
-                Please wait while AI analyzes your document...
+                {waitingForBackend
+                  ? 'This may take up to a minute on first scan'
+                  : 'Please wait while AI analyzes your document...'}
               </Text>
             </View>
           </View>
