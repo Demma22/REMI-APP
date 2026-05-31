@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,12 @@ import {
   Alert,
   RefreshControl,
   Modal,
-  Image,
 } from "react-native";
 import { getUserData, updateUserData } from "../../../services/userDataService";
 import NavigationBar from "../../../components/NavigationBar";
 import SvgIcon from "../../../components/SvgIcon";
 import ScreenHeader from "../../../components/ScreenHeader";
+import AddActivitySheet from "../../../components/AddActivitySheet";
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useNotifications } from '../../../hooks/useNotifications';
 import { getStyles } from "./TimetableScreen.styles";
@@ -31,9 +31,24 @@ const capitalize = (s) => s && s[0].toUpperCase() + s.slice(1);
 
 const formatTime = (t) => {
   if (!t || t === 'TBD') return t || '';
-  const m = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if (!m) return t;
-  return m[2] === '00' ? `${m[1]}${m[3].toLowerCase()}` : `${m[1]}:${m[2]}${m[3].toLowerCase()}`;
+  // 12hr with AM/PM: "8:00 AM" → "8am", "12:15 PM" → "12:15pm"
+  const m12 = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (m12) {
+    return m12[2] === '00'
+      ? `${m12[1]}${m12[3].toLowerCase()}`
+      : `${m12[1]}:${m12[2]}${m12[3].toLowerCase()}`;
+  }
+  // 24hr: "08:00" → "8am", "14:30" → "2:30pm"
+  const m24 = t.match(/^(\d{1,2}):(\d{2})$/);
+  if (m24) {
+    let h = parseInt(m24[1], 10);
+    const min = m24[2];
+    const period = h >= 12 ? 'pm' : 'am';
+    if (h > 12) h -= 12;
+    if (h === 0) h = 12;
+    return min === '00' ? `${h}${period}` : `${h}:${min}${period}`;
+  }
+  return t;
 };
 
 export default function TimetableScreen({ navigation }) {
@@ -49,7 +64,7 @@ export default function TimetableScreen({ navigation }) {
   // Modal state
   const [selectedActivity, setSelectedActivity] = useState(null); // { lecture, dayKey, index }
   const [editSheetDay, setEditSheetDay] = useState(null);         // dayKey string
-  const [showAddSheet, setShowAddSheet] = useState(false);
+  const addSheetRef = useRef(null);
 
   useEffect(() => {
     loadData();
@@ -100,25 +115,20 @@ export default function TimetableScreen({ navigation }) {
     navigation.navigate("EditTimetable", { initialDay: dayKey, initialLectureIndex: lectureIndex, lecture });
   };
 
-  const handleScanTimetable = () => { setShowAddSheet(false); navigation.navigate("AITimetableScanner", { mode: "lectures" }); };
-  const handleAddManually = () => { setShowAddSheet(false); navigation.navigate("AddActivity"); };
-
-  const profileAvatar = (
-    <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.8}>
-      {profileImage ? (
-        <Image source={{ uri: profileImage }} style={styles.headerAvatar} />
-      ) : (
-        <View style={[styles.headerAvatarPlaceholder, { backgroundColor: PURPLE }]}>
-          <SvgIcon name="user" size={16} color="#FFFFFF" />
-        </View>
-      )}
+  const addBtn = (
+    <TouchableOpacity
+      onPress={() => addSheetRef.current?.open()}
+      style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: PURPLE, justifyContent: "center", alignItems: "center" }}
+      activeOpacity={0.8}
+    >
+      <SvgIcon name="plus" size={18} color="#FFFFFF" />
     </TouchableOpacity>
   );
 
   if (loading) {
     return (
       <View style={styles.container}>
-        <ScreenHeader title="Weekly Schedule" onBackPress={() => navigation.goBack()} rightElement={profileAvatar} />
+        <ScreenHeader title="Weekly Schedule" onBackPress={() => navigation.goBack()} rightElement={addBtn} />
         <TimetableSkeleton />
         <NavigationBar />
       </View>
@@ -127,7 +137,7 @@ export default function TimetableScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Weekly Schedule" onBackPress={() => navigation.goBack()} rightElement={profileAvatar} />
+      <ScreenHeader title="Weekly Schedule" onBackPress={() => navigation.goBack()} rightElement={addBtn} />
 
       <ScrollView
         style={styles.scrollView}
@@ -142,41 +152,41 @@ export default function TimetableScreen({ navigation }) {
               const abbr = DAY_ABBR[dayKey];
 
               return (
-                <View key={dayKey} style={[styles.weekDayCard, hasActivities ? styles.weekDayCardPurple : styles.weekDayCardBlack]}>
+                <View key={dayKey} style={[styles.weekDayCard, hasActivities ? styles.weekDayCardPurple : styles.weekDayCardEmpty]}>
                   <View style={styles.weekDayCardContent}>
 
                     {/* Left: activity rows or empty state */}
                     <View style={styles.weekDayLeft}>
                       {hasActivities ? (
                         list.map((lecture, i) => (
-                          <TouchableOpacity
-                            key={i}
-                            style={styles.activityRow}
-                            onPress={() => setSelectedActivity({ lecture, dayKey, index: i })}
-                            activeOpacity={0.7}
-                          >
-                            <Text style={styles.activityTime}>{formatTime(lecture.start)}</Text>
-                            <Text style={styles.activityName} numberOfLines={1}>{lecture.name}</Text>
-                          </TouchableOpacity>
+                          <React.Fragment key={i}>
+                            {i > 0 && <View style={styles.activitySeparator} />}
+                            <TouchableOpacity
+                              style={styles.activityRow}
+                              onPress={() => setSelectedActivity({ lecture, dayKey, index: i })}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.activityTime}>{formatTime(lecture.start)}</Text>
+                              <Text style={styles.activityName} numberOfLines={1}>{lecture.name}</Text>
+                            </TouchableOpacity>
+                          </React.Fragment>
                         ))
                       ) : (
-                        <Text style={styles.noActivityText}>No activities yet</Text>
+                        <Text style={styles.noActivityTextEmpty}>No activities yet</Text>
                       )}
                     </View>
 
                     {/* Right: day label + action button */}
                     <View style={styles.weekDayRight}>
                       <View style={styles.dayLabelContainer}>
-                        <Text style={styles.dayAbbrText}>{abbr}</Text>
-                        <Text style={styles.dayWordText}>day</Text>
+                        <Text style={hasActivities ? styles.dayAbbrText : styles.dayAbbrTextDark}>{abbr}</Text>
+                        <Text style={hasActivities ? styles.dayWordText : styles.dayWordTextDark}>day</Text>
                       </View>
                       <TouchableOpacity
                         style={hasActivities ? styles.editDayBtn : styles.addDayBtn}
-                        onPress={() => hasActivities ? setEditSheetDay(dayKey) : setShowAddSheet(true)}
+                        onPress={() => addSheetRef.current?.open(dayKey)}
                       >
-                        <Text style={hasActivities ? styles.editDayBtnText : styles.addDayBtnText}>
-                          {hasActivities ? 'EDIT' : 'ADD'}
-                        </Text>
+                        <Text style={hasActivities ? styles.editDayBtnText : styles.addDayBtnText}>ADD</Text>
                       </TouchableOpacity>
                     </View>
 
@@ -285,40 +295,9 @@ export default function TimetableScreen({ navigation }) {
         </TouchableOpacity>
       </Modal>
 
-      {/* ── Add Menu Bottom Sheet ── */}
-      <Modal visible={showAddSheet} transparent animationType="slide" onRequestClose={() => setShowAddSheet(false)}>
-        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowAddSheet(false)}>
-          <View style={[styles.bottomSheet, styles.addSheetPurple]} onStartShouldSetResponder={() => true}>
-            <View style={[styles.sheetHandle, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
-            <Text style={[styles.sheetTitle, { color: '#FFFFFF' }]}>Add to Timetable</Text>
-
-            <TouchableOpacity style={styles.addSheetItem} onPress={handleScanTimetable}>
-              <View style={styles.addSheetIconBg}>
-                <SvgIcon name="scan" size={22} color={PURPLE} />
-              </View>
-              <View style={styles.addSheetTextContainer}>
-                <Text style={styles.addSheetItemTitle}>Scan with AI</Text>
-                <Text style={styles.addSheetItemDesc}>Extract timetable from a photo</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.addSheetItem} onPress={handleAddManually}>
-              <View style={styles.addSheetIconBg}>
-                <SvgIcon name="edit" size={22} color={PURPLE} />
-              </View>
-              <View style={styles.addSheetTextContainer}>
-                <Text style={styles.addSheetItemTitle}>Add Manually</Text>
-                <Text style={styles.addSheetItemDesc}>Enter lecture details by hand</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.sheetCancelBtn, styles.sheetCancelWhite]} onPress={() => setShowAddSheet(false)}>
-              <Text style={[styles.sheetCancelText, { color: '#FFFFFF' }]}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
       <NavigationBar />
+
+      <AddActivitySheet ref={addSheetRef} onSaved={loadData} />
     </View>
   );
 }

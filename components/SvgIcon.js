@@ -58,6 +58,9 @@ import lockIcon from '../assets/icons/lock.svg';
 import calenderIcon from '../assets/icons/calender.svg';
 import starIcon from '../assets/icons/star.svg';
 import quoteIcon from '../assets/icons/quote.svg';
+import cameraIcon from '../assets/icons/camera.svg';
+import uploadIcon from '../assets/icons/upload.svg';
+import fireIcon from '../assets/icons/fire.svg';
 
 const iconComponents = {
   'home': HomeIcon,
@@ -65,6 +68,9 @@ const iconComponents = {
   'instagram':InstagramIcon,
   'star': starIcon,
   'quote': quoteIcon,
+  'camera': cameraIcon,
+  'upload': uploadIcon,
+  'fire': fireIcon,
   'lock': lockIcon,
   'calender': calenderIcon,
   'x': XIcon,

@@ -27,7 +27,7 @@ import { ListSkeleton } from '../../../components/SkeletonLoader';
 const { width, height } = Dimensions.get('window');
 
 export default function AITimetableScanner({ navigation, route }) {
-  const { mode = 'lectures' } = route?.params || {};
+  const { mode = 'lectures', source } = route?.params || {};
   const { theme } = useTheme();
   const styles = getStyles(theme);
   
@@ -191,6 +191,12 @@ export default function AITimetableScanner({ navigation, route }) {
       Alert.alert('No Items Found', 'No items could be detected. Please try with a clearer image.');
     }
   };
+
+  useEffect(() => {
+    if (source === 'camera' || source === 'gallery') {
+      handleScan(source === 'camera');
+    }
+  }, []);
 
   const handleScan = async (isCamera = false) => {
     setErrorMessage('');

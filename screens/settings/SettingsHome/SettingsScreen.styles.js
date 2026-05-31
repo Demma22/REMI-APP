@@ -1,203 +1,92 @@
 // screens/settings/SettingsHome/SettingsScreen.styles.js
-import { StyleSheet, Dimensions, Platform } from 'react-native';
-
-const { width, height } = Dimensions.get('window');
+import { StyleSheet } from "react-native";
 
 export const getStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
+
+  // Header — same formula as HomeScreen: insets.top + 12
   header: {
-    backgroundColor: theme.colors.backgroundSecondary,
-    paddingTop: 60,
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  headerTop: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    backgroundColor: theme.colors.background,
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
+    backgroundColor: theme.colors.backgroundTertiary,
     justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-    textAlign: "center",
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  content: {
-    padding: 24,
-  },
-  loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  loadingText: {
-    marginTop: 16,
+    textAlign: "center",
+    fontSize: 17,
+    fontWeight: "600",
     color: theme.colors.textSecondary,
-    fontSize: 16,
   },
-  section: {
-    marginBottom: 32,
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-    marginBottom: 16,
+
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 100,
+  },
+
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+    letterSpacing: 0.8,
+    marginTop: 24,
+    marginBottom: 10,
     paddingHorizontal: 4,
   },
-  menuButton: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
+
+  card: {
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    // iOS shadow only
-    ...Platform.select({
-      ios: {
-        shadowColor: theme.colors.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 0, // No elevation on Android to avoid inner shadow
-      },
-    }),
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 14,
   },
-  menuIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  menuTextContainer: {
+
+  rowLabel: {
     flex: 1,
-  },
-  menuTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "500",
     color: theme.colors.textPrimary,
-    marginBottom: 4,
   },
-  menuSubtitle: {
-    fontSize: 12,
+
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginLeft: 50,
+  },
+
+  chevron: {
+    fontSize: 22,
     color: theme.colors.textSecondary,
-    lineHeight: 16,
-  },
-  dangerButton: {
-    borderWidth: 1,
-    borderColor: theme.colors.danger,
-    backgroundColor: `${theme.colors.danger}10`,
-  },
-  accountInfo: {
-    backgroundColor: theme.colors.card,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    // iOS shadow only - no elevation on Android
-    ...Platform.select({
-      ios: {
-        shadowColor: theme.colors.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: 'center',
-  },
-  emailContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  accountIcon: {
-    marginRight: 8,
-  },
-  accountEmail: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-  },
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: 4,
-  },
-  accountStatus: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  logoutButton: {
-    backgroundColor: theme.colors.danger,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 8,
-    // iOS shadow only
-    ...Platform.select({
-      ios: {
-        shadowColor: theme.colors.danger,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 0,
-      },
-    }),
-  },
-  logoutButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  bottomSpacing: {
-    height: 20,
+    lineHeight: 26,
   },
 });

@@ -49,6 +49,7 @@ import EditUnits from "./screens/settings/EditUnits";
 import EditCourse from "./screens/settings/EditCourse";
 import NotificationsSettingsScreen from "./screens/settings/NotificationsSettings/NotificationsSettingsScreen";
 import StatisticsDashboard from "./screens/admin/StatisticsDashboard/StatisticsDashboard";
+import FocusScreen from "./screens/focus/FocusScreen";
 
 const Stack = createStackNavigator();
 
@@ -142,7 +143,14 @@ function AppContent() {
         translucent={true}
       />
       
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{
+          headerShown: false,
+          cardStyleInterpolator: () => ({ cardStyle: { opacity: 1 } }),
+          transitionSpec: {
+            open:  { animation: 'timing', config: { duration: 350 } },
+            close: { animation: 'timing', config: { duration: 350 } },
+          },
+        }}>
         {!user ? (
           // AUTH FLOW - User not logged in
           <>
@@ -154,6 +162,7 @@ function AppContent() {
             
             {/* App screens */}
             <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Focus" component={FocusScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
@@ -191,6 +200,7 @@ function AppContent() {
             
             {/* App screens for navigation after onboarding */}
             <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Focus" component={FocusScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
@@ -225,6 +235,7 @@ function AppContent() {
           // MAIN APP FLOW - User logged in AND completed onboarding
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Focus" component={FocusScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />

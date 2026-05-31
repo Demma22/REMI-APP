@@ -1,22 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Image,
-  RefreshControl,
+  View, Text, TouchableOpacity, ScrollView, RefreshControl, StyleSheet,
 } from "react-native";
+import Animated from "react-native-reanimated";
 import { getUserData } from "../../services/userDataService";
 import NavigationBar from "../../components/NavigationBar";
 import SvgIcon from "../../components/SvgIcon";
 import ScreenHeader from "../../components/ScreenHeader";
+import AddDeadlineSheet from "../../components/AddDeadlineSheet";
 import { useTheme } from "../../contexts/ThemeContext";
 import { getStyles } from "./DeadlinesScreen.styles";
 
 const PURPLE = "#535FFD";
 const RED = "#D32F2F";
-
 const DAY_ABBR = ["SUN", "MON", "TUES", "WED", "THURS", "FRI", "SAT"];
 
 const formatCardDate = (isoString) => {
@@ -38,9 +34,9 @@ const getDaysLeft = (isoString) => {
 export default function DeadlinesScreen({ navigation }) {
   const { theme } = useTheme();
   const styles = getStyles(theme);
+  const sheetRef = useRef(null);
 
   const [exams, setExams] = useState([]);
-  const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -59,7 +55,6 @@ export default function DeadlinesScreen({ navigation }) {
           (a, b) => new Date(a.date) - new Date(b.date)
         );
         setExams(sorted);
-        if (userData.avatar_url) setProfileImage(userData.avatar_url);
       }
     } catch (e) {
       console.error("Error loading deadlines:", e);
@@ -71,15 +66,13 @@ export default function DeadlinesScreen({ navigation }) {
 
   const onRefresh = () => { setRefreshing(true); loadData(); };
 
-  const profileAvatar = (
-    <TouchableOpacity onPress={() => navigation.navigate("Profile")} activeOpacity={0.8}>
-      {profileImage ? (
-        <Image source={{ uri: profileImage }} style={styles.headerAvatar} />
-      ) : (
-        <View style={[styles.headerAvatarPlaceholder, { backgroundColor: PURPLE }]}>
-          <SvgIcon name="user" size={16} color="#FFFFFF" />
-        </View>
-      )}
+  const addBtn = (
+    <TouchableOpacity
+      onPress={() => sheetRef.current?.open()}
+      style={ds.addHeaderBtn}
+      activeOpacity={0.8}
+    >
+      <SvgIcon name="plus" size={18} color="#FFFFFF" />
     </TouchableOpacity>
   );
 
@@ -99,7 +92,6 @@ export default function DeadlinesScreen({ navigation }) {
           {exam.start ? <Text style={styles.cardTime}>{exam.start}</Text> : null}
           {exam.room ? <Text style={styles.cardRoom}>{exam.room}</Text> : null}
         </View>
-
         <View style={styles.cardRight}>
           <View style={styles.cardDateBlock}>
             <Text style={styles.cardDayAbbr}>{dayAbbr}</Text>
@@ -127,7 +119,7 @@ export default function DeadlinesScreen({ navigation }) {
       <ScreenHeader
         title="Deadlines"
         onBackPress={() => navigation.goBack()}
-        rightElement={profileAvatar}
+        rightElement={addBtn}
       />
 
       <ScrollView
@@ -150,15 +142,20 @@ export default function DeadlinesScreen({ navigation }) {
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => navigation.navigate("AddExam")}
-        activeOpacity={0.85}
-      >
-        <SvgIcon name="plus" size={22} color="#FFFFFF" />
-      </TouchableOpacity>
-
       <NavigationBar />
+
+      <AddDeadlineSheet ref={sheetRef} onSaved={loadData} />
     </View>
   );
 }
+
+const ds = StyleSheet.create({
+  addHeaderBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#535FFD",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});

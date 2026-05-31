@@ -1,53 +1,113 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SvgIcon from './SvgIcon';
 import { useTheme } from '../contexts/ThemeContext';
 
 const NAV_ITEMS = [
-  { label: 'Schedule', svgName: 'calendar', screen: 'Timetable' },
-  { label: 'GPA', svgName: 'chart-line', screen: 'GPA' },
-  { label: 'Home', svgName: 'home', screen: 'Home' },
-  { label: 'Deadlines', svgName: 'clock', screen: 'Deadlines' },
-  { label: 'Profile', svgName: 'user', screen: 'Profile' },
+  { label: 'Schedule',  svgName: 'calendar',    screen: 'Timetable' },
+  { label: 'Focus',     svgName: 'focus',        screen: 'Focus'     },
+  { label: 'Home',      svgName: 'home',         screen: 'Home'      },
+  { label: 'Deadlines', svgName: 'clock',        screen: 'Deadlines' },
+  { label: 'Profile',   svgName: 'user',         screen: 'Profile'   },
 ];
+
+// Widths (px) that the label text needs — measured per label at fontSize 13
+const LABEL_WIDTHS = { Schedule: 78, Focus: 54, Home: 52, Deadlines: 72, Profile: 50 };
 
 const NavigationBar = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const bottomPad = insets.bottom > 0 ? insets.bottom : 8;
 
-  const bottomPadding = Platform.OS === 'android' ? Math.max(insets.bottom, 16) : insets.bottom + 8;
-  const isActive = (screen) => route.name === screen;
+  // One Animated.Value per tab: 0 = inactive, 1 = active
+  const anims = useRef(
+    NAV_ITEMS.map(item => new Animated.Value(item.screen === route.name ? 1 : 0))
+  ).current;
+
+  useEffect(() => {
+    const activeIdx = NAV_ITEMS.findIndex(item => item.screen === route.name);
+    anims.forEach((anim, i) => {
+      Animated.spring(anim, {
+        toValue: i === activeIdx ? 1 : 0,
+        useNativeDriver: false,
+        tension: 60,
+        friction: 9,
+      }).start();
+    });
+  }, [route.name]);
 
   return (
-    <View style={[styles.container, {
-      bottom: bottomPadding,
-      backgroundColor: theme.colors.navBackground,
-      borderColor: theme.colors.navBorder,
-    }]}>
-      {NAV_ITEMS.map((item) => {
-        const active = isActive(item.screen);
+    <View
+      style={[
+        styles.bar,
+        { bottom: bottomPad, backgroundColor: theme.colors.navBackground, borderColor: theme.colors.navBorder },
+      ]}
+    >
+      {NAV_ITEMS.map((item, idx) => {
+        const active = route.name === item.screen;
+        const labelW = LABEL_WIDTHS[item.label] ?? 60;
+
+        // Container grows from flex 1 → 2.8 so other tabs slide outward smoothly
+        const flex = anims[idx].interpolate({ inputRange: [0, 1], outputRange: [1, 2.8] });
+
+        // Pill background fades in
+        const pillBg = anims[idx].interpolate({
+          inputRange: [0, 1],
+          outputRange: ['rgba(83,95,253,0)', 'rgba(83,95,253,1)'],
+        });
+
+        // Horizontal padding of the pill grows to give breathing room around icon+label
+        const pillPadH = anims[idx].interpolate({ inputRange: [0, 1], outputRange: [0, 14] });
+
+        // Label container expands from 0 → measured width
+        const labelContainerW = anims[idx].interpolate({ inputRange: [0, 1], outputRange: [0, labelW] });
+
+        // Gap between icon and label: 0 while collapsed, 5 when open
+        const labelMarginL = anims[idx].interpolate({ inputRange: [0, 1], outputRange: [0, 5] });
+
+        // Label text fades in during the second half of the expand
+        const labelOpacity = anims[idx].interpolate({
+          inputRange: [0, 0.45, 1],
+          outputRange: [0, 0, 1],
+        });
+
         return (
-          <TouchableOpacity
+          <Animated.View
             key={item.screen}
-            style={styles.item}
-            onPress={() => navigation.navigate(item.screen)}
-            activeOpacity={0.7}
+            style={{ flex, alignItems: 'center', justifyContent: 'center' }}
           >
-            <View style={[styles.pill, active && styles.pillActive]}>
-              <SvgIcon
-                name={item.svgName}
-                size={20}
-                color={active ? '#FFFFFF' : theme.colors.navText}
-              />
-              {active && (
-                <Text style={styles.pillLabel}>{item.label}</Text>
-              )}
-            </View>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate(item.screen)}
+              activeOpacity={0.8}
+            >
+              <Animated.View
+                style={[
+                  styles.pill,
+                  { backgroundColor: pillBg, paddingHorizontal: pillPadH },
+                ]}
+              >
+                <SvgIcon
+                  name={item.svgName}
+                  size={20}
+                  color={active ? '#FFFFFF' : theme.colors.navText}
+                />
+                <Animated.View
+                  style={{ width: labelContainerW, marginLeft: labelMarginL, overflow: 'hidden' }}
+                >
+                  <Animated.Text
+                    style={[styles.label, { opacity: labelOpacity }]}
+                    numberOfLines={1}
+                  >
+                    {item.label}
+                  </Animated.Text>
+                </Animated.View>
+              </Animated.View>
+            </TouchableOpacity>
+          </Animated.View>
         );
       })}
     </View>
@@ -55,7 +115,7 @@ const NavigationBar = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  bar: {
     position: 'absolute',
     left: 20,
     right: 20,
@@ -64,33 +124,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 32,
     borderWidth: 1,
+    alignItems: 'center',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 16 },
       android: { elevation: 8 },
     }),
-  },
-  item: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     height: 40,
-    paddingHorizontal: 10,
     borderRadius: 20,
-    gap: 5,
   },
-  pillActive: {
-    backgroundColor: '#535FFD',
-    paddingHorizontal: 14,
-  },
-  pillLabel: {
+  label: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
 

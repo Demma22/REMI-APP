@@ -28,6 +28,7 @@ const ScreenHeader = ({
   title,
   onBackPress,
   rightElement,
+  containerStyle,
 }) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -68,7 +69,7 @@ const ScreenHeader = ({
   }
 
   return (
-    <View style={styles.pageContainer}>
+    <View style={[styles.pageContainer, containerStyle]}>
       <TouchableOpacity style={styles.backBtn} onPress={onBackPress} activeOpacity={0.8}>
         <SvgIcon name="arrow-back" size={20} color={theme.colors.textPrimary} />
       </TouchableOpacity>

@@ -76,9 +76,12 @@ export const getStyles = (theme) => StyleSheet.create({
     backgroundColor: PURPLE,
     shadowColor: PURPLE,
   },
-  weekDayCardBlack: {
-    backgroundColor: '#0D0D0D',
+  weekDayCardEmpty: {
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     shadowColor: '#000',
+    shadowOpacity: 0.05,
   },
   weekDayCardContent: {
     flexDirection: 'row',
@@ -89,7 +92,6 @@ export const getStyles = (theme) => StyleSheet.create({
   weekDayLeft: {
     flex: 1,
     justifyContent: 'center',
-    gap: 8,
     paddingRight: 12,
     minHeight: 80,
   },
@@ -97,12 +99,17 @@ export const getStyles = (theme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    paddingVertical: 8,
+  },
+  activitySeparator: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   activityTime: {
-    fontSize: 13,
+    fontSize: 10,
     fontWeight: '500',
     color: 'rgba(255,255,255,0.65)',
-    width: 38,
+    width: 46,
   },
   activityName: {
     fontSize: 16,
@@ -113,6 +120,11 @@ export const getStyles = (theme) => StyleSheet.create({
   noActivityText: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.45)',
+    fontStyle: 'italic',
+  },
+  noActivityTextEmpty: {
+    fontSize: 14,
+    color: theme.colors.textTertiary,
     fontStyle: 'italic',
   },
 
@@ -132,10 +144,23 @@ export const getStyles = (theme) => StyleSheet.create({
     lineHeight: 28,
     letterSpacing: 0.5,
   },
+  dayAbbrTextDark: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: theme.colors.textPrimary,
+    lineHeight: 28,
+    letterSpacing: 0.5,
+  },
   dayWordText: {
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
+    lineHeight: 20,
+  },
+  dayWordTextDark: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
     lineHeight: 20,
   },
   editDayBtn: {
