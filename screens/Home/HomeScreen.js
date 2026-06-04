@@ -4,7 +4,6 @@ import {
   Dimensions, Animated, StyleSheet, Platform,
   TextInput, KeyboardAvoidingView, Modal, ActivityIndicator, Alert,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import ReAnimated from "react-native-reanimated";
 import { Svg, Circle } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -43,7 +42,7 @@ const PICKER_THEME = {
 };
 const PICKER_STYLES = StyleSheet.create({
   timePickerContainer: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
-  timePickerContent: { width: "90%", borderRadius: 24, padding: 20 },
+  timePickerContent: { width: "90%", borderRadius: 15, padding: 20 },
   timePickerHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   timePickerTitle: { fontSize: 18, fontWeight: "700" },
   timePickerColumns: { flexDirection: "row", justifyContent: "space-between", height: 200 },
@@ -116,174 +115,255 @@ function SkeletonBone({ style }) {
 function HomeSkeleton() {
   return (
     <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-      <SkeletonBone style={{ height: 150, marginHorizontal: 20, marginTop: 20, borderRadius: 24 }} />
-      <View style={{ flexDirection: "row", paddingHorizontal: 20, marginTop: 28, gap: 10 }}>
-        {[0, 1, 2].map(i => <SkeletonBone key={i} style={{ flex: 1, height: 88, borderRadius: 44 }} />)}
-      </View>
-      <View style={{ flexDirection: "row", paddingHorizontal: 20, marginTop: 24, gap: 12 }}>
-        <SkeletonBone style={{ flex: 1, height: 190, borderRadius: 20 }} />
-        <View style={{ flex: 1, gap: 12 }}>
-          <SkeletonBone style={{ height: 89, borderRadius: 20 }} />
-          <SkeletonBone style={{ height: 89, borderRadius: 20 }} />
+      {/* Today card */}
+      <SkeletonBone style={{ height: 130, marginHorizontal: 20, marginTop: 16, borderRadius: 15 }} />
+      {/* Your Activities: section title + 3 circles */}
+      <View style={{ paddingHorizontal: 20, marginTop: 26 }}>
+        <SkeletonBone style={{ height: 16, width: 130, borderRadius: 8, marginBottom: 14 }} />
+        <View style={{ flexDirection: "row" }}>
+          {[0, 1, 2].map(i => (
+            <View key={i} style={{ flex: 1, alignItems: "center" }}>
+              <SkeletonBone style={{ width: 88, height: 88, borderRadius: 44 }} />
+              <SkeletonBone style={{ height: 10, width: 36, borderRadius: 5, marginTop: 7 }} />
+            </View>
+          ))}
         </View>
       </View>
-      <SkeletonBone style={{ height: 72, marginHorizontal: 20, marginTop: 24, borderRadius: 20 }} />
+      {/* 3 action cards */}
+      <View style={{ flexDirection: "row", gap: 12, paddingHorizontal: 20, marginTop: 24 }}>
+        {[0, 1, 2].map(i => (
+          <SkeletonBone key={i} style={{ flex: 1, height: 82, borderRadius: 15 }} />
+        ))}
+      </View>
+      {/* Weekly focus graph */}
+      <SkeletonBone style={{ height: 120, marginHorizontal: 20, marginTop: 16, borderRadius: 15 }} />
     </ScrollView>
   );
 }
 
-// ── Activity Circle ───────────────────────────────────────────────
-const RING = 88;
-const STROKE = 12;
-const RADIUS = RING / 2 - STROKE / 2;
-const CIRC = 2 * Math.PI * RADIUS;
+// ── Focus Summary ring ────────────────────────────────────────────
+const FOCUS_D = 160;
+const FOCUS_SW = 14;
+const FOCUS_R = FOCUS_D / 2 - FOCUS_SW / 2;
+const FOCUS_C = 2 * Math.PI * FOCUS_R;
 
-function ActivityCircle({ activity, width }) {
-  const [progress, setProgress] = useState(0);
-  const { theme } = useTheme();
-
-  const calc = () => {
-    const now = new Date();
-    const cur = now.getHours() * 60 + now.getMinutes();
-    const s = parseStoredTime(activity.start);
-    const e = parseStoredTime(activity.end);
-    if (e <= s || cur < s) return 0;
-    if (cur >= e) return 1;
-    return (cur - s) / (e - s);
-  };
-
-  useEffect(() => {
-    const update = () => setProgress(calc());
-    update();
-    const id = setInterval(update, 30000);
-    return () => clearInterval(id);
-  }, []);
-
-  const isDone = progress >= 1;
-  const isLive = progress > 0 && progress < 1;
-  const offset = CIRC * (1 - progress);
-  const innerBg = theme.colors.background;
-  const innerText = theme.colors.textPrimary;
-  const trackColor = isDone ? "#535FFD" : "#E2E8F0";
+function HomeFocusSummary({ todayMins, sessions, streak, target, theme, onPress }) {
+  const remaining = Math.max(0, target - todayMins);
+  const progress = target > 0 ? Math.min(todayMins / target, 1) : 0;
+  const offset = FOCUS_C * (1 - progress);
 
   return (
-    <View style={{ alignItems: "center", ...(width ? { width } : { flex: 1 }) }}>
-      <View style={{ width: RING, height: RING }}>
-        <Svg width={RING} height={RING} style={{ position: "absolute" }}>
-          <Circle cx={RING / 2} cy={RING / 2} r={RADIUS} stroke={trackColor} strokeWidth={STROKE} fill="none" />
-          {isLive && (
-            <Circle
-              cx={RING / 2} cy={RING / 2} r={RADIUS}
-              stroke="#535FFD" strokeWidth={STROKE} fill="none"
-              strokeDasharray={CIRC} strokeDashoffset={offset}
-              strokeLinecap="round" rotation="-90" origin={`${RING / 2},${RING / 2}`}
-            />
-          )}
-        </Svg>
-        <View style={{
-          position: "absolute", top: STROKE, left: STROKE, right: STROKE, bottom: STROKE,
-          borderRadius: (RING - STROKE * 2) / 2,
-          backgroundColor: innerBg,
-          justifyContent: "center", alignItems: "center",
-        }}>
-          <Text style={{ fontSize: 9, fontWeight: "700", color: innerText, textAlign: "center", paddingHorizontal: 4 }} numberOfLines={2}>
-            {activity.course}
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        {/* Sessions */}
+        <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
+          <SvgIcon name="focus" size={20} color={theme.colors.textSecondary} />
+          <Text style={{ fontSize: 26, fontWeight: "800", color: theme.colors.textPrimary, letterSpacing: -0.5 }}>
+            {sessions}
           </Text>
+          <Text style={{ fontSize: 11, fontWeight: "600", color: theme.colors.textSecondary }}>Sessions</Text>
+        </View>
+
+        {/* Main ring */}
+        <View style={{ width: FOCUS_D, height: FOCUS_D, alignItems: "center", justifyContent: "center" }}>
+          <Svg width={FOCUS_D} height={FOCUS_D} style={StyleSheet.absoluteFill}>
+            <Circle cx={FOCUS_D / 2} cy={FOCUS_D / 2} r={FOCUS_R}
+              stroke={theme.colors.border} strokeWidth={FOCUS_SW} fill="none" />
+            <Circle cx={FOCUS_D / 2} cy={FOCUS_D / 2} r={FOCUS_R}
+              stroke="#535FFD" strokeWidth={FOCUS_SW} fill="none"
+              strokeDasharray={FOCUS_C} strokeDashoffset={offset}
+              strokeLinecap="round" rotation="-90"
+              origin={`${FOCUS_D / 2},${FOCUS_D / 2}`} />
+          </Svg>
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ fontSize: 34, fontWeight: "800", color: theme.colors.textPrimary, letterSpacing: -1 }}>
+              {remaining}
+            </Text>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: theme.colors.textSecondary, marginTop: 2, textAlign: "center" }}>
+              {remaining === 0 && target > 0 ? "Goal hit! 🎉" : "min left"}
+            </Text>
+          </View>
+        </View>
+
+        {/* Streak */}
+        <View style={{ flex: 1, alignItems: "center", gap: 3 }}>
+          <SvgIcon name="fire" size={20} color={theme.colors.textSecondary} />
+          <Text style={{ fontSize: 26, fontWeight: "800", color: theme.colors.textPrimary, letterSpacing: -0.5 }}>
+            {streak}
+          </Text>
+          <Text style={{ fontSize: 11, fontWeight: "600", color: theme.colors.textSecondary }}>Streak</Text>
         </View>
       </View>
-      <Text style={{ fontSize: 10, marginTop: 7, fontWeight: isDone || isLive ? "600" : "400", color: isDone ? "#535FFD" : isLive ? "#535FFD" : "#AAAAAA" }}>
-        {isDone ? "Done" : isLive ? "Live" : formatDisplayTime(activity.start)}
-      </Text>
+    </TouchableOpacity>
+  );
+}
+
+// ── Live activity pill ────────────────────────────────────────────
+function isLectureLive(lec) {
+  const now = new Date();
+  const cur = now.getHours() * 60 + now.getMinutes();
+  const s = parseStoredTime(lec.start);
+  const e = parseStoredTime(lec.end);
+  return s > 0 && e > s && cur >= s && cur < e;
+}
+
+function LiveDot() {
+  const ring1 = useRef(new Animated.Value(0)).current;
+  const ring2 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const makeRingAnim = (sv, delay) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(sv, { toValue: 1, duration: 1400, useNativeDriver: true }),
+          Animated.timing(sv, { toValue: 0, duration: 0, useNativeDriver: true }),
+        ])
+      );
+
+    const a1 = makeRingAnim(ring1, 0);
+    const a2 = makeRingAnim(ring2, 700);
+    a1.start();
+    a2.start();
+    return () => { a1.stop(); a2.stop(); };
+  }, []);
+
+  const ringStyle = (sv) => ({
+    position: 'absolute',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#22C55E',
+    top: -6,
+    left: -6,
+    opacity: sv.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.8, 0.5, 0] }),
+    transform: [{ scale: sv.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1.6] }) }],
+  });
+
+  return (
+    <View style={{ width: 8, height: 8, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.View style={ringStyle(ring1)} />
+      <Animated.View style={ringStyle(ring2)} />
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' }} />
     </View>
   );
 }
 
 // ── Today Card ────────────────────────────────────────────────────
-function TodayCard({ lectures, navigation, focusSessions, focusTodayMins }) {
-  const sessionLabel = `${focusSessions} Focus session${focusSessions !== 1 ? "s" : ""}`;
-  const minuteLabel = focusTodayMins === 1 ? "1 minute" : `${focusTodayMins} minutes`;
+function TodayCard({ lectures, deadlines, navigation, onActivityPress }) {
+  const hasNothing = lectures.length === 0 && deadlines.length === 0;
 
   return (
     <View style={s.todayCard}>
       {/* Header row */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
         <Text style={s.todayLabel}>Today</Text>
-        <View style={{ flexDirection: "row", gap: 14 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-            <SvgIcon name="focus" size={13} color="#535FFD" />
-            <Text style={s.todayStatText}>{sessionLabel}</Text>
-          </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-            <SvgIcon name="clock" size={13} color="#535FFD" />
-            <Text style={s.todayStatText}>{minuteLabel}</Text>
-          </View>
-        </View>
       </View>
 
       {/* Activity rows */}
-      {lectures.length === 0 ? (
+      {hasNothing ? (
         <Text style={{ color: "#AAAAAA", fontSize: 14, paddingVertical: 8 }}>No activities today</Text>
       ) : (
-        lectures.slice(0, 4).map((lec, i) => (
-          <React.Fragment key={i}>
-            {i > 0 && <View style={{ height: 1, backgroundColor: "#EEEEFF" }} />}
-            <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 11, gap: 8 }}>
-              <Text style={s.todayTimeRange} numberOfLines={1}>{formatDisplayTime(lec.start)}</Text>
-              <Text style={s.todayCourse} numberOfLines={1}>{lec.course}</Text>
+        <>
+          {lectures.slice(0, 4).map((lec, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && <View style={{ height: 1, backgroundColor: "#EEEEFF" }} />}
+              <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 11, gap: 8 }}>
+                {isLectureLive(lec) && <LiveDot />}
+                <TouchableOpacity
+                  style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}
+                  onPress={() => onActivityPress(lec)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={s.todayTimeRange} numberOfLines={1}>{formatDisplayTime(lec.start)}</Text>
+                  <Text style={s.todayCourse} numberOfLines={1}>{lec.course}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={s.focusModeBtn}
+                  onPress={() => navigation.navigate("Focus", { quickStart: true })}
+                  activeOpacity={0.85}
+                >
+                  <Text style={s.focusModeBtnText}>Focus Mode</Text>
+                </TouchableOpacity>
+              </View>
+            </React.Fragment>
+          ))}
+          {lectures.length > 4 && (
+            <TouchableOpacity onPress={() => navigation.navigate("Timetable")}>
+              <Text style={{ color: "#AAAAAA", fontSize: 11, marginTop: 2, marginBottom: 4 }}>+{lectures.length - 4} more</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Deadline rows */}
+          {deadlines.map((dl, i) => (
+            <View key={`dl-${i}`} style={s.deadlineRow}>
+              <Text style={s.deadlineRowTime} numberOfLines={1}>{dl.dueLabel}</Text>
+              <Text style={s.deadlineRowName} numberOfLines={1}>{dl.course}</Text>
               <TouchableOpacity
-                style={s.focusModeBtn}
+                style={s.focusModeBtnDl}
                 onPress={() => navigation.navigate("Focus", { quickStart: true })}
                 activeOpacity={0.85}
               >
-                <Text style={s.focusModeBtnText}>Focus Mode</Text>
+                <Text style={s.focusModeBtnTextDl}>Focus Mode</Text>
               </TouchableOpacity>
             </View>
-          </React.Fragment>
-        ))
-      )}
-      {lectures.length > 4 && (
-        <TouchableOpacity onPress={() => navigation.navigate("Timetable")}>
-          <Text style={{ color: "#AAAAAA", fontSize: 11, marginTop: 6 }}>+{lectures.length - 4} more</Text>
-        </TouchableOpacity>
+          ))}
+        </>
       )}
     </View>
   );
 }
 
 // ── Action Cards ──────────────────────────────────────────────────
+const NAV_CARDS = (navigation, onCreatePress, hasSchedule) => [
+  {
+    label: "Schedule",
+    icon: "calendar",
+    bg: "#FFFFFF",
+    iconColor: "#535FFD",
+    textColor: "#111111",
+    dark: false,
+    onPress: hasSchedule ? () => navigation.navigate("Timetable") : onCreatePress,
+  },
+  {
+    label: "Focus",
+    icon: "focus",
+    bg: "#FFFFFF",
+    iconColor: "#535FFD",
+    textColor: "#111111",
+    dark: false,
+    onPress: () => navigation.navigate("Focus"),
+  },
+  {
+    label: "Deadline",
+    icon: "bell",
+    bg: "#FFFFFF",
+    iconColor: "#535FFD",
+    textColor: "#111111",
+    dark: false,
+    onPress: () => navigation.navigate("Deadlines"),
+  },
+];
+
 function ActionCards({ navigation, onCreatePress, hasSchedule }) {
+  const cards = NAV_CARDS(navigation, onCreatePress, hasSchedule);
   return (
     <View style={{ flexDirection: "row", gap: 12, paddingHorizontal: 20, marginTop: 24 }}>
-      <TouchableOpacity
-        style={s.createCard}
-        onPress={hasSchedule ? () => navigation.navigate("Timetable") : onCreatePress}
-        activeOpacity={0.85}
-      >
-        <View>
-          <Text style={s.createTitle}>{hasSchedule ? "MY" : "CREATE"}</Text>
-          <Text style={s.createSubtitle}>Schedule</Text>
-          {!hasSchedule && <Text style={s.createDesc}>Add your Timetable</Text>}
-        </View>
-        <View style={s.createIconPill}>
-          <SvgIcon name="calendar" size={30} color="#FFFFFF" />
-        </View>
-      </TouchableOpacity>
-
-      <View style={{ flex: 1, gap: 12 }}>
-        <TouchableOpacity style={s.addCard} onPress={() => navigation.navigate("Deadlines")} activeOpacity={0.85}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.addSubtitle}>Deadlines</Text>
-          </View>
-          <SvgIcon name="bell" size={32} color="#535FFD" />
+      {cards.map((card, i) => (
+        <TouchableOpacity
+          key={i}
+          style={[s.navCard, { backgroundColor: card.bg }, card.dark ? s.navCardDark : s.navCardLight]}
+          onPress={card.onPress}
+          activeOpacity={0.85}
+        >
+          <SvgIcon name={card.icon} size={28} color={card.iconColor} />
+          <Text style={[s.navCardLabel, { color: card.textColor }]}>{card.label}</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={s.addCard} onPress={() => navigation.navigate("Focus")} activeOpacity={0.85}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.addSubtitle}>Focus</Text>
-          </View>
-          <SvgIcon name="focus" size={32} color="#535FFD" />
-        </TouchableOpacity>
-      </View>
+      ))}
     </View>
   );
 }
@@ -311,9 +391,82 @@ function GPACard({ gpaSummary, onPress }) {
   );
 }
 
+// ── Weekly Focus Graph ────────────────────────────────────────────
+const BAR_MAX_H = 60;
+
+function WeeklyFocusGraph({ data, target, theme }) {
+  const _td = new Date();
+  const today = `${_td.getFullYear()}-${String(_td.getMonth()+1).padStart(2,"0")}-${String(_td.getDate()).padStart(2,"0")}`;
+  const maxVal = Math.max(target, ...data.map(d => d.minutes), 1);
+  const totalWeek = data.reduce((sum, d) => sum + d.minutes, 0);
+  const daysHitTarget = data.filter(d => target > 0 && d.minutes >= target).length;
+
+  return (
+    <View style={[s.weekCard, { backgroundColor: theme.colors.card }]}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+        <View>
+          <Text style={[s.weekTitle, { color: theme.colors.textPrimary }]}>Weekly Focus</Text>
+          <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+            {totalWeek >= 60
+              ? `${Math.floor(totalWeek / 60)}h ${totalWeek % 60 > 0 ? `${totalWeek % 60}m` : ""} this week`
+              : `${totalWeek}m this week`}
+            {daysHitTarget > 0 ? ` · ${daysHitTarget}d goal hit` : ""}
+          </Text>
+        </View>
+      </View>
+
+      <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6 }}>
+        {data.map((d, i) => {
+          const isToday = d.date === today;
+          const hitTarget = target > 0 && d.minutes >= target;
+          const barH = d.minutes > 0 ? Math.max(Math.round((d.minutes / maxVal) * BAR_MAX_H), 4) : 0;
+          const targetLineH = target > 0 ? Math.round((target / maxVal) * BAR_MAX_H) : 0;
+
+          return (
+            <View key={i} style={{ flex: 1, alignItems: "center" }}>
+              <View style={{ height: BAR_MAX_H, justifyContent: "flex-end", width: "100%", alignItems: "center" }}>
+                {/* Target dashed line for today's bar */}
+                {isToday && target > 0 && !hitTarget && (
+                  <View style={{
+                    position: "absolute", bottom: targetLineH,
+                    width: "80%", height: 1.5,
+                    borderWidth: 1, borderColor: "#535FFD", borderStyle: "dashed",
+                  }} />
+                )}
+                <View style={{
+                  width: "72%", height: barH || 0,
+                  backgroundColor: hitTarget ? "#535FFD" : isToday ? "#535FFD88" : "#E2E8F0",
+                  borderRadius: 6,
+                }} />
+              </View>
+              <Text style={{
+                fontSize: 10, marginTop: 6, fontWeight: isToday ? "800" : "500",
+                color: isToday ? "#535FFD" : theme.colors.textSecondary,
+              }}>
+                {d.dayLabel}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      {target > 0 && (
+        <Text style={{ color: theme.colors.textSecondary, fontSize: 11, marginTop: 10 }}>
+          Daily goal: {target >= 60
+            ? `${Math.floor(target / 60)}h${target % 60 > 0 ? ` ${target % 60}m` : ""}`
+            : `${target}m`}
+        </Text>
+      )}
+    </View>
+  );
+}
+
 // ── Main Screen ───────────────────────────────────────────────────
 export default function HomeScreen({ navigation }) {
   const [todayLectures, setTodayLectures] = useState([]);
+  const [todayDeadlines, setTodayDeadlines] = useState([]);
+  const [weeklyFocusData, setWeeklyFocusData] = useState([]);
+  const [weeklyFocusTarget, setWeeklyFocusTarget] = useState(60);
   const [gpaSummary, setGpaSummary] = useState([]);
   const [upcomingExam, setUpcomingExam] = useState(null);
   const [focusStreak, setFocusStreak] = useState(0);
@@ -325,6 +478,7 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [hasSchedule, setHasSchedule] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetStep, setSheetStep] = useState("options");
   const sheetStepRef = useRef("options");
@@ -431,17 +585,34 @@ export default function HomeScreen({ navigation }) {
 
   const loadFocusStats = async () => {
     try {
-      const today = new Date().toISOString().split("T")[0];
-      const [sessionsRaw, streakRaw] = await Promise.all([
-        AsyncStorage.getItem("@remi_focus_sessions"),
-        AsyncStorage.getItem("@remi_focus_streak"),
-      ]);
-      const sessions = sessionsRaw ? JSON.parse(sessionsRaw) : [];
+      const _d = new Date();
+      const today = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,"0")}-${String(_d.getDate()).padStart(2,"0")}`;
+      const ud = await getUserData();
+      const sessions = Array.isArray(ud?.focusSessions) ? ud.focusSessions : [];
       const todaySessions = sessions.filter(s => s.date === today);
       setFocusTodayMins(todaySessions.reduce((sum, s) => sum + (s.duration || 0), 0));
       setFocusSessions(todaySessions.length);
-      const streakData = streakRaw ? JSON.parse(streakRaw) : { count: 0 };
-      setFocusStreak(streakData.count || 0);
+      setFocusStreak(ud?.focusStreak?.count || 0);
+    } catch {}
+  };
+
+  const loadWeeklyFocus = async () => {
+    try {
+      const ud = await getUserData();
+      const sessions = Array.isArray(ud?.focusSessions) ? ud.focusSessions : [];
+      setWeeklyFocusTarget(ud?.focusTarget || 60);
+      const days = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+        const dayLabel = d.toLocaleString("en-US", { weekday: "short" }).slice(0, 3).toUpperCase();
+        const minutes = sessions
+          .filter(s => s.date === dateStr)
+          .reduce((sum, s) => sum + (s.duration || 0), 0);
+        days.push({ dayLabel, date: dateStr, minutes });
+      }
+      setWeeklyFocusData(days);
     } catch {}
   };
 
@@ -450,6 +621,7 @@ export default function HomeScreen({ navigation }) {
     loadHomeData();
     checkOnboardingStatus();
     loadFocusStats();
+    loadWeeklyFocus();
   }, []);
 
   useEffect(() => {
@@ -458,6 +630,7 @@ export default function HomeScreen({ navigation }) {
       loadHomeData();
       checkOnboardingStatus();
       loadFocusStats();
+      loadWeeklyFocus();
     });
     return unsubscribe;
   }, [navigation]);
@@ -478,6 +651,7 @@ export default function HomeScreen({ navigation }) {
       const ud = await getUserData();
       if (ud) {
         loadTodaysLectures(ud);
+        loadTodayDeadlines(ud);
         loadGPASummary(ud);
         loadUpcomingExam(ud);
         setCurrentSemester(ud.currentSemester || ud.current_semester || 1);
@@ -495,15 +669,41 @@ export default function HomeScreen({ navigation }) {
     try {
       const day = new Date().toLocaleString("en-US", { weekday: "long" }).toLowerCase();
       const timetable = userData.timetable || {};
-      const currentSemester = userData.current_semester || 1;
-      const todaysLectures = timetable[day]?.filter((l) => l.semester === currentSemester) || [];
+      const todaysLectures = timetable[day] || [];
       setTodayLectures(
-        todaysLectures.map((l) => ({
+        todaysLectures.map((l, idx) => ({
           course: l.name, time: `${l.start} - ${l.end}`,
-          start: l.start, end: l.end, room: l.room,
+          start: l.start, end: l.end,
+          location: l.location || l.room, lecturer: l.lecturer,
+          type: l.type, notes: l.notes,
+          dayKey: day, index: idx,
         }))
       );
     } catch { setTodayLectures([]); }
+  };
+
+  const loadTodayDeadlines = (userData) => {
+    try {
+      const exams = Array.isArray(userData.exams) ? userData.exams : [];
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const upcoming = exams
+        .filter(e => {
+          const d = new Date(e.date);
+          d.setHours(0, 0, 0, 0);
+          const diff = Math.round((d - now) / (1000 * 60 * 60 * 24));
+          return diff >= 0 && diff <= 3;
+        })
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .map(e => {
+          const d = new Date(e.date);
+          d.setHours(0, 0, 0, 0);
+          const diff = Math.round((d - now) / (1000 * 60 * 60 * 24));
+          const dueLabel = diff === 0 ? "Today" : diff === 1 ? "Tomorrow" : `In ${diff}d`;
+          return { course: e.name, dueLabel, start: e.start, date: e.date, isDeadline: true };
+        });
+      setTodayDeadlines(upcoming);
+    } catch { setTodayDeadlines([]); }
   };
 
   const loadGPASummary = (userData) => {
@@ -574,12 +774,6 @@ export default function HomeScreen({ navigation }) {
                   <SvgIcon name="user" size={20} color="#FFFFFF" />
                 </ReAnimated.View>
             }
-            {focusStreak > 0 && (
-              <View style={s.streakBadge}>
-                <SvgIcon name="fire" size={13} color="#535FFD" />
-                <Text style={s.streakBadgeText}>{focusStreak}</Text>
-              </View>
-            )}
           </View>
         </TouchableOpacity>
         <View style={{ alignItems: "center", flex: 1 }}>
@@ -617,56 +811,102 @@ export default function HomeScreen({ navigation }) {
         {/* Today card */}
         <TodayCard
           lectures={todayLectures}
+          deadlines={todayDeadlines}
           navigation={navigation}
-          focusSessions={focusSessions}
-          focusTodayMins={focusTodayMins}
+          onActivityPress={setSelectedActivity}
         />
 
-        {/* Your Activities */}
-        {todayLectures.length > 0 && (
-          <View style={{ marginTop: 26, paddingHorizontal: 20 }}>
-            <Text style={[s.sectionTitle, { color: theme.colors.textPrimary }]}>Your Activities</Text>
-            {todayLectures.length > 4 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={{ marginTop: 14, marginHorizontal: -20 }}
-                contentContainerStyle={{ paddingHorizontal: 20 }}
-              >
-                {todayLectures.map((lec, i) => <ActivityCircle key={i} activity={lec} width={100} />)}
-              </ScrollView>
-            ) : (
-              <View style={{ flexDirection: "row", marginTop: 14 }}>
-                {todayLectures.map((lec, i) => <ActivityCircle key={i} activity={lec} />)}
-              </View>
-            )}
-          </View>
-        )}
+        {/* Focus Summary */}
+        <View style={{ marginHorizontal: 20, marginTop: 16 }}>
+          <Text style={[s.sectionTitle, { color: theme.colors.textPrimary, marginBottom: 12 }]}>Focus</Text>
+          <HomeFocusSummary
+            todayMins={focusTodayMins}
+            sessions={focusSessions}
+            streak={focusStreak}
+            target={weeklyFocusTarget}
+            theme={theme}
+            onPress={() => navigation.navigate("Focus")}
+          />
+        </View>
+
 
         {/* Action cards */}
         <ActionCards navigation={navigation} onCreatePress={openSheet} hasSchedule={hasSchedule} />
 
-        {/* Upcoming deadline */}
-        {upcomingExam && (
-          <TouchableOpacity
-            style={[s.deadlineCard, { marginTop: 16, marginHorizontal: 20 }]}
-            onPress={() => navigation.navigate("Deadlines")}
-            activeOpacity={0.85}
-          >
-            <View style={s.deadlineIcon}>
-              <SvgIcon name="bell" size={18} color="#FFFFFF" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "700" }}>{upcomingExam.name}</Text>
-              <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, marginTop: 3 }}>
-                {upcomingExam.formattedDate} · {upcomingExam.start}
-              </Text>
-            </View>
-          </TouchableOpacity>
+        {/* Weekly focus graph */}
+        {weeklyFocusData.length > 0 && (
+          <WeeklyFocusGraph
+            data={weeklyFocusData}
+            target={weeklyFocusTarget}
+            theme={theme}
+          />
         )}
+
       </ScrollView>
 
       <NavigationBar />
+
+      {/* Activity detail popup */}
+      <Modal visible={!!selectedActivity} transparent animationType="fade" onRequestClose={() => setSelectedActivity(null)}>
+        <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setSelectedActivity(null)}>
+          <View style={s.activityDetailCard}>
+            <View style={s.activityDetailHeader}>
+              <Text style={s.activityDetailName}>{selectedActivity?.course}</Text>
+              <TouchableOpacity onPress={() => setSelectedActivity(null)}>
+                <Text style={s.closeX}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={s.activityDetailBody}>
+              {(selectedActivity?.start) && (
+                <View style={s.detailRow}>
+                  <SvgIcon name="clock" size={16} color="#888888" />
+                  <Text style={s.detailText}>
+                    {selectedActivity.start}{selectedActivity.time?.includes(" - ") ? ` – ${selectedActivity.time.split(" - ")[1]}` : ""}
+                  </Text>
+                </View>
+              )}
+              {selectedActivity?.location && (
+                <View style={s.detailRow}>
+                  <SvgIcon name="location" size={16} color="#888888" />
+                  <Text style={s.detailText}>{selectedActivity.location}</Text>
+                </View>
+              )}
+              {selectedActivity?.lecturer && (
+                <View style={s.detailRow}>
+                  <SvgIcon name="user" size={16} color="#888888" />
+                  <Text style={s.detailText}>{selectedActivity.lecturer}</Text>
+                </View>
+              )}
+              {selectedActivity?.type && (
+                <View style={s.detailRow}>
+                  <SvgIcon name="edit" size={16} color="#888888" />
+                  <Text style={s.detailText}>{selectedActivity.type.charAt(0).toUpperCase() + selectedActivity.type.slice(1)}</Text>
+                </View>
+              )}
+              {selectedActivity?.notes && (
+                <View style={s.detailRow}>
+                  <SvgIcon name="message" size={16} color="#888888" />
+                  <Text style={s.detailText}>{selectedActivity.notes}</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={s.activityDetailActions}>
+              <TouchableOpacity
+                style={s.detailEditBtn}
+                onPress={() => {
+                  const act = selectedActivity;
+                  setSelectedActivity(null);
+                  navigation.navigate("EditTimetable", { initialDay: act.dayKey, initialLectureIndex: act.index });
+                }}
+              >
+                <Text style={s.detailEditText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Backdrop */}
       <Animated.View
@@ -875,17 +1115,18 @@ const s = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: 20,
     marginBottom: 16,
-    borderRadius: 16,
+    borderRadius: 15,
     padding: 14,
   },
 
   // Section
   sectionTitle: { fontSize: 16, fontWeight: "800" },
 
+
   // Today card
   todayCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 24,
+    borderRadius: 15,
     marginHorizontal: 20,
     marginTop: 16,
     padding: 20,
@@ -900,11 +1141,45 @@ const s = StyleSheet.create({
   todayCourse: { color: "#111111", fontSize: 15, fontWeight: "700", flex: 1 },
   focusModeBtn: {
     backgroundColor: "#535FFD",
-    borderRadius: 20,
+    borderRadius: 15,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   focusModeBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
+
+  // Weekly focus graph
+  weekCard: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderRadius: 15,
+    padding: 20,
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 14 },
+      android: { elevation: 2 },
+    }),
+  },
+  weekTitle: { fontSize: 16, fontWeight: "800" },
+
+  // Deadline rows inside Today card
+  deadlineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EF4444",
+    borderRadius: 14,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    marginTop: 8,
+    gap: 8,
+  },
+  deadlineRowTime: { color: "#FFFFFF", fontSize: 12, fontWeight: "600", width: 72 },
+  deadlineRowName: { color: "#FFFFFF", fontSize: 15, fontWeight: "700", flex: 1 },
+  focusModeBtnDl: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  focusModeBtnTextDl: { color: "#111111", fontSize: 11, fontWeight: "700" },
 
   // Streak badge overlapping bottom-right of avatar
   streakBadge: {
@@ -921,11 +1196,29 @@ const s = StyleSheet.create({
   },
   streakBadgeText: { color: "#FFFFFF", fontSize: 13, fontWeight: "800" },
 
-  // Action cards
+  // Nav cards (3-up row)
+  navCard: {
+    flex: 1,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 18,
+    gap: 8,
+  },
+  navCardLight: {
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8 },
+      android: { elevation: 2 },
+    }),
+  },
+  navCardDark: {},
+  navCardLabel: { fontSize: 13, fontWeight: "700" },
+
+  // Action cards (legacy, kept for ref)
   createCard: {
     flex: 1,
     backgroundColor: "#535FFD",
-    borderRadius: 20,
+    borderRadius: 15,
     padding: 18,
     minHeight: 190,
     justifyContent: "space-between",
@@ -938,13 +1231,13 @@ const s = StyleSheet.create({
   createSubtitle: { color: "#FFFFFF", fontSize: 16, fontWeight: "700", marginTop: 2 },
   createDesc: { color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 4 },
   createIconPill: {
-    width: 56, height: 56, borderRadius: 16,
+    width: 56, height: 56, borderRadius: 15,
     backgroundColor: "rgba(255,255,255,0.22)",
     justifyContent: "center", alignItems: "center",
   },
   addCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: 15,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
@@ -960,7 +1253,7 @@ const s = StyleSheet.create({
   // GPA card
   gpaCard: {
     backgroundColor: "#111111",
-    borderRadius: 20,
+    borderRadius: 15,
     padding: 20,
     flexDirection: "row",
     alignItems: "center",
@@ -973,7 +1266,7 @@ const s = StyleSheet.create({
   // Deadline card
   deadlineCard: {
     backgroundColor: "#EF4444",
-    borderRadius: 20,
+    borderRadius: 15,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
@@ -1034,7 +1327,7 @@ const s = StyleSheet.create({
   sheetOptionBtn: {
     flex: 1,
     backgroundColor: "#535FFD",
-    borderRadius: 20,
+    borderRadius: 15,
     paddingVertical: 28,
     alignItems: "center",
     justifyContent: "center",
@@ -1042,7 +1335,7 @@ const s = StyleSheet.create({
   },
   sheetAiBtn: {
     backgroundColor: "#535FFD",
-    borderRadius: 20,
+    borderRadius: 15,
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -1089,4 +1382,31 @@ const s = StyleSheet.create({
     paddingVertical: 18, alignItems: "center",
   },
   addActivityBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800", letterSpacing: 0.5 },
+
+  // Activity detail modal
+  modalOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center", alignItems: "center", paddingHorizontal: 24,
+  },
+  activityDetailCard: {
+    backgroundColor: "#FFFFFF", borderRadius: 15, padding: 24, width: "100%",
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 20 },
+      android: { elevation: 12 },
+    }),
+  },
+  activityDetailHeader: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20,
+  },
+  activityDetailName: { fontSize: 22, fontWeight: "800", color: "#111111", flex: 1, paddingRight: 12 },
+  closeX: { fontSize: 18, color: "#AAAAAA", fontWeight: "600" },
+  activityDetailBody: { gap: 12, marginBottom: 24 },
+  detailRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  detailText: { fontSize: 15, color: "#444444", flex: 1 },
+  activityDetailActions: { flexDirection: "row", gap: 12 },
+  detailEditBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 12,
+    backgroundColor: "#535FFD", alignItems: "center",
+  },
+  detailEditText: { color: "#FFFFFF", fontWeight: "700", fontSize: 15 },
 });

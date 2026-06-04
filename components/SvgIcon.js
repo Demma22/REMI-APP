@@ -61,6 +61,16 @@ import quoteIcon from '../assets/icons/quote.svg';
 import cameraIcon from '../assets/icons/camera.svg';
 import uploadIcon from '../assets/icons/upload.svg';
 import fireIcon from '../assets/icons/fire.svg';
+import shareIcon from '../assets/icons/share.svg';
+import logoutIcon from '../assets/icons/logout.svg';
+import CalendarFillIcon from '../assets/icons/calendar-fill.svg';
+import ClockFillIcon from '../assets/icons/clock-fill.svg';
+import HouseFillIcon from '../assets/icons/house-fill.svg';
+import UserFillIcon from '../assets/icons/user-fill.svg';
+import BellFillIcon from '../assets/icons/bell-fill.svg';
+import MoonFillIcon from '../assets/icons/moon-fill.svg';
+import FocusFillIcon from '../assets/icons/focus-fill.svg';
+
 
 const iconComponents = {
   'home': HomeIcon,
@@ -82,7 +92,6 @@ const iconComponents = {
   'complete': completeIcon,
   'tiktok': TiktokIcon,
   'mail': MailIcon,
-  'book': BookIcon,
   'info': AboutIcon,
   'bell': BellIcon,
   'whatsapp': WhatsappIcon,
@@ -124,6 +133,15 @@ const iconComponents = {
   'robot': RobotIcon,
   'smile': SmileIcon,
   'user': UserIcon,
+  'share': shareIcon,
+  'logout': logoutIcon,
+  'calendar-fill': CalendarFillIcon,
+  'clock-fill': ClockFillIcon,
+  'house-fill': HouseFillIcon,
+  'user-fill': UserFillIcon,
+  'bell-fill': BellFillIcon,
+  'moon-fill': MoonFillIcon,
+  'focus-fill': FocusFillIcon,
 };
 
 const SvgIcon = ({ name, size = 24, color = '#000', style }) => {

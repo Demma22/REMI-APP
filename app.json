@@ -21,7 +21,8 @@
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone.",
         "UIBackgroundModes": [
           "remote-notification",
-          "fetch"
+          "fetch",
+          "audio"
         ]
       }
     },

@@ -47,7 +47,7 @@ export const styles = StyleSheet.create({
   },
   formCard: {
     backgroundColor: "#535FFD", // Purple card
-    borderRadius: 24,
+    borderRadius: 15,
     padding: 24,
     marginBottom: 32,
     shadowColor: "#535FFD",

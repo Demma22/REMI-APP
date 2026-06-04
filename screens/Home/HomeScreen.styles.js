@@ -41,7 +41,7 @@ export const getStyles = (theme) =>
 
     // ── Upcoming exam card ────────────────────────────────────────
     examCard: {
-      borderRadius: 20,
+      borderRadius: 15,
       padding: 16,
       marginHorizontal: 20,
       ...Platform.select({
@@ -93,7 +93,7 @@ export const getStyles = (theme) =>
     onboardingBanner: {
       marginHorizontal: 20,
       marginTop: 20,
-      borderRadius: 16,
+      borderRadius: 15,
       padding: 14,
       borderWidth: 1,
       borderColor: theme.colors.border,
@@ -117,7 +117,7 @@ export const getStyles = (theme) =>
     onboardingBannerButton: {
       paddingHorizontal: 16,
       paddingVertical: 8,
-      borderRadius: 20,
+      borderRadius: 15,
     },
     onboardingBannerButtonText: {
       color: "#FFFFFF",

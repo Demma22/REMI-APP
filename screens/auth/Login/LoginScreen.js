@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Image,
-  ImageBackground, KeyboardAvoidingView, Platform, Alert,
+  KeyboardAvoidingView, Platform, Alert,
   ActivityIndicator, ScrollView, Dimensions,
 } from "react-native";
 import { Svg, Path } from "react-native-svg";
@@ -12,7 +12,7 @@ import { usernameToEmail } from "../../../utils/usernameHelper";
 import { signInWithGoogle } from "../../../utils/googleAuth";
 
 const { height } = Dimensions.get("window");
-const HEADER_H = height * 0.42;
+const HEADER_H = height * 0.32;
 
 export default function LoginScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -44,7 +44,8 @@ export default function LoginScreen({ navigation }) {
         setIsLoading(false);
         return;
       }
-      // App.js onAuthStateChange handles navigation
+      // Keep spinner — onAuthStateChange unmounts this component when it navigates.
+      setTimeout(() => setIsLoading(false), 10000);
     } catch {
       setError("Connection error. Please try again.");
       setIsLoading(false);
@@ -54,12 +55,10 @@ export default function LoginScreen({ navigation }) {
   const handleGoogleSignIn = async () => {
     setError(""); setIsLoading(true);
     try {
-      const result = await signInWithGoogle();
-      if (!result) return;
-      navigation.reset({ index: 0, routes: [{ name: result.onboardingCompleted ? "Home" : "Onboarding" }] });
+      await signInWithGoogle();
+      setTimeout(() => setIsLoading(false), 10000);
     } catch (err) {
       setError(err.message || "Google sign-in failed. Please try again.");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -67,15 +66,10 @@ export default function LoginScreen({ navigation }) {
   return (
     <View style={styles.root}>
       {/* Header */}
-      <ImageBackground
-        source={require("../../../assets/welcome-page.png")}
-        style={[styles.imgHeader, { height: HEADER_H, paddingTop: insets.top + 20 }]}
-        resizeMode="cover"
-      >
-        <View style={styles.imgOverlay} />
+      <View style={[styles.imgHeader, { height: HEADER_H, paddingTop: insets.top + 20 }]}>
         <Image source={require("../../../assets/remiwhite.png")} style={styles.logo} resizeMode="contain" />
         <Text style={styles.logoLabel}>Remi</Text>
-      </ImageBackground>
+      </View>
 
       {/* Card */}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -171,15 +165,14 @@ export default function LoginScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#FFFFFF" },
-  imgHeader: { alignItems: "center", justifyContent: "center" },
-  imgOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(52, 57, 172, 0.62)",
+  imgHeader: {
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "#535FFD",
   },
-  logo: { width: 58, height: 58, zIndex: 1 },
+  logo: { width: 58, height: 58 },
   logoLabel: {
     color: "#FFFFFF", fontSize: 17, fontWeight: "600",
-    marginTop: 8, letterSpacing: 0.3, zIndex: 1,
+    marginTop: 8, letterSpacing: 0.3,
   },
   card: {
     flex: 1,

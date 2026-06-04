@@ -11,6 +11,7 @@ import { getUserData, updateUserData } from "../services/userDataService";
 import { useNotifications } from "../hooks/useNotifications";
 import SvgIcon from "./SvgIcon";
 import TimePicker from "../screens/timetable/components/TimePicker";
+import { AIScanButtons } from "./AIScanSheet";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 const SHEET_H = SCREEN_H * 0.80;
@@ -24,7 +25,7 @@ const PICKER_THEME = {
 };
 const PICKER_STYLES = StyleSheet.create({
   timePickerContainer: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
-  timePickerContent: { width: "90%", borderRadius: 24, padding: 20 },
+  timePickerContent: { width: "90%", borderRadius: 15, padding: 20 },
   timePickerHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   timePickerTitle: { fontSize: 18, fontWeight: "700" },
   timePickerColumns: { flexDirection: "row", justifyContent: "space-between", height: 200 },
@@ -39,11 +40,13 @@ const PICKER_STYLES = StyleSheet.create({
   timePickerConfirmText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
 });
 
+// step: "form" | "aiScan"
 const AddDeadlineSheet = forwardRef(({ onSaved }, ref) => {
   const navigation = useNavigation();
   const sheetAnim = useRef(new Animated.Value(SHEET_H)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [step, setStep] = useState("form");
 
   const [deadlineName, setDeadlineName] = useState("");
   const [deadlineDate, setDeadlineDate] = useState(new Date());
@@ -59,6 +62,7 @@ const AddDeadlineSheet = forwardRef(({ onSaved }, ref) => {
 
   const openSheet = () => {
     sheetAnim.setValue(SHEET_H);
+    setStep("form");
     setSheetOpen(true);
     Animated.parallel([
       Animated.spring(sheetAnim, { toValue: 0, useNativeDriver: true, bounciness: 4 }),
@@ -72,6 +76,7 @@ const AddDeadlineSheet = forwardRef(({ onSaved }, ref) => {
       Animated.timing(backdropAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
     ]).start(() => {
       setSheetOpen(false);
+      setStep("form");
       setDeadlineName("");
       setDeadlineDate(new Date());
       setHour(9); setMinute("00"); setPeriod("AM");
@@ -146,64 +151,86 @@ const AddDeadlineSheet = forwardRef(({ onSaved }, ref) => {
         style={[ds.sheet, { transform: [{ translateY: sheetAnim }] }]}
       >
         <View style={ds.handle} />
+
+        {/* Header */}
         <View style={ds.headerRow}>
-          <View style={{ width: 36 }} />
+          {step === "aiScan" ? (
+            <TouchableOpacity onPress={() => setStep("form")} style={ds.iconBtn}>
+              <SvgIcon name="arrow-back" size={18} color="#111111" />
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 36 }} />
+          )}
           <View style={{ flex: 1 }} />
           <TouchableOpacity onPress={closeSheet} style={ds.iconBtn}>
             <Text style={{ color: "#111111", fontSize: 16, fontWeight: "500", lineHeight: 20 }}>✕</Text>
           </TouchableOpacity>
         </View>
 
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <Text style={ds.title}>Add Deadline</Text>
+        {/* ── Step: form ── */}
+        {step === "form" && (
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <Text style={ds.title}>Add Deadline</Text>
 
-            <Text style={ds.label}>Deadline Name</Text>
-            <TextInput
-              style={ds.input}
-              value={deadlineName}
-              onChangeText={setDeadlineName}
-              placeholder="eg Final Exam, Assignment"
-              placeholderTextColor="#AAAAAA"
+              <Text style={ds.label}>Deadline Name</Text>
+              <TextInput
+                style={ds.input}
+                value={deadlineName}
+                onChangeText={setDeadlineName}
+                placeholder="eg Final Exam, Assignment"
+                placeholderTextColor="#AAAAAA"
+              />
+
+              <Text style={ds.label}>Date</Text>
+              <TouchableOpacity style={ds.chip} onPress={() => setShowDatePicker(true)}>
+                <Text style={ds.chipText}>{formatDate(deadlineDate)}</Text>
+              </TouchableOpacity>
+
+              <Text style={ds.label}>Time</Text>
+              <TouchableOpacity style={[ds.chip, { marginBottom: 20 }]} onPress={() => setShowTimePicker(true)}>
+                <Text style={ds.chipText}>{formatTimeDisplay(hour, minute, period)}</Text>
+              </TouchableOpacity>
+
+              <Text style={ds.label}>Room / Location</Text>
+              <TextInput
+                style={[ds.input, { marginBottom: 24 }]}
+                value={room}
+                onChangeText={setRoom}
+                placeholder="eg Room 304, Online"
+                placeholderTextColor="#AAAAAA"
+              />
+
+              <TouchableOpacity style={ds.addBtn} onPress={saveDeadline} disabled={saving} activeOpacity={0.85}>
+                {saving
+                  ? <ActivityIndicator color="#FFFFFF" />
+                  : <Text style={ds.addBtnText}>ADD DEADLINE</Text>
+                }
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={ds.scanBtn}
+                activeOpacity={0.85}
+                onPress={() => setStep("aiScan")}
+              >
+                <SvgIcon name="scan" size={18} color="#535FFD" />
+                <Text style={ds.scanBtnText}>Scan with AI</Text>
+              </TouchableOpacity>
+              <View style={{ height: 32 }} />
+            </ScrollView>
+          </KeyboardAvoidingView>
+        )}
+
+        {/* ── Step: aiScan ── */}
+        {step === "aiScan" && (
+          <View style={{ flex: 1, paddingTop: 8 }}>
+            <Text style={ds.title}>AI Scan</Text>
+            <AIScanButtons
+              onCamera={() => { closeSheet(); setTimeout(() => navigation.navigate("AITimetableScanner", { source: "camera", mode: "deadlines" }), 300); }}
+              onGallery={() => { closeSheet(); setTimeout(() => navigation.navigate("AITimetableScanner", { source: "gallery", mode: "deadlines" }), 300); }}
             />
-
-            <Text style={ds.label}>Date</Text>
-            <TouchableOpacity style={ds.chip} onPress={() => setShowDatePicker(true)}>
-              <Text style={ds.chipText}>{formatDate(deadlineDate)}</Text>
-            </TouchableOpacity>
-
-            <Text style={ds.label}>Time</Text>
-            <TouchableOpacity style={[ds.chip, { marginBottom: 20 }]} onPress={() => setShowTimePicker(true)}>
-              <Text style={ds.chipText}>{formatTimeDisplay(hour, minute, period)}</Text>
-            </TouchableOpacity>
-
-            <Text style={ds.label}>Room / Location</Text>
-            <TextInput
-              style={[ds.input, { marginBottom: 24 }]}
-              value={room}
-              onChangeText={setRoom}
-              placeholder="eg Room 304, Online"
-              placeholderTextColor="#AAAAAA"
-            />
-
-            <TouchableOpacity style={ds.addBtn} onPress={saveDeadline} disabled={saving} activeOpacity={0.85}>
-              {saving
-                ? <ActivityIndicator color="#FFFFFF" />
-                : <Text style={ds.addBtnText}>ADD DEADLINE</Text>
-              }
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={ds.scanBtn}
-              activeOpacity={0.85}
-              onPress={() => { closeSheet(); setTimeout(() => navigation.navigate("AITimetableScanner", { source: "camera", mode: "deadlines" }), 300); }}
-            >
-              <SvgIcon name="scan" size={18} color="#535FFD" />
-              <Text style={ds.scanBtnText}>Scan with AI</Text>
-            </TouchableOpacity>
-            <View style={{ height: 32 }} />
-          </ScrollView>
-        </KeyboardAvoidingView>
+          </View>
+        )}
       </Animated.View>
 
       {/* Date picker – Android inline */}

@@ -9,6 +9,7 @@ import { getUserData, updateUserData } from "../services/userDataService";
 import { useNotifications } from "../hooks/useNotifications";
 import SvgIcon from "./SvgIcon";
 import TimePicker from "../screens/timetable/components/TimePicker";
+import { AIScanButtons } from "./AIScanSheet";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 const SHEET_H_SMALL = SCREEN_H * 0.50;
@@ -40,7 +41,7 @@ const PICKER_THEME = {
 
 const PICKER_STYLES = StyleSheet.create({
   timePickerContainer: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
-  timePickerContent: { width: "90%", borderRadius: 24, padding: 20 },
+  timePickerContent: { width: "90%", borderRadius: 15, padding: 20 },
   timePickerHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   timePickerTitle: { fontSize: 18, fontWeight: "700" },
   timePickerColumns: { flexDirection: "row", justifyContent: "space-between", height: 200 },
@@ -84,6 +85,7 @@ const AddActivitySheet = forwardRef(({ onSaved }, ref) => {
   const [category, setCategory] = useState("study");
   const [location, setLocation] = useState("");
   const [instructor, setInstructor] = useState("");
+  const [preselectedDay, setPreselectedDay] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
@@ -106,9 +108,11 @@ const AddActivitySheet = forwardRef(({ onSaved }, ref) => {
     if (dayKey) {
       const match = DAYS.find(d => d.value.toLowerCase() === dayKey.toLowerCase());
       if (match) setSelectedDay(match.value);
+      setPreselectedDay(true);
       setStepTracked("manual");
       sheetAnim.setValue(SHEET_H_LARGE);
     } else {
+      setPreselectedDay(false);
       setStepTracked("options");
       sheetAnim.setValue(SHEET_H_SMALL);
     }
@@ -124,7 +128,7 @@ const AddActivitySheet = forwardRef(({ onSaved }, ref) => {
     Animated.parallel([
       Animated.timing(sheetAnim, { toValue: dist, duration: 280, useNativeDriver: true }),
       Animated.timing(backdropAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
-    ]).start(() => { setSheetOpen(false); setStepTracked("options"); resetForm(); });
+    ]).start(() => { setSheetOpen(false); setStepTracked("options"); setPreselectedDay(false); resetForm(); });
   };
 
   useImperativeHandle(ref, () => ({ open: openSheet, close: closeSheet }));
@@ -238,24 +242,10 @@ const AddActivitySheet = forwardRef(({ onSaved }, ref) => {
         {step === "aiScan" && (
           <>
             <Text style={as.title}>AI Scan</Text>
-            <View style={{ gap: 14 }}>
-              <TouchableOpacity
-                style={as.aiBtn}
-                activeOpacity={0.85}
-                onPress={() => { closeSheet(); setTimeout(() => navigation.navigate("AITimetableScanner", { source: "camera" }), 300); }}
-              >
-                <SvgIcon name="camera" size={44} color="#FFFFFF" />
-                <Text style={as.optionBtnText}>Take Photo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={as.aiBtn}
-                activeOpacity={0.85}
-                onPress={() => { closeSheet(); setTimeout(() => navigation.navigate("AITimetableScanner", { source: "gallery" }), 300); }}
-              >
-                <SvgIcon name="upload" size={44} color="#FFFFFF" />
-                <Text style={as.optionBtnText}>Upload</Text>
-              </TouchableOpacity>
-            </View>
+            <AIScanButtons
+              onCamera={() => { closeSheet(); setTimeout(() => navigation.navigate("AITimetableScanner", { source: "camera" }), 300); }}
+              onGallery={() => { closeSheet(); setTimeout(() => navigation.navigate("AITimetableScanner", { source: "gallery" }), 300); }}
+            />
           </>
         )}
 
@@ -274,18 +264,22 @@ const AddActivitySheet = forwardRef(({ onSaved }, ref) => {
                 placeholderTextColor="#AAAAAA"
               />
 
-              <Text style={as.label}>Select Day</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
-                {DAYS.map(d => (
-                  <TouchableOpacity
-                    key={d.value}
-                    style={[as.dayChip, selectedDay === d.value && as.dayChipActive]}
-                    onPress={() => setSelectedDay(d.value)}
-                  >
-                    <Text style={[as.dayChipText, selectedDay === d.value && as.dayChipTextActive]}>{d.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              {!preselectedDay && (
+                <>
+                  <Text style={as.label}>Select Day</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
+                    {DAYS.map(d => (
+                      <TouchableOpacity
+                        key={d.value}
+                        style={[as.dayChip, selectedDay === d.value && as.dayChipActive]}
+                        onPress={() => setSelectedDay(d.value)}
+                      >
+                        <Text style={[as.dayChipText, selectedDay === d.value && as.dayChipTextActive]}>{d.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </>
+              )}
 
               <View style={{ flexDirection: "row", gap: 16, marginBottom: 20 }}>
                 <View style={{ flex: 1 }}>
@@ -339,6 +333,15 @@ const AddActivitySheet = forwardRef(({ onSaved }, ref) => {
                   : <Text style={as.addBtnText}>ADD ACTIVITY</Text>
                 }
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={as.scanBtn}
+                activeOpacity={0.85}
+                onPress={goToAiScan}
+              >
+                <SvgIcon name="scan" size={18} color="#535FFD" />
+                <Text style={as.scanBtnText}>Scan with AI</Text>
+              </TouchableOpacity>
               <View style={{ height: 32 }} />
             </ScrollView>
           </KeyboardAvoidingView>
@@ -390,10 +393,8 @@ const as = StyleSheet.create({
   chipText: { fontSize: 15, color: "#888888" },
   // Options step
   optionRow: { flexDirection: "row", gap: 16 },
-  optionBtn: { flex: 1, backgroundColor: "#535FFD", borderRadius: 20, paddingVertical: 28, alignItems: "center", justifyContent: "center", gap: 10 },
+  optionBtn: { flex: 1, backgroundColor: "#535FFD", borderRadius: 15, paddingVertical: 28, alignItems: "center", justifyContent: "center", gap: 10 },
   optionBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
-  // AI scan step
-  aiBtn: { backgroundColor: "#535FFD", borderRadius: 20, paddingVertical: 16, alignItems: "center", justifyContent: "center", gap: 8 },
   // Manual form
   dayChip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 50, backgroundColor: "#F0F0F0", marginRight: 8 },
   dayChipActive: { backgroundColor: "#535FFD" },
@@ -405,4 +406,6 @@ const as = StyleSheet.create({
   categoryChipTextActive: { color: "#FFFFFF" },
   addBtn: { backgroundColor: "#535FFD", borderRadius: 50, paddingVertical: 18, alignItems: "center" },
   addBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "800", letterSpacing: 0.5 },
+  scanBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 50, paddingVertical: 16, marginTop: 12, borderWidth: 1.5, borderColor: "#535FFD" },
+  scanBtnText: { color: "#535FFD", fontSize: 15, fontWeight: "700" },
 });
