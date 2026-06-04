@@ -20,21 +20,21 @@ export const getStyles = (theme) =>
     headerAvatar: {
       width: 38,
       height: 38,
-      borderRadius: 19,
+      borderRadius: 15,
       borderWidth: 2,
       borderColor: PURPLE,
     },
     headerAvatarPlaceholder: {
       width: 38,
       height: 38,
-      borderRadius: 19,
+      borderRadius: 15,
       justifyContent: "center",
       alignItems: "center",
     },
 
     // ── Deadline card ──────────────────────────────────────────────────────
     card: {
-      borderRadius: 22,
+      borderRadius: 15,
       padding: 20,
       flexDirection: "row",
       alignItems: "stretch",
@@ -87,7 +87,7 @@ export const getStyles = (theme) =>
 
     daysLeftBadge: {
       backgroundColor: "#FFFFFF",
-      borderRadius: 20,
+      borderRadius: 15,
       paddingHorizontal: 10,
       paddingVertical: 4,
       marginTop: 8,

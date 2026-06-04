@@ -68,7 +68,7 @@ export const getStyles = (theme) => StyleSheet.create({
   // Setting Cards
   settingCard: {
     backgroundColor: theme.colors.card,
-    borderRadius: 16,
+    borderRadius: 15,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,

@@ -55,7 +55,7 @@ export const getStyles = (theme) => StyleSheet.create({
   logo: {
     width: 100,
     height: 100,
-    borderRadius: 20,
+    borderRadius: 15,
   },
 
   // SND Studio Branding
@@ -110,7 +110,7 @@ export const getStyles = (theme) => StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 15,
     marginBottom: 24,
   },
   websiteButtonText: {

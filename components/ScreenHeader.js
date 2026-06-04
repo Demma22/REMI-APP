@@ -99,14 +99,14 @@ const getStyles = (theme, topPad) =>
     profileImg: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      borderRadius: 15,
       borderWidth: 2,
       borderColor: theme.colors.primary,
     },
     profilePlaceholder: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      borderRadius: 15,
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -127,7 +127,7 @@ const getStyles = (theme, topPad) =>
     iconBtn: {
       width: 44,
       height: 44,
-      borderRadius: 22,
+      borderRadius: 15,
       backgroundColor: theme.colors.backgroundTertiary,
       justifyContent: 'center',
       alignItems: 'center',

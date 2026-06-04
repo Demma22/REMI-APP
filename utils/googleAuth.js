@@ -3,6 +3,8 @@ import { supabase } from '../supabase';
 
 WebBrowser.maybeCompleteAuthSession();
 
+// Returns { isExistingUser: boolean } — callers use this to notify the user when
+// they hit "Sign up with Google" but already have an account.
 export const signInWithGoogle = async () => {
   const redirectUri = 'remi://auth/callback';
 
@@ -11,6 +13,9 @@ export const signInWithGoogle = async () => {
     options: {
       redirectTo: redirectUri,
       skipBrowserRedirect: true,
+      // Force the Google account picker on every attempt so the user can choose
+      // which account to use and isn't silently signed into a cached account.
+      queryParams: { prompt: 'select_account' },
     },
   });
 
@@ -23,6 +28,23 @@ export const signInWithGoogle = async () => {
 
   const url = new URL(result.url);
 
+  const resolveUser = async (user) => {
+    // Check if this Google account already has a completed profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarding_completed')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    // Persist avatar without blocking navigation
+    supabase
+      .from('profiles')
+      .upsert({ id: user.id, avatar_url: user.user_metadata?.avatar_url ?? null }, { onConflict: 'id' })
+      .then(() => {});
+
+    return { isExistingUser: profile?.onboarding_completed === true };
+  };
+
   // PKCE flow — code in query params
   const code = url.searchParams.get('code');
   if (code) {
@@ -33,23 +55,7 @@ export const signInWithGoogle = async () => {
     const user = sessionData?.session?.user;
     if (!user) throw new Error('No user returned from Google');
 
-    await supabase
-      .from('profiles')
-      .upsert(
-        { id: user.id, avatar_url: user.user_metadata?.avatar_url ?? null },
-        { onConflict: 'id' }
-      );
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('onboarding_completed')
-      .eq('id', user.id)
-      .single();
-
-    return {
-      user,
-      onboardingCompleted: profile?.onboarding_completed === true,
-    };
+    return resolveUser(user);
   }
 
   // Implicit flow fallback — tokens in hash
@@ -66,23 +72,7 @@ export const signInWithGoogle = async () => {
     const user = sessionData?.session?.user;
     if (!user) throw new Error('No user returned from Google');
 
-    await supabase
-      .from('profiles')
-      .upsert(
-        { id: user.id, avatar_url: user.user_metadata?.avatar_url ?? null },
-        { onConflict: 'id' }
-      );
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('onboarding_completed')
-      .eq('id', user.id)
-      .single();
-
-    return {
-      user,
-      onboardingCompleted: profile?.onboarding_completed === true,
-    };
+    return resolveUser(user);
   }
 
   const oauthError =

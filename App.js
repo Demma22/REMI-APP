@@ -80,11 +80,13 @@ function AppContent() {
   }, []);
 
   const checkOnboarding = async (userId) => {
-    const { data: profile } = await supabase
+    const query = supabase
       .from('profiles')
       .select('onboarding_completed')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
+    const timeout = new Promise((resolve) => setTimeout(() => resolve({ data: { onboarding_completed: true } }), 5000));
+    const { data: profile } = await Promise.race([query, timeout]);
     return profile?.onboarding_completed === true;
   };
 
@@ -96,15 +98,32 @@ function AppContent() {
       async (event, session) => {
         try {
           if (session?.user) {
-            setUser(session.user);
-            setOnboardingCompleted(await checkOnboarding(session.user.id));
+            if (event === 'TOKEN_REFRESHED') {
+              // Token refresh during normal use — just update user, don't touch navigation
+              setUser(session.user);
+            } else if (event === 'SIGNED_IN' || event === 'SIGNED_UP') {
+              // Fresh login/signup — navigate instantly without a DB round-trip.
+              // OnboardingScreen checks onboarding_completed and redirects to Home if done.
+              setUser(session.user);
+              setOnboardingCompleted(false);
+            } else {
+              // INITIAL_SESSION (app restore) — check DB while splash is showing
+              const completed = await checkOnboarding(session.user.id);
+              setUser(session.user);
+              setOnboardingCompleted(completed);
+            }
           } else {
             setUser(null);
             setOnboardingCompleted(false);
           }
         } catch {
-          setUser(null);
-          setOnboardingCompleted(false);
+          if (session?.user) {
+            setUser(session.user);
+            setOnboardingCompleted(false);
+          } else {
+            setUser(null);
+            setOnboardingCompleted(false);
+          }
         } finally {
           if (event === 'INITIAL_SESSION') {
             setCheckingAuth(false);
@@ -152,53 +171,16 @@ function AppContent() {
           },
         }}>
         {!user ? (
-          // AUTH FLOW - User not logged in
+          // AUTH FLOW - not logged in
           <>
             <Stack.Screen name="SplashIntro" component={SplashIntro} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />
-            
-
-            
-            {/* App screens */}
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="Focus" component={FocusScreen} />
-            <Stack.Screen name="Profile" component={ProfileScreen} />
-            <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
-            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
-            <Stack.Screen name="DataDelete" component={DataDeleteScreen} />
-            <Stack.Screen name="Timetable" component={TimetableScreen} />
-            <Stack.Screen name="AddActivity" component={AddActivityScreen} />
-            <Stack.Screen name="EditTimetable" component={EditTimetableScreen} />
-            <Stack.Screen name="GPA" component={GPAScreen} />
-            <Stack.Screen name="RateReviewModal" component={RateReviewModal} />
-            <Stack.Screen name="CurriculumSelector" component={CurriculumSelectorScreen} />
-            <Stack.Screen name="ScanResults" component={ScanResultsScreen} />
-            <Stack.Screen name="ReviewScannedResults" component={ReviewScannedResults} />
-            <Stack.Screen name="AITimetableScanner" component={AITimetableScanner} />
-            <Stack.Screen name="ReviewScannedLectures" component={ReviewScannedLectures} />
-            <Stack.Screen name="ExportGPA" component={ExportGPAScreen} />
-            <Stack.Screen name="AddExam" component={AddExamScreen} />
-            <Stack.Screen name="Deadlines" component={DeadlinesScreen} />
-            <Stack.Screen name="Settings" component={SettingsScreen} />
-            <Stack.Screen name="AboutUs" component={AboutUsScreen} />
-            <Stack.Screen name="NotificationsSettings" component={NotificationsSettingsScreen} />
-            <Stack.Screen name="EditNickname" component={EditNickname} />
-            <Stack.Screen name="ContactUs" component={ContactUsScreen} />
-            <Stack.Screen name="EditCurrentSemester" component={EditCurrentSemester} />
-            <Stack.Screen name="EditUnits" component={EditUnits} />
-            <Stack.Screen name="EditCourse" component={EditCourse} />
-            <Stack.Screen name="StatisticsDashboard" component={StatisticsDashboard} />
           </>
         ) : !onboardingCompleted ? (
-          // ONBOARDING FLOW - User logged in but hasn't completed onboarding
+          // ONBOARDING FLOW - logged in, onboarding pending
           <>
-            {/* NEW ONBOARDING SCREEN */}
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-            
-
-            
-            {/* App screens for navigation after onboarding */}
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Focus" component={FocusScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
@@ -227,12 +209,9 @@ function AppContent() {
             <Stack.Screen name="EditUnits" component={EditUnits} />
             <Stack.Screen name="EditCourse" component={EditCourse} />
             <Stack.Screen name="StatisticsDashboard" component={StatisticsDashboard} />
-<Stack.Screen name="SplashIntro" component={SplashIntro} />
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Signup" component={SignupScreen} />
           </>
         ) : (
-          // MAIN APP FLOW - User logged in AND completed onboarding
+          // MAIN APP FLOW - logged in, onboarding done
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Focus" component={FocusScreen} />
@@ -263,9 +242,6 @@ function AppContent() {
             <Stack.Screen name="EditCourse" component={EditCourse} />
             <Stack.Screen name="StatisticsDashboard" component={StatisticsDashboard} />
             <Stack.Screen name="Deadlines" component={DeadlinesScreen} />
-            <Stack.Screen name="SplashIntro" component={SplashIntro} />
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Signup" component={SignupScreen} />
           </>
         )}
       </Stack.Navigator>

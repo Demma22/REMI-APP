@@ -27,11 +27,12 @@ import { ListSkeleton } from '../../../components/SkeletonLoader';
 const { width, height } = Dimensions.get('window');
 
 export default function AITimetableScanner({ navigation, route }) {
-  const { mode = 'lectures', source } = route?.params || {};
+  const { mode = 'lectures', source, imageUri: passedImageUri } = route?.params || {};
+  const autoStart = source === 'camera' || source === 'gallery';
   const { theme } = useTheme();
   const styles = getStyles(theme);
-  
-  const [scanStage, setScanStage] = useState('idle'); // idle, loading, scanning, confirming
+
+  const [scanStage, setScanStage] = useState('loading');
   const [rawText, setRawText] = useState('');
   const [lectures, setLectures] = useState([]);
   const [exams, setExams] = useState([]);
@@ -57,6 +58,7 @@ export default function AITimetableScanner({ navigation, route }) {
   // Store the scan result before showing animation
   const pendingScanResult = useRef(null);
   const animationCompleted = useRef(false);
+  const scanInitiated = useRef(false);
   const resultProcessed = useRef(false);
   
   const scanningMessages = [
@@ -186,14 +188,19 @@ export default function AITimetableScanner({ navigation, route }) {
       setExams(result.exams);
       setScanStage('confirming');
     } else {
-      setScanStage('idle');
-      setCapturedImageUri(null);
-      Alert.alert('No Items Found', 'No items could be detected. Please try with a clearer image.');
+      const msg = result?.error || 'No activities could be detected. Please try a clearer image.';
+      Alert.alert('Scan Failed', msg, [
+        { text: 'OK', onPress: () => navigation.navigate('Timetable') },
+      ]);
     }
   };
 
   useEffect(() => {
-    if (source === 'camera' || source === 'gallery') {
+    if (scanInitiated.current) return;
+    scanInitiated.current = true;
+    if (passedImageUri) {
+      startScanFromUri(passedImageUri);
+    } else if (source === 'camera' || source === 'gallery') {
       handleScan(source === 'camera');
     }
   }, []);
@@ -212,7 +219,7 @@ export default function AITimetableScanner({ navigation, route }) {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') throw new Error('Camera permission required');
         const picked = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.9 });
-        if (picked.canceled) { setScanStage('idle'); return; }
+        if (picked.canceled) { navigation.navigate('Timetable'); return; }
         imageUri = picked.assets[0].uri;
       } else {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -222,7 +229,7 @@ export default function AITimetableScanner({ navigation, route }) {
           allowsEditing: true,
           quality: 0.9,
         });
-        if (picked.canceled) { setScanStage('idle'); return; }
+        if (picked.canceled) { navigation.navigate('Timetable'); return; }
         imageUri = picked.assets[0].uri;
       }
 
@@ -246,13 +253,12 @@ export default function AITimetableScanner({ navigation, route }) {
       setTimeout(() => {
         if (!resultProcessed.current) {
           resultProcessed.current = true;
+          setWaitingForBackend(false);
           Alert.alert(
             'Scan Timed Out',
             'The server took too long to respond. This usually happens on the first scan of the day — please try again.',
+            [{ text: 'OK', onPress: () => navigation.navigate('Timetable') }],
           );
-          setScanStage('idle');
-          setCapturedImageUri(null);
-          setWaitingForBackend(false);
         }
       }, 120000);
 
@@ -269,21 +275,69 @@ export default function AITimetableScanner({ navigation, route }) {
           if (!resultProcessed.current) {
             resultProcessed.current = true;
             console.error('Scan error:', err);
-            Alert.alert('Scan Failed', err.message || 'Failed to scan. Please try again.');
-            setErrorMessage(err.message);
-            setScanStage('idle');
-            setCapturedImageUri(null);
             setWaitingForBackend(false);
+            Alert.alert('Scan Failed', err.message || 'Failed to scan. Please try again.', [
+              { text: 'OK', onPress: () => navigation.navigate('Timetable') },
+            ]);
           }
         });
 
     } catch (error) {
       console.error('Scan error:', error);
-      Alert.alert('Scan Failed', error.message || 'Failed to scan. Please try again.');
-      setErrorMessage(error.message);
-      setScanStage('idle');
-      setCapturedImageUri(null);
+      Alert.alert('Scan Failed', error.message || 'Failed to scan. Please try again.', [
+        { text: 'OK', onPress: () => navigation.navigate('Timetable') },
+      ]);
     }
+  };
+
+  const startScanFromUri = (imageUri) => {
+    setErrorMessage('');
+    pendingScanResult.current = null;
+    animationCompleted.current = false;
+    resultProcessed.current = false;
+    setWaitingForBackend(false);
+    setCapturedImageUri(imageUri);
+    setScanStage('scanning');
+    startScanningAnimations();
+
+    setTimeout(() => {
+      animationCompleted.current = true;
+      if (pendingScanResult.current) {
+        processResult(pendingScanResult.current);
+      } else {
+        setWaitingForBackend(true);
+      }
+    }, 10500);
+
+    setTimeout(() => {
+      if (!resultProcessed.current) {
+        resultProcessed.current = true;
+        setWaitingForBackend(false);
+        Alert.alert(
+          'Scan Timed Out',
+          'The server took too long to respond. This usually happens on the first scan of the day — please try again.',
+          [{ text: 'OK', onPress: () => navigation.navigate('Timetable') }],
+        );
+      }
+    }, 120000);
+
+    scanTimetableFromImage(imageUri, mode)
+      .then(result => {
+        pendingScanResult.current = result;
+        if (animationCompleted.current) {
+          setWaitingForBackend(false);
+          processResult(result);
+        }
+      })
+      .catch(err => {
+        if (!resultProcessed.current) {
+          resultProcessed.current = true;
+          setWaitingForBackend(false);
+          Alert.alert('Scan Failed', err.message || 'Failed to scan. Please try again.', [
+            { text: 'OK', onPress: () => navigation.navigate('Timetable') },
+          ]);
+        }
+      });
   };
 
   const confirmAndSaveLectures = () => {
@@ -303,16 +357,12 @@ export default function AITimetableScanner({ navigation, route }) {
       return;
     }
     
-    const lectureSummary = lectures.map((l, i) => 
-      `${i + 1}. ${l.name} - ${l.day} at ${l.start}`
-    ).join('\n');
-    
     Alert.alert(
-      'Confirm Schedule',
-      `You are about to add ${lectures.length} lecture(s):\n\n${lectureSummary}\n\nAre all times correct?`,
+      'Ready to save?',
+      'Make sure all activities look accurate. You can always edit them from your schedule later.',
       [
-        { text: 'Edit', style: 'cancel' },
-        { text: 'Confirm', onPress: () => handleSaveLectures() }
+        { text: 'Go Back', style: 'cancel' },
+        { text: 'Save', onPress: () => handleSaveLectures() },
       ]
     );
   };
@@ -442,7 +492,7 @@ export default function AITimetableScanner({ navigation, route }) {
         onPress: () => {
           const updated = lectures.filter((_, i) => i !== index);
           setLectures(updated);
-          if (updated.length === 0) setScanStage('idle');
+          if (updated.length === 0) navigation.navigate('Timetable');
         },
       },
     ]);
@@ -457,7 +507,7 @@ export default function AITimetableScanner({ navigation, route }) {
         onPress: () => {
           const updated = exams.filter((_, i) => i !== index);
           setExams(updated);
-          if (updated.length === 0) setScanStage('idle');
+          if (updated.length === 0) navigation.navigate('Timetable');
         },
       },
     ]);
@@ -472,13 +522,7 @@ export default function AITimetableScanner({ navigation, route }) {
   };
 
   const handleRetry = () => {
-    setScanStage('idle');
-    setErrorMessage('');
-    setLectures([]);
-    setExams([]);
-    setRawText('');
-    setCapturedImageUri(null);
-    pendingScanResult.current = null;
+    navigation.navigate('Timetable');
   };
 
   const formatTimeDisplay = (time) => {
@@ -583,18 +627,13 @@ export default function AITimetableScanner({ navigation, route }) {
     return (
       <View style={styles.container}>
         <ScreenHeader
-          title="Confirm Lectures"
+          title="Confirm Activities"
           onBackPress={handleRetry}
-          rightElement={
-            <TouchableOpacity onPress={handleAddManualLecture} style={styles.addBtn}>
-              <SvgIcon name="plus" size={24} color={theme.colors.primary} />
-            </TouchableOpacity>
-          }
         />
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.aiSummary}>
-            <Text style={styles.aiSummaryText}>AI detected {lectures.length} lecture(s). Review and edit.</Text>
+            <Text style={styles.aiSummaryText}>{lectures.length} {lectures.length === 1 ? 'activity' : 'activities'} detected. Please review and save.</Text>
           </View>
           
           {lectures.map((lecture, idx) => (
@@ -606,12 +645,12 @@ export default function AITimetableScanner({ navigation, route }) {
                 </TouchableOpacity>
               </View>
               
-              <Text style={styles.label}>Course Name *</Text>
-              <TextInput 
-                style={[styles.input, !lecture.name && styles.inputError]} 
-                value={lecture.name} 
-                onChangeText={(text) => handleEditLecture(idx, 'name', text)} 
-                placeholder="Course name"
+              <Text style={styles.label}>Activity *</Text>
+              <TextInput
+                style={[styles.input, !lecture.name && styles.inputError]}
+                value={lecture.name}
+                onChangeText={(text) => handleEditLecture(idx, 'name', text)}
+                placeholder="Activity name"
                 placeholderTextColor={theme.colors.textTertiary}
               />
               
@@ -660,21 +699,21 @@ export default function AITimetableScanner({ navigation, route }) {
                 <SvgIcon name="chevron-down" size={14} color={theme.colors.textSecondary} />
               </TouchableOpacity>
               
-              <Text style={styles.label}>Room</Text>
-              <TextInput 
-                style={styles.input} 
-                value={lecture.room} 
-                onChangeText={(text) => handleEditLecture(idx, 'room', text)} 
-                placeholder="Room number"
+              <Text style={styles.label}>Location</Text>
+              <TextInput
+                style={styles.input}
+                value={lecture.room}
+                onChangeText={(text) => handleEditLecture(idx, 'room', text)}
+                placeholder="Location or venue"
                 placeholderTextColor={theme.colors.textTertiary}
               />
-              
-              <Text style={styles.label}>Lecturer</Text>
-              <TextInput 
-                style={styles.input} 
-                value={lecture.lecturer} 
-                onChangeText={(text) => handleEditLecture(idx, 'lecturer', text)} 
-                placeholder="Lecturer name"
+
+              <Text style={styles.label}>Instructor</Text>
+              <TextInput
+                style={styles.input}
+                value={lecture.lecturer}
+                onChangeText={(text) => handleEditLecture(idx, 'lecturer', text)}
+                placeholder="Instructor name"
                 placeholderTextColor={theme.colors.textTertiary}
               />
             </View>
@@ -682,7 +721,7 @@ export default function AITimetableScanner({ navigation, route }) {
           
           <TouchableOpacity style={styles.addButton} onPress={handleAddManualLecture}>
             <SvgIcon name="plus" size={20} color={theme.colors.primary} />
-            <Text style={styles.addButtonText}>Add Another Lecture</Text>
+            <Text style={styles.addButtonText}>Add Another Activity</Text>
           </TouchableOpacity>
           
           <View style={styles.bottomSpacing} />
@@ -697,7 +736,7 @@ export default function AITimetableScanner({ navigation, route }) {
             {saving ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.saveButtonText}>Save {lectures.length} Lecture(s)</Text>
+              <Text style={styles.saveButtonText}>Save {lectures.length} {lectures.length === 1 ? 'Activity' : 'Activities'}</Text>
             )}
           </TouchableOpacity>
           

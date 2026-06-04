@@ -38,7 +38,7 @@ export const getStyles = (theme) => StyleSheet.create({
     zIndex: 1000,
   },
   processingCard: {
-    borderRadius: 20,
+    borderRadius: 15,
     padding: 32,
     alignItems: "center",
     width: "80%",
@@ -70,7 +70,7 @@ export const getStyles = (theme) => StyleSheet.create({
   backBtn: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 15,
     backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
@@ -208,7 +208,7 @@ export const getStyles = (theme) => StyleSheet.create({
     alignItems: "center",
   },
   modalContent: {
-    borderRadius: 24,
+    borderRadius: 15,
     marginHorizontal: 20,
     maxHeight: "60%",
     width: "90%",
@@ -263,7 +263,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   timePickerContent: {
     width: "90%",
-    borderRadius: 24,
+    borderRadius: 15,
     padding: 20,
   },
   timePickerHeader: {
@@ -327,7 +327,7 @@ export const getStyles = (theme) => StyleSheet.create({
   typeButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: 15,
     marginRight: 8,
     backgroundColor: theme.colors.backgroundTertiary,
   },

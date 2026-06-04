@@ -39,7 +39,7 @@ export const getStyles = (theme) => StyleSheet.create({
     zIndex: 1000,
   },
   processingCard: {
-    borderRadius: 20,
+    borderRadius: 15,
     padding: 40,
     alignItems: 'center',
     width: '80%',
@@ -78,7 +78,7 @@ export const getStyles = (theme) => StyleSheet.create({
   backBtn: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 15,
     backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
@@ -93,7 +93,7 @@ export const getStyles = (theme) => StyleSheet.create({
   menuBtn: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 15,
     backgroundColor: theme.colors.background,
     alignItems: "center",
     justifyContent: "center",
@@ -245,7 +245,7 @@ export const getStyles = (theme) => StyleSheet.create({
   
   // Menu Modal
   menuModal: {
-    borderRadius: 16,
+    borderRadius: 15,
     padding: 8,
     width: 220,
     shadowColor: '#000',
@@ -279,7 +279,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   timePickerContent: {
     width: "90%",
-    borderRadius: 24,
+    borderRadius: 15,
     padding: 20,
   },
   timePickerHeader: {

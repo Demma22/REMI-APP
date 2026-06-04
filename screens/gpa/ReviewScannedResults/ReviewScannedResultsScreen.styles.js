@@ -41,7 +41,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   gpaSummaryCard: {
     padding: 24,
-    borderRadius: 24,
+    borderRadius: 15,
     alignItems: "center",
     marginBottom: 20,
   },
@@ -119,7 +119,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   courseCard: {
     backgroundColor: theme.colors.card,
-    borderRadius: 16,
+    borderRadius: 15,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,

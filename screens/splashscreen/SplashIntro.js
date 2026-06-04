@@ -31,6 +31,8 @@ export default function SplashIntro({ navigation }) {
   const sheetAnim = useRef(new Animated.Value(SHEET_H)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
   const [activeSheet, setActiveSheet] = useState(null); // null | 'signup' | 'login'
+  // Tracks intended state so the close-animation callback can bail if openSheet was called first
+  const activeSheetRef = useRef(null);
 
   // Signup state
   const [signupStep, setSignupStep] = useState("method");
@@ -54,18 +56,27 @@ export default function SplashIntro({ navigation }) {
 
   // ── Sheet controls ──────────────────────────────────────────────
   const openSheet = (type) => {
+    activeSheetRef.current = type;
+    if (type === "signup") setSignupStep("method");
     setActiveSheet(type);
-    Animated.parallel([
-      Animated.spring(sheetAnim, { toValue: 0, useNativeDriver: true, tension: 60, friction: 12 }),
-      Animated.timing(backdropAnim, { toValue: 1, duration: 280, useNativeDriver: true }),
-    ]).start();
+    // Defer animation one tick so React re-renders content before the sheet slides up
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.spring(sheetAnim, { toValue: 0, useNativeDriver: true, tension: 60, friction: 12 }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 280, useNativeDriver: true }),
+      ]).start();
+    }, 0);
   };
 
   const closeSheet = () => {
+    activeSheetRef.current = null;
     Animated.parallel([
       Animated.spring(sheetAnim, { toValue: SHEET_H, useNativeDriver: true, tension: 60, friction: 12 }),
       Animated.timing(backdropAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
-    ]).start(() => {
+    ]).start(({ finished }) => {
+      // If openSheet was called while this animation was running, activeSheetRef won't
+      // be null — bail out so we don't wipe the content the new sheet already set.
+      if (!finished || activeSheetRef.current !== null) return;
       setActiveSheet(null);
       setSignupStep("method");
       setUsername(""); setPassword(""); setConfirmPassword("");
@@ -108,11 +119,16 @@ export default function SplashIntro({ navigation }) {
     setSignupError(""); setSignupLoading(true);
     try {
       const result = await signInWithGoogle();
-      if (!result) return;
-      navigation.reset({ index: 0, routes: [{ name: result.onboardingCompleted ? "Home" : "Onboarding" }] });
+      if (result?.isExistingUser) {
+        Alert.alert(
+          "Account already exists",
+          "This Google account is already linked to a Remi account. Logging you in.",
+          [{ text: "OK" }]
+        );
+      }
+      setTimeout(() => setSignupLoading(false), 10000);
     } catch (err) {
       setSignupError(err.message || "Google sign-in failed. Please try again.");
-    } finally {
       setSignupLoading(false);
     }
   };
@@ -139,15 +155,33 @@ export default function SplashIntro({ navigation }) {
       const email = usernameToEmail(username.trim().toLowerCase());
       const { data, error: authError } = await supabase.auth.signUp({ email, password });
       if (authError) {
-        setSignupError(authError.message.includes("already registered") ? "Username already taken." : authError.message);
-        setSignupLoading(false); return;
+        setSignupError(authError.message.includes("already registered") ? "Username already taken. Please choose another." : authError.message);
+        setSignupLoading(false);
+        return;
       }
-      await supabase.from("profiles").update({ username: username.trim().toLowerCase() }).eq("id", data.user.id);
-      // App.js onAuthStateChange handles navigation
+
+      if (!data.session) {
+        // Email confirmation required — show inline confirmation UI
+        setSignupStep("email-sent");
+        setSignupLoading(false);
+        return;
+      }
+
+      // Fire-and-forget — don't await, so the spinner stays up while
+      // onAuthStateChange handles navigation. Awaiting would clear the spinner
+      // before navigation, letting the user click again ("username already taken").
+      supabase.from("profiles")
+        .upsert({ id: data.user.id, username: username.trim().toLowerCase() }, { onConflict: "id" })
+        .then(() => {});
+
+      // Spinner stays running — onAuthStateChange unmounts this component on navigate.
+      // Safety: clear after 10s if navigation never fires.
+      setTimeout(() => setSignupLoading(false), 10000);
     } catch {
       setSignupError("Failed to create account. Please try again.");
       setSignupLoading(false);
     }
+    // No finally — success path keeps spinner until navigation unmounts the component
   };
 
   // ── Login auth ──────────────────────────────────────────────────
@@ -170,31 +204,46 @@ export default function SplashIntro({ navigation }) {
         } else {
           setLoginError("Login failed. Please check your details.");
         }
-        setLoginLoading(false); return;
+        setLoginLoading(false);
+        return;
       }
-      // App.js onAuthStateChange handles navigation
+      // Keep spinner — onAuthStateChange unmounts this component when it navigates.
+      // Safety: clear after 10s if navigation somehow never fires.
+      setTimeout(() => setLoginLoading(false), 10000);
     } catch {
       setLoginError("Connection error. Please try again.");
       setLoginLoading(false);
     }
+    // No finally — success path keeps spinner until navigation unmounts the component
   };
 
   const handleGoogleLogin = async () => {
     setLoginError(""); setLoginLoading(true);
     try {
-      const result = await signInWithGoogle();
-      if (!result) return;
-      navigation.reset({ index: 0, routes: [{ name: result.onboardingCompleted ? "Home" : "Onboarding" }] });
+      await signInWithGoogle();
+      setTimeout(() => setLoginLoading(false), 10000);
     } catch (err) {
       setLoginError(err.message || "Google sign-in failed. Please try again.");
-    } finally {
       setLoginLoading(false);
     }
   };
 
   // ── Sheet content ───────────────────────────────────────────────
   const renderSignupSheet = () =>
-    signupStep === "method" ? (
+    signupStep === "email-sent" ? (
+      <ScrollView contentContainerStyle={s.sheetInner} showsVerticalScrollIndicator={false}>
+        <View style={s.handle} />
+        <Text style={[s.title, { marginTop: 16 }]}>Check your email</Text>
+        <Text style={{ color: "#666", fontSize: 15, lineHeight: 22, marginBottom: 24 }}>
+          {"We sent a confirmation link to your email address. Once you verify it, come back and log in with username "}
+          <Text style={{ fontWeight: "700", color: "#1A1A1A" }}>{username.trim().toLowerCase()}</Text>
+          {" and your password."}
+        </Text>
+        <TouchableOpacity style={s.mainBtn} onPress={closeSheet} activeOpacity={0.9}>
+          <Text style={s.mainBtnTxt}>Back to home</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    ) : signupStep === "method" ? (
       <ScrollView contentContainerStyle={s.sheetInner} showsVerticalScrollIndicator={false}>
         <View style={s.handle} />
         <TouchableOpacity style={s.closeBtn} onPress={closeSheet}>

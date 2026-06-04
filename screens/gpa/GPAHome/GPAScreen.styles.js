@@ -58,7 +58,7 @@ export const getStyles = (theme) => StyleSheet.create({
   overallCard: {
     margin: 24,
     padding: 24,
-    borderRadius: 24,
+    borderRadius: 15,
     alignItems: "center",
     shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 8 },
@@ -88,7 +88,7 @@ export const getStyles = (theme) => StyleSheet.create({
     backgroundColor: theme.colors.card,
     margin: 24,
     padding: 20,
-    borderRadius: 24,
+    borderRadius: 15,
     shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
@@ -103,7 +103,7 @@ export const getStyles = (theme) => StyleSheet.create({
     textAlign: "center",
   },
   chart: {
-    borderRadius: 16,
+    borderRadius: 15,
   },
   
   // Curriculum Bar - positioned below header
@@ -146,7 +146,7 @@ export const getStyles = (theme) => StyleSheet.create({
   semesterCard: {
     backgroundColor: theme.colors.card,
     padding: 20,
-    borderRadius: 20,
+    borderRadius: 15,
     marginBottom: 16,
     shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
@@ -204,7 +204,7 @@ export const getStyles = (theme) => StyleSheet.create({
   emptyState: {
     backgroundColor: theme.colors.card,
     padding: 40,
-    borderRadius: 20,
+    borderRadius: 15,
     alignItems: "center",
     shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
@@ -239,7 +239,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   scanButton: {
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 15,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
@@ -258,7 +258,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   exportButton: {
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 15,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
@@ -284,7 +284,7 @@ export const getStyles = (theme) => StyleSheet.create({
   emptyCard: {
     backgroundColor: theme.colors.card,
     padding: 32,
-    borderRadius: 24,
+    borderRadius: 15,
     alignItems: "center",
     shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },

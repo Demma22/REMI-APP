@@ -62,7 +62,7 @@ export const getStyles = (theme) => StyleSheet.create({
     alignItems: "center",
     backgroundColor: theme.colors.card,
     padding: 32,
-    borderRadius: 24,
+    borderRadius: 15,
     marginBottom: 24,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -171,7 +171,7 @@ export const getStyles = (theme) => StyleSheet.create({
   // GPA Summary Card Styles
   gpaSummaryCard: {
     padding: 24,
-    borderRadius: 24,
+    borderRadius: 15,
     alignItems: "center",
     marginBottom: 20,
   },
@@ -259,7 +259,7 @@ export const getStyles = (theme) => StyleSheet.create({
   // Course Card Styles
   courseCard: {
     backgroundColor: theme.colors.card,
-    borderRadius: 16,
+    borderRadius: 15,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
@@ -383,7 +383,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   modalClose: {
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 15,
     alignItems: "center",
     marginTop: 16,
   },

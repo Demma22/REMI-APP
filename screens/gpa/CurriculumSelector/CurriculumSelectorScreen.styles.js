@@ -53,7 +53,7 @@ export const getStyles = (theme) => StyleSheet.create({
     alignItems: "center",
     backgroundColor: theme.colors.card,
     padding: 24,
-    borderRadius: 20,
+    borderRadius: 15,
     marginBottom: 24,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -73,7 +73,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   curriculumCard: {
     backgroundColor: theme.colors.card,
-    borderRadius: 16,
+    borderRadius: 15,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
@@ -92,7 +92,7 @@ export const getStyles = (theme) => StyleSheet.create({
   curriculumIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 15,
     backgroundColor: theme.colors.backgroundTertiary,
     alignItems: "center",
     justifyContent: "center",
@@ -157,7 +157,7 @@ export const getStyles = (theme) => StyleSheet.create({
     alignItems: "center",
   },
   modalContent: {
-    borderRadius: 24,
+    borderRadius: 15,
     padding: 20,
     width: "85%",
     maxHeight: "80%",

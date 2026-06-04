@@ -337,7 +337,7 @@ const getStyles = (theme) => StyleSheet.create({
   semesterCard: {
     backgroundColor: theme.colors.card,
     padding: 24,
-    borderRadius: 20,
+    borderRadius: 15,
     marginBottom: 20,
     shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
@@ -422,7 +422,7 @@ const getStyles = (theme) => StyleSheet.create({
   },
   saveButton: {
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 15,
     alignItems: "center",
     marginBottom: 12,
     shadowColor: theme.colors.shadow,
@@ -443,7 +443,7 @@ const getStyles = (theme) => StyleSheet.create({
   },
   cancelButton: {
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 15,
     alignItems: "center",
     borderWidth: 2,
     borderColor: theme.colors.border,

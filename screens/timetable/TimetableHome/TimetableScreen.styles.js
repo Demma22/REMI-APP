@@ -30,7 +30,7 @@ export const getStyles = (theme) => StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: 15,
   },
   tabActive: {
     backgroundColor: theme.colors.primaryLight,
@@ -48,14 +48,14 @@ export const getStyles = (theme) => StyleSheet.create({
   headerAvatar: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: 15,
     borderWidth: 2,
     borderColor: PURPLE,
   },
   headerAvatarPlaceholder: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -65,7 +65,7 @@ export const getStyles = (theme) => StyleSheet.create({
     gap: 14,
   },
   weekDayCard: {
-    borderRadius: 22,
+    borderRadius: 15,
     padding: 18,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
@@ -167,7 +167,7 @@ export const getStyles = (theme) => StyleSheet.create({
     backgroundColor: '#0D0D0D',
     paddingHorizontal: 16,
     paddingVertical: 7,
-    borderRadius: 20,
+    borderRadius: 15,
     marginTop: 12,
   },
   editDayBtnText: {
@@ -180,7 +180,7 @@ export const getStyles = (theme) => StyleSheet.create({
     backgroundColor: PURPLE,
     paddingHorizontal: 18,
     paddingVertical: 7,
-    borderRadius: 20,
+    borderRadius: 15,
     marginTop: 12,
   },
   addDayBtnText: {
@@ -194,7 +194,7 @@ export const getStyles = (theme) => StyleSheet.create({
   emptyCard: {
     backgroundColor: theme.colors.primary,
     padding: 32,
-    borderRadius: 24,
+    borderRadius: 15,
     alignItems: "center",
     marginTop: 20,
   },
@@ -246,7 +246,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   examCard: {
     backgroundColor: PURPLE,
-    borderRadius: 20,
+    borderRadius: 15,
     padding: 16,
     marginBottom: 12,
     shadowColor: PURPLE,
@@ -281,7 +281,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   pastExamCard: {
     backgroundColor: theme.colors.backgroundTertiary,
-    borderRadius: 16,
+    borderRadius: 15,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
@@ -418,7 +418,7 @@ export const getStyles = (theme) => StyleSheet.create({
   addSheetIconBg: {
     width: 46,
     height: 46,
-    borderRadius: 23,
+    borderRadius: 15,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
@@ -440,7 +440,7 @@ export const getStyles = (theme) => StyleSheet.create({
   // ── Activity detail popup ─────────────────────────────────────────────────
   activityDetailCard: {
     backgroundColor: PURPLE,
-    borderRadius: 24,
+    borderRadius: 15,
     padding: 24,
     width: '100%',
     shadowColor: PURPLE,

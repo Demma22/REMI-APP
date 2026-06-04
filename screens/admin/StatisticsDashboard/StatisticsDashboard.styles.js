@@ -90,14 +90,14 @@ export const getStyles = (theme) => StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
   statIconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -115,7 +115,7 @@ export const getStyles = (theme) => StyleSheet.create({
   
   // Section Card
   sectionCard: {
-    borderRadius: 20,
+    borderRadius: 15,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
@@ -173,7 +173,7 @@ export const getStyles = (theme) => StyleSheet.create({
   recentUserAvatar: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 15,
     backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',

@@ -12,6 +12,9 @@ const KEY_MAP = {
   gpaData: 'gpa_data',
   onboardingCompleted: 'onboarding_completed',
   onboardingCompletedAt: 'onboarding_completed_at',
+  focusSessions: 'focus_sessions',
+  focusStreak: 'focus_streak',
+  focusTarget: 'focus_target',
 };
 
 const REVERSE_KEY_MAP = Object.fromEntries(
@@ -24,6 +27,7 @@ const WRITABLE_COLUMNS = new Set([
   'heard_from', 'study_stage', 'age_range', 'current_semester', 'total_semesters',
   'selected_curriculum', 'grading_scale', 'gpa_data',
   'onboarding_completed', 'onboarding_completed_at', 'purpose', 'timeZone',
+  'focus_sessions', 'focus_streak', 'focus_target',
 ]);
 
 export const toSupabase = (data) => {
@@ -68,7 +72,7 @@ export const getUserData = async () => {
     .from('profiles')
     .select('*')
     .eq('id', session.user.id)
-    .single();
+    .maybeSingle();
   return fromSupabase(data);
 };
 

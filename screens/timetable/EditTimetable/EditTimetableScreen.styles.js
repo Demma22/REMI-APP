@@ -66,7 +66,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   editCard: {
     backgroundColor: "#535FFD",
-    borderRadius: 24,
+    borderRadius: 15,
     padding: 24,
     shadowColor: "#535FFD",
     shadowOffset: { width: 0, height: 4 },
@@ -142,7 +142,7 @@ export const getStyles = (theme) => StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     padding: 18,
-    borderRadius: 16,
+    borderRadius: 15,
     backgroundColor: "#FDAC1B",
   },
   saveButtonText: {
@@ -169,7 +169,7 @@ export const getStyles = (theme) => StyleSheet.create({
   typeButton: {
     paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 24,
+    borderRadius: 15,
     marginRight: 10,
     backgroundColor: "rgba(255,255,255,0.15)",
     borderWidth: 1,
@@ -192,7 +192,7 @@ export const getStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    borderRadius: 24,
+    borderRadius: 15,
     padding: 20,
     width: '85%',
     maxHeight: '70%',

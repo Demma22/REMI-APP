@@ -60,7 +60,7 @@ export default function RateReviewModal({ navigation, route }) {
     modalContainer: {
       width: '85%',
       backgroundColor: theme.colors.card,
-      borderRadius: 24,
+      borderRadius: 15,
       padding: 24,
       alignItems: 'center',
       borderWidth: 1,

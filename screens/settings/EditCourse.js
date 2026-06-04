@@ -355,7 +355,7 @@ const getStyles = (theme) => StyleSheet.create({
     borderWidth: 2,
     borderColor: theme.colors.border,
     padding: 18,
-    borderRadius: 16,
+    borderRadius: 15,
     fontSize: 18,
     color: theme.colors.textPrimary,
     shadowColor: theme.colors.shadow,
@@ -387,7 +387,7 @@ const getStyles = (theme) => StyleSheet.create({
   },
   saveButton: {
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 15,
     alignItems: "center",
     marginBottom: 12,
     shadowColor: theme.colors.shadow,
@@ -411,7 +411,7 @@ const getStyles = (theme) => StyleSheet.create({
   },
   cancelButton: {
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 15,
     alignItems: "center",
     borderWidth: 2,
     borderColor: theme.colors.border,

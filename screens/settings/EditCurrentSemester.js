@@ -396,7 +396,7 @@ const getStyles = (theme) => StyleSheet.create({
   semesterCard: {
     backgroundColor: theme.colors.card,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 15,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -432,7 +432,7 @@ const getStyles = (theme) => StyleSheet.create({
   semesterNumber: {
     width: 50,
     height: 50,
-    borderRadius: 25,
+    borderRadius: 15,
     backgroundColor: theme.colors.backgroundTertiary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -524,7 +524,7 @@ const getStyles = (theme) => StyleSheet.create({
   },
   saveButton: {
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 15,
     alignItems: "center",
     marginBottom: 12,
     shadowColor: theme.colors.shadow,
@@ -548,7 +548,7 @@ const getStyles = (theme) => StyleSheet.create({
   },
   cancelButton: {
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 15,
     alignItems: "center",
     borderWidth: 2,
     borderColor: theme.colors.border,

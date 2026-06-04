@@ -79,7 +79,7 @@ export const getStyles = (theme) => StyleSheet.create({
     marginBottom: 32,
   },
   contactCard: {
-    borderRadius: 16,
+    borderRadius: 15,
     padding: 20,
     shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },

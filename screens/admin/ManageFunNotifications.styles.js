@@ -45,7 +45,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: 15,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
@@ -100,7 +100,7 @@ export const getStyles = (theme) => StyleSheet.create({
     textAlign: 'center',
   },
   notificationCard: {
-    borderRadius: 16,
+    borderRadius: 15,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
@@ -115,7 +115,7 @@ export const getStyles = (theme) => StyleSheet.create({
   categoryBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: 15,
   },
   categoryText: {
     fontSize: 12,
@@ -179,7 +179,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   modalContent: {
     width: '90%',
-    borderRadius: 24,
+    borderRadius: 15,
     padding: 24,
   },
   modalHeader: {
@@ -216,7 +216,7 @@ export const getStyles = (theme) => StyleSheet.create({
   categoryButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 15,
     marginRight: 8,
     borderWidth: 1,
   },

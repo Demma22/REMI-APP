@@ -76,7 +76,7 @@ export const getStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.colors.card,
     padding: 24,
-    borderRadius: 20,
+    borderRadius: 15,
     marginBottom: 24,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -167,7 +167,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   lectureCard: {
     backgroundColor: theme.colors.card,
-    borderRadius: 16,
+    borderRadius: 15,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
@@ -244,7 +244,7 @@ export const getStyles = (theme) => StyleSheet.create({
   dayButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 15,
     backgroundColor: theme.colors.backgroundTertiary,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -274,16 +274,11 @@ export const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
   },
   saveButton: {
-    backgroundColor: theme.colors.secondary,
+    backgroundColor: '#535FFD',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    borderRadius: 12,
-    shadowColor: theme.colors.secondary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    borderRadius: 15,
   },
   saveButtonDisabled: {
     opacity: 0.7,
@@ -402,7 +397,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   timePickerContent: {
     width: "90%",
-    borderRadius: 24,
+    borderRadius: 15,
     padding: 20,
   },
   timePickerHeader: {

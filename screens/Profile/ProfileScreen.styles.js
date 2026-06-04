@@ -107,7 +107,7 @@ export const getStyles = (theme) => StyleSheet.create({
     backgroundColor: "#111111",
     paddingHorizontal: 20,
     paddingVertical: 18,
-    borderRadius: 20,
+    borderRadius: 15,
   },
   quoteHeaderText: {
     fontSize: 16,
@@ -118,7 +118,7 @@ export const getStyles = (theme) => StyleSheet.create({
     backgroundColor: "#111111",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderRadius: 20,
+    borderRadius: 15,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
@@ -144,7 +144,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   accountCard: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 20,
+    borderRadius: 15,
     paddingHorizontal: 20,
     paddingVertical: 4,
   },
@@ -204,7 +204,7 @@ export const getStyles = (theme) => StyleSheet.create({
   photoModalImage: {
     width: SCREEN_WIDTH - 40,
     height: SCREEN_WIDTH - 40,
-    borderRadius: 20,
+    borderRadius: 15,
   },
 
   // Edit Quote Modal

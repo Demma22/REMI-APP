@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   },
   section: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: 15,
     padding: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
   agreementContainer: {
     backgroundColor: "#F8FAFC",
-    borderRadius: 16,
+    borderRadius: 15,
     padding: 16,
     marginTop: 32,
     marginBottom: 24,

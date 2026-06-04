@@ -59,7 +59,7 @@ export const getStyles = (theme) => StyleSheet.create({
 
   card: {
     backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: 16,
+    borderRadius: 15,
     overflow: "hidden",
   },
 

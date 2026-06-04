@@ -171,7 +171,7 @@ export default function SettingsScreen({ navigation }) {
           </View>
           <View style={styles.divider} />
           <TouchableOpacity style={styles.row} onPress={handleLogout} activeOpacity={0.7} disabled={signingOut}>
-            <SvgIcon name="complete" size={20} color={theme.colors.textPrimary} />
+            <SvgIcon name="logout" size={20} color={theme.colors.textPrimary} />
             <Text style={styles.rowLabel}>Logout</Text>
             {signingOut
               ? <ActivityIndicator size="small" color={theme.colors.textSecondary} />
@@ -190,7 +190,7 @@ export default function SettingsScreen({ navigation }) {
         <Text style={styles.sectionLabel}>CONTACT US</Text>
         <View style={styles.card}>
           <TouchableOpacity style={styles.row} onPress={() => navigation.navigate("ContactUs")} activeOpacity={0.7}>
-            <SvgIcon name="send" size={20} color={theme.colors.textPrimary} />
+            <SvgIcon name="share" size={20} color={theme.colors.textPrimary} />
             <Text style={styles.rowLabel}>Send Feedback</Text>
             <Text style={styles.chevron}>{"›"}</Text>
           </TouchableOpacity>

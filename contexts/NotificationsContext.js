@@ -4,6 +4,9 @@ import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const NOTIF_CLEAN_KEY = '@remi_notif_cleaned_v1';
 
 export const NotificationsContext = createContext({});
 
@@ -34,6 +37,15 @@ export const NotificationsProvider = ({ children }) => {
   const responseListener = useRef();
 
   useEffect(() => {
+    // One-time wipe of all old scheduled notifications (e.g. leftover from Firebase era)
+    AsyncStorage.getItem(NOTIF_CLEAN_KEY).then(done => {
+      if (!done) {
+        Notifications.cancelAllScheduledNotificationsAsync()
+          .then(() => AsyncStorage.setItem(NOTIF_CLEAN_KEY, '1'))
+          .catch(() => {});
+      }
+    });
+
     registerForPushNotificationsAsync().then(token => {
       setExpoPushToken(token);
     });

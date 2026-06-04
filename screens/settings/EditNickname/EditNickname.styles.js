@@ -60,7 +60,7 @@ export const getStyles = (theme) => StyleSheet.create({
   },
   editCard: {
     backgroundColor: '#535FFD',
-    borderRadius: 24,
+    borderRadius: 15,
     padding: 24,
     shadowColor: '#535FFD',
     shadowOffset: { width: 0, height: 4 },

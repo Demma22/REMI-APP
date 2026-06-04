@@ -1,13 +1,7 @@
-// screens/timetable/ReviewScannedLectures.js
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-  StyleSheet,
+  View, Text, TouchableOpacity, ScrollView, Alert,
+  ActivityIndicator, StyleSheet,
 } from 'react-native';
 import { useTheme } from '../../../contexts/ThemeContext';
 import SvgIcon from '../../../components/SvgIcon';
@@ -15,12 +9,25 @@ import ScreenHeader from '../../../components/ScreenHeader';
 import { getUserData, updateUserData } from '../../../services/userDataService';
 import { useNotifications } from '../../../hooks/useNotifications';
 
+const PURPLE = '#535FFD';
+const DAY_ABBR = { monday:'MON', tuesday:'TUES', wednesday:'WED', thursday:'THURS', friday:'FRI', saturday:'SAT', sunday:'SUN' };
+
 export default function ReviewScannedLectures({ navigation, route }) {
   const { lectures } = route.params;
   const [saving, setSaving] = useState(false);
   const { theme } = useTheme();
   const { scheduleScannedLecturesNotifications } = useNotifications();
-  const styles = getStyles(theme);
+
+  const confirmAndSave = () => {
+    Alert.alert(
+      'Ready to save?',
+      'Make sure all activities look accurate. You can always edit them from your schedule later.',
+      [
+        { text: 'Go Back', style: 'cancel' },
+        { text: 'Save', style: 'default', onPress: saveLectures },
+      ]
+    );
+  };
 
   const saveLectures = async () => {
     setSaving(true);
@@ -31,9 +38,7 @@ export default function ReviewScannedLectures({ navigation, route }) {
 
       lectures.forEach(lecture => {
         const dayKey = lecture.day.toLowerCase();
-        if (!timetableData[dayKey]) {
-          timetableData[dayKey] = [];
-        }
+        if (!timetableData[dayKey]) timetableData[dayKey] = [];
         timetableData[dayKey].push({
           name: lecture.name,
           start: lecture.start,
@@ -43,7 +48,7 @@ export default function ReviewScannedLectures({ navigation, route }) {
           semester: currentSemester,
           day: lecture.day,
           id: Date.now() + Math.random() * 1000,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
         });
       });
 
@@ -51,76 +56,80 @@ export default function ReviewScannedLectures({ navigation, route }) {
 
       try {
         await scheduleScannedLecturesNotifications(lectures);
-      } catch (notifError) {
-        console.error("Notification scheduling error:", notifError);
+      } catch (e) {
+        console.error('Notification scheduling error:', e);
       }
 
-      Alert.alert('Success', `${lectures.length} lectures added successfully!`);
+      Alert.alert('Saved', `${lectures.length} ${lectures.length === 1 ? 'activity' : 'activities'} added to your schedule!`);
       navigation.navigate('Timetable');
     } catch (error) {
       console.error('Save error:', error);
-      Alert.alert('Error', 'Failed to save lectures');
+      Alert.alert('Error', 'Failed to save activities. Please try again.');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <ScreenHeader title="Review Lectures" onBackPress={() => navigation.goBack()} />
+    <View style={s.container(theme)}>
+      <ScreenHeader title="Review Activities" onBackPress={() => navigation.goBack()} />
 
-      <ScrollView style={styles.content}>
-        <Text style={[styles.countText, { color: theme.colors.textSecondary }]}>
-          Found {lectures.length} lectures
-        </Text>
-        
-        {lectures.map((lecture, idx) => (
-          <View key={idx} style={[styles.lectureCard, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.lectureName, { color: theme.colors.textPrimary }]}>
-              {lecture.name}
-            </Text>
-            <View style={styles.detailRow}>
-              <SvgIcon name="calendar" size={14} color={theme.colors.textSecondary} />
-              <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
-                {lecture.day}
-              </Text>
-            </View>
-            <View style={styles.detailRow}>
-              <SvgIcon name="clock" size={14} color={theme.colors.textSecondary} />
-              <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
-                {lecture.start} {lecture.end ? `- ${lecture.end}` : ''}
-              </Text>
-            </View>
-            {lecture.lecturer && lecture.lecturer !== "" && (
-              <View style={styles.detailRow}>
-                <SvgIcon name="user" size={14} color={theme.colors.textSecondary} />
-                <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
-                  {lecture.lecturer}
-                </Text>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={s.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={s.countBadge}>
+          <Text style={s.countText}>{lectures.length} {lectures.length === 1 ? 'activity' : 'activities'} found</Text>
+        </View>
+
+        {lectures.map((item, idx) => {
+          const dayKey = item.day?.toLowerCase();
+          const dayAbbr = DAY_ABBR[dayKey] || item.day?.toUpperCase().slice(0, 3) || '—';
+          const timeStr = item.end ? `${item.start} – ${item.end}` : item.start;
+
+          return (
+            <View key={idx} style={s.card}>
+              <View style={s.cardLeft}>
+                <Text style={s.cardName} numberOfLines={2}>{item.name}</Text>
+                <View style={s.cardDetails}>
+                  <View style={s.detailRow}>
+                    <SvgIcon name="clock" size={13} color="rgba(255,255,255,0.65)" />
+                    <Text style={s.detailText}>{timeStr}</Text>
+                  </View>
+                  {item.lecturer ? (
+                    <View style={s.detailRow}>
+                      <SvgIcon name="user" size={13} color="rgba(255,255,255,0.65)" />
+                      <Text style={s.detailText}>{item.lecturer}</Text>
+                    </View>
+                  ) : null}
+                  {item.room ? (
+                    <View style={s.detailRow}>
+                      <SvgIcon name="location" size={13} color="rgba(255,255,255,0.65)" />
+                      <Text style={s.detailText}>{item.room}</Text>
+                    </View>
+                  ) : null}
+                </View>
               </View>
-            )}
-            {lecture.room && lecture.room !== "" && (
-              <View style={styles.detailRow}>
-                <SvgIcon name="location" size={14} color={theme.colors.textSecondary} />
-                <Text style={[styles.detailText, { color: theme.colors.textSecondary }]}>
-                  Room {lecture.room}
-                </Text>
+              <View style={s.cardRight}>
+                <Text style={s.dayAbbr}>{dayAbbr}</Text>
               </View>
-            )}
-          </View>
-        ))}
+            </View>
+          );
+        })}
       </ScrollView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity 
-          style={[styles.saveButton, { backgroundColor: theme.colors.secondary }]}
-          onPress={saveLectures}
+      <View style={s.footer(theme)}>
+        <TouchableOpacity
+          style={s.saveBtn}
+          onPress={confirmAndSave}
           disabled={saving}
+          activeOpacity={0.85}
         >
           {saving ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.saveButtonText}>Save All Lectures</Text>
+            <Text style={s.saveBtnText}>Save to Schedule</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -128,81 +137,98 @@ export default function ReviewScannedLectures({ navigation, route }) {
   );
 }
 
-const getStyles = (theme) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: theme.colors.backgroundSecondary,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: theme.colors.textPrimary,
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
+const s = {
+  container: (theme) => ({ flex: 1, backgroundColor: theme.colors.background }),
+  scrollContent: { padding: 16, gap: 12, paddingBottom: 32 },
+
+  countBadge: {
+    backgroundColor: 'rgba(83,95,253,0.12)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 15,
+    marginBottom: 4,
   },
   countText: {
-    fontSize: 14,
-    marginBottom: 16,
-  },
-  lectureCard: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  lectureName: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '700',
-    marginBottom: 8,
+    color: PURPLE,
+    letterSpacing: 0.3,
+  },
+
+  card: {
+    backgroundColor: PURPLE,
+    borderRadius: 15,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    shadowColor: PURPLE,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  cardLeft: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingRight: 12,
+  },
+  cardName: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 10,
+    lineHeight: 22,
+  },
+  cardDetails: {
+    gap: 6,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 4,
   },
   detailText: {
     fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+    flex: 1,
   },
-  footer: {
+  cardRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minWidth: 64,
+  },
+  dayAbbr: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+    textAlign: 'right',
+  },
+
+  footer: (theme) => ({
     padding: 20,
     paddingBottom: 40,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
-  },
-  saveButton: {
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: theme.colors.background,
+  }),
+  saveBtn: {
+    backgroundColor: PURPLE,
+    paddingVertical: 16,
+    borderRadius: 15,
     alignItems: 'center',
+    shadowColor: PURPLE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  saveButtonText: {
+  saveBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+    letterSpacing: 0.3,
   },
-});
+};

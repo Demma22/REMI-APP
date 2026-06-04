@@ -64,11 +64,16 @@ export default function SignupScreen({ navigation }) {
     setError(""); setIsLoading(true);
     try {
       const result = await signInWithGoogle();
-      if (!result) return;
-      navigation.reset({ index: 0, routes: [{ name: result.onboardingCompleted ? "Home" : "Onboarding" }] });
+      if (result?.isExistingUser) {
+        Alert.alert(
+          "Account already exists",
+          "This Google account is already linked to a Remi account. Logging you in.",
+          [{ text: "OK" }]
+        );
+      }
+      setTimeout(() => setIsLoading(false), 10000);
     } catch (err) {
       setError(err.message || "Google sign-in failed. Please try again.");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -96,12 +101,23 @@ export default function SignupScreen({ navigation }) {
       const { data, error: authError } = await supabase.auth.signUp({ email, password });
       if (authError) {
         setError(authError.message.includes("already registered") ? "Username already taken." : authError.message);
-        setIsLoading(false); return;
+        setIsLoading(false);
+        return;
       }
-      await supabase.from("profiles")
-        .update({ username: username.trim().toLowerCase() })
-        .eq("id", data.user.id);
-      // App.js onAuthStateChange handles navigation
+
+      if (!data.session) {
+        Alert.alert("Check your email", "We sent you a confirmation link. Please verify your email then log in.");
+        navigation.navigate("Login");
+        setIsLoading(false);
+        return;
+      }
+
+      // Fire-and-forget — don't await, keep spinner running until onAuthStateChange navigates
+      supabase.from("profiles")
+        .upsert({ id: data.user.id, username: username.trim().toLowerCase() }, { onConflict: "id" })
+        .then(() => {});
+
+      setTimeout(() => setIsLoading(false), 10000);
     } catch {
       setError("Failed to create account. Please try again.");
       setIsLoading(false);
